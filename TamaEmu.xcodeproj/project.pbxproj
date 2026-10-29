@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
+		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
+		C919374E85E040D38477FC99 /* TamaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */; };
+		F847517F815D45A390B05D05 /* TamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69860A54686643F895D85D5D /* TamaProvider.swift */; };
+		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
+		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */; };
 		04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
@@ -28,6 +34,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TamaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
+		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
+		69860A54686643F895D85D5D /* TamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaProvider.swift; sourceTree = "<group>"; };
+		6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetView.swift; sourceTree = "<group>"; };
+		04981D1305DB4733ACBC657E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaWidget.entitlements; sourceTree = "<group>"; };
 		40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveDeviceLookup.swift; sourceTree = "<group>"; };
 		36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		33A5894F6DD24F569DA1474D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -57,6 +70,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		75D146CA22D845C1842CD311 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -108,8 +128,22 @@
 			isa = PBXGroup;
 			children = (
 				48000D40ECD8B146CAD8EF8F /* TamaEmu.app */,
+				1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		6D4A525F4E3B4FAD988C0290 /* TamaWidget */ = {
+			isa = PBXGroup;
+			children = (
+				D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */,
+				D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */,
+				69860A54686643F895D85D5D /* TamaProvider.swift */,
+				6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */,
+				04981D1305DB4733ACBC657E /* Info.plist */,
+				2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */,
+			);
+			path = TamaWidget;
 			sourceTree = "<group>";
 		};
 		C3C94697C2E99148C09374B1 = {
@@ -117,6 +151,7 @@
 			children = (
 				AB66E2F7B5777459637B33B0 /* Packages */,
 				DB258A04DE97642CF7DF85FD /* TamaEmu */,
+				6D4A525F4E3B4FAD988C0290 /* TamaWidget */,
 				B0CC56E460754400D65818A7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -156,10 +191,12 @@
 				A343ABF042C4922CC0E458BA /* Sources */,
 				85530BAB898D3A7620382C73 /* Resources */,
 				B536D9A96CC802A0C2F886D9 /* Frameworks */,
+				2C811203063C45D486F26D9A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				5B735F2931CE49E6B1E997EE /* PBXTargetDependency */,
 			);
 			name = TamaEmu;
 			packageProductDependencies = (
@@ -168,6 +205,23 @@
 			productName = TamaEmu;
 			productReference = 48000D40ECD8B146CAD8EF8F /* TamaEmu.app */;
 			productType = "com.apple.product-type.application";
+		};
+		3A3639CD2AA2479DA40C79C0 /* TamaWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0E731AA81E1C4D9EB3BEAE9A /* Build configuration list for PBXNativeTarget "TamaWidgetExtension" */;
+			buildPhases = (
+				0A3D00E0850A4570B6C77DBE /* Sources */,
+				6BFAC85DBFAA4C43926D7FA4 /* Resources */,
+				75D146CA22D845C1842CD311 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TamaWidgetExtension;
+			productName = TamaWidgetExtension;
+			productReference = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -198,9 +252,28 @@
 			projectRoot = "";
 			targets = (
 				B439B3BD28C3C79AAF386EED /* TamaEmu */,
+				3A3639CD2AA2479DA40C79C0 /* TamaWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXContainerItemProxy section */
+		560211D29D664D279D20AF66 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 79EE1E46263308E7329E29E1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A3639CD2AA2479DA40C79C0;
+			remoteInfo = TamaWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		5B735F2931CE49E6B1E997EE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A3639CD2AA2479DA40C79C0 /* TamaWidgetExtension */;
+			targetProxy = 560211D29D664D279D20AF66 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		85530BAB898D3A7620382C73 /* Resources */ = {
@@ -211,7 +284,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6BFAC85DBFAA4C43926D7FA4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2C811203063C45D486F26D9A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A343ABF042C4922CC0E458BA /* Sources */ = {
@@ -237,9 +331,53 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0A3D00E0850A4570B6C77DBE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */,
+				C919374E85E040D38477FC99 /* TamaWidget.swift in Sources */,
+				F847517F815D45A390B05D05 /* TamaProvider.swift in Sources */,
+				B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */,
+				5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		5402DFC838E5472AB67ECA3D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TamaWidget/TamaWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = TamaWidget/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fluorescente.TamaEmu.TamaWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0C888FF237654F81A73A0E77 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TamaWidget/TamaWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = TamaWidget/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fluorescente.TamaEmu.TamaWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		36F3512EEA8E21D9A4A7D9E7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -402,6 +540,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0E731AA81E1C4D9EB3BEAE9A /* Build configuration list for PBXNativeTarget "TamaWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5402DFC838E5472AB67ECA3D /* Debug */,
+				0C888FF237654F81A73A0E77 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		172A4AF1A72A077FD9F56EA3 /* Build configuration list for PBXNativeTarget "TamaEmu" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
