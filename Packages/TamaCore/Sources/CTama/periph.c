@@ -144,11 +144,7 @@ static void tone_update(Emu *e)
     uint16_t crb = (uint16_t)(IOB(0x300782) | (IOB(0x300783) << 8));
     uint8_t  ctl = IOB(0x300786), ck = IOB(0x3007E0);
     uint8_t on = (ctl & 1) && (ctl & 4) && (ck & 8) && cra > 0 && cra < crb;
-    /* iOS port: tone generation reads the device's own fixed tone_hz, not
-     * mclk_hz/osc3_hz — real hardware's audio clock runs independently of
-     * whatever the CPU-side CMU/PLL is currently configured to. See
-     * CREDITS.md. */
-    double mhz = e->dev.tone_hz;
+    double mhz = e->cmu.mclk_hz > 0 ? e->cmu.mclk_hz : e->dev.osc3_hz;
     float freq = (float)(mhz / pd[ck & 7] / (double)(crb + 1));
     if (on == e->tone_on && (!on || freq == e->tone_freq)) return;
     e->tone_on = on; e->tone_freq = freq;

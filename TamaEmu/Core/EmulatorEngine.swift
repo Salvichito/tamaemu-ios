@@ -327,26 +327,39 @@ final class EmulatorEngine {
         var w: Int32 = 0
         var h: Int32 = 0
 
+        // Accumulated across iterations, matching the Android port's own
+        // `t_ziel` — NOT recomputed fresh from emu_secs each time. Its own
+        // comment explains why that distinction matters: if a single frame
+        // overshoots (see the cycle ceiling below), recomputing from the
+        // new, already-overshot emu_secs would just keep that excess
+        // forever; accumulating means the next frame's target is
+        // unaffected by the overshoot, so the loop simply skips stepping
+        // until real time catches back up to where emu_secs already is —
+        // paying the excess back instead of banking it.
+        var targetSecs = emu.pointee.emu_secs
+
         while true {
             stopLock.lock(); let stop = shouldStop; stopLock.unlock()
             if stop { break }
 
-            // Fixed 1/60s per iteration, matching the Android port's own
-            // emu_thread (`t_ziel += 1.0/60.0`) — NOT anchored to wall-clock
-            // elapsed time. Animation speed is driven by how many CPU
-            // cycles execute per real second (the chip's own oscillator
-            // rate), so making this elastic to "catch up" missed real time
-            // would execute cycles faster than real hardware ever would,
-            // speeding up every cycle-driven animation (blinks, sprite
-            // steps) right along with the catch-up — which is exactly what
-            // an earlier version of this fix did, and exactly why it made
-            // idle animation visibly faster than a real device. Android's
-            // own comment at the equivalent point says it plainly: time
-            // lost to an overrun used to be discarded (drifting the clock
-            // forever), so now it's recorded as a backlog and caught up
-            // later — not by running hotter right now.
-            let targetSecs = emu.pointee.emu_secs + (1.0 / 60.0)
-            while emu.pointee.emu_secs < targetSecs && !emu.pointee.stopped {
+            targetSecs += 1.0 / 60.0
+            // Mirrors the Android port's own "notbremse" (emergency brake).
+            // The firmware's clock isn't constant — e.g. entering its
+            // low-power sleep mode mid-frame drops OSC3's ~20MHz down to
+            // OSC1's 32.768kHz watch crystal. rtc_tick() computes
+            // emu_secs += cycles/hz, so the moment hz collapses, every
+            // further cycle in that same frame suddenly represents a much
+            // bigger slice of emu_secs — without a ceiling, a handful of
+            // cycles right at that transition can masquerade as many
+            // real seconds of simulated time. That hits idle animation
+            // specifically hard, since sleep/wake cycling is exactly what
+            // happens while idling. Capping cycles-per-frame at roughly
+            // what full speed would need, plus slack for legitimately
+            // catching up a small lag, bounds how bad one transition can
+            // be — identical in spirit to upstream's own fix for this.
+            let mclk = emu.pointee.cmu.mclk_hz > 0 ? emu.pointee.cmu.mclk_hz : emu.pointee.dev.osc3_hz
+            let cycleCeiling = emu.pointee.cycles &+ UInt64(mclk / 60.0) &+ 100_000
+            while emu.pointee.emu_secs < targetSecs && emu.pointee.cycles < cycleCeiling && !emu.pointee.stopped {
                 let before = emu.pointee.cycles
                 cpu_step(emu)
                 let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
