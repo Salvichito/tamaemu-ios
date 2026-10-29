@@ -46,6 +46,14 @@ final class EmulatorEngine {
     /// attempt instead of silently vanishing.
     private var catchUpBacklog: TimeInterval = 0
 
+    /// Real seconds lost to a large (>250ms) frame overrun during live
+    /// play — e.g. a genuine stall, not routine scheduling jitter — that
+    /// `runLoop()` deliberately did NOT correct for in the moment (see its
+    /// own comment for why). Written only from the emulator thread, read
+    /// only from `save()` after `stop()` has joined that thread, so there's
+    /// no concurrent access despite no lock guarding it.
+    private var liveDriftBacklog: TimeInterval = 0
+
     private let callDetector = CallDetector()
     /// Set by whoever owns this engine to be told when the Tamagotchi
     /// starts calling for attention (M9c wires this to a local
@@ -224,7 +232,11 @@ final class EmulatorEngine {
             }
         }
         if saved != 0 {
-            savePaths.lastSavedAt = Date().addingTimeInterval(-catchUpBacklog)
+            savePaths.lastSavedAt = Date().addingTimeInterval(-(catchUpBacklog + liveDriftBacklog))
+            // Folded into lastSavedAt above — zero it so a second save()
+            // on this same (still-running) engine instance, e.g. from
+            // restartTama()/prepareExportURL(), doesn't subtract it again.
+            liveDriftBacklog = 0
         }
         if emu.pointee.flash_dirty, let rom = emu.pointee.rom {
             let romSize = Int(emu.pointee.dev.rom_size)
@@ -309,9 +321,7 @@ final class EmulatorEngine {
 
     private func runLoop() {
         let frameNanos: UInt64 = 1_000_000_000 / 60
-        let startWallNanos = DispatchTime.now().uptimeNanoseconds
-        let startEmuSecs = emu.pointee.emu_secs
-        var nextDeadlineNanos = startWallNanos + frameNanos
+        var nextDeadlineNanos = DispatchTime.now().uptimeNanoseconds + frameNanos
         var pixels = [UInt32](repeating: 0xFF000000, count: Int(PANEL_W) * Int(PANEL_H))
         var w: Int32 = 0
         var h: Int32 = 0
@@ -320,17 +330,21 @@ final class EmulatorEngine {
             stopLock.lock(); let stop = shouldStop; stopLock.unlock()
             if stop { break }
 
-            // Anchored to real elapsed wall-clock time since this loop
-            // started, not incremented by a fixed 1/60s per iteration —
-            // a fixed increment silently drifts behind forever the moment
-            // any single iteration overruns its budget (sleep overshoot,
-            // scheduler jitter, thermal throttling), none of which are
-            // rare on real hardware the way they are in Simulator. This
-            // way a slow iteration's overrun is simply made up by the
-            // next one stepping further, the same self-correcting idea
-            // catchUp() already uses between sessions, just continuous.
-            let wallElapsed = Double(DispatchTime.now().uptimeNanoseconds - startWallNanos) / 1_000_000_000
-            let targetSecs = startEmuSecs + wallElapsed
+            // Fixed 1/60s per iteration, matching the Android port's own
+            // emu_thread (`t_ziel += 1.0/60.0`) — NOT anchored to wall-clock
+            // elapsed time. Animation speed is driven by how many CPU
+            // cycles execute per real second (the chip's own oscillator
+            // rate), so making this elastic to "catch up" missed real time
+            // would execute cycles faster than real hardware ever would,
+            // speeding up every cycle-driven animation (blinks, sprite
+            // steps) right along with the catch-up — which is exactly what
+            // an earlier version of this fix did, and exactly why it made
+            // idle animation visibly faster than a real device. Android's
+            // own comment at the equivalent point says it plainly: time
+            // lost to an overrun used to be discarded (drifting the clock
+            // forever), so now it's recorded as a backlog and caught up
+            // later — not by running hotter right now.
+            let targetSecs = emu.pointee.emu_secs + (1.0 / 60.0)
             while emu.pointee.emu_secs < targetSecs && !emu.pointee.stopped {
                 let before = emu.pointee.cycles
                 cpu_step(emu)
@@ -349,6 +363,18 @@ final class EmulatorEngine {
             if nextDeadlineNanos > nowNanos {
                 Thread.sleep(forTimeInterval: Double(nextDeadlineNanos - nowNanos) / 1_000_000_000)
             } else {
+                // Overran this frame's budget. A small overrun is normal
+                // scheduling jitter and self-corrects for free — the next
+                // iteration just starts immediately with no sleep, same as
+                // Android tolerates below its own tuned 250ms threshold.
+                // Only count anything bigger as real drift (Doze-equivalent
+                // suspension, thermal throttling, a genuine stall) for the
+                // next session-boundary catch-up pass to absorb instead of
+                // correcting it live.
+                let overrun = Double(nowNanos - nextDeadlineNanos) / 1_000_000_000
+                if overrun > 0.25 {
+                    liveDriftBacklog += overrun
+                }
                 nextDeadlineNanos = nowNanos
             }
             nextDeadlineNanos += frameNanos
