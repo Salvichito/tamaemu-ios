@@ -35,6 +35,17 @@ final class EmulatorEngine {
     private var shouldStop = false
     private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
+    /// How many seconds of real elapsed time catch-up has NOT yet applied
+    /// to `emu_secs` — set once, right after `init()`'s catch-up pass, and
+    /// unchanged for the rest of this engine's life (normal real-time play
+    /// keeps `emu_secs` and wall-clock moving in lockstep, so it neither
+    /// grows nor shrinks on its own). `save()` subtracts this from `Date()`
+    /// when recording `lastSavedAt`, so a catch-up pass that couldn't
+    /// finish (wall-clock budget, or a deliberately low catch-up cap)
+    /// doesn't get forgotten — the shortfall carries into the next catch-up
+    /// attempt instead of silently vanishing.
+    private var catchUpBacklog: TimeInterval = 0
+
     private let callDetector = CallDetector()
     /// Set by whoever owns this engine to be told when the Tamagotchi
     /// starts calling for attention (M9c wires this to a local
@@ -191,7 +202,7 @@ final class EmulatorEngine {
             }
         }
         if saved != 0 {
-            savePaths.lastSavedAt = Date()
+            savePaths.lastSavedAt = Date().addingTimeInterval(-catchUpBacklog)
         }
         if emu.pointee.flash_dirty, let rom = emu.pointee.rom {
             let romSize = Int(emu.pointee.dev.rom_size)
@@ -244,10 +255,18 @@ final class EmulatorEngine {
     /// execution budget — stopping early here just means less of the gap
     /// got caught up, not a crash or lost progress.
     private func catchUp(seconds: TimeInterval, wallClockBudget: TimeInterval = 5.0) {
+        let requestedSeconds = max(seconds, 0)
         let capSeconds = AppSettings.catchUpCapHours * 3600
-        let cappedSeconds = min(max(seconds, 0), capSeconds)
-        guard cappedSeconds > 0 else { return }
-        let targetSecs = emu.pointee.emu_secs + cappedSeconds
+        let cappedSeconds = min(requestedSeconds, capSeconds)
+        guard cappedSeconds > 0 else {
+            // Nothing attempted this pass — e.g. catch-up is turned off, or
+            // there's genuinely nothing to catch up. Whatever gap exists
+            // stays owed in full, rather than being reset to zero.
+            catchUpBacklog = requestedSeconds
+            return
+        }
+        let startSecs = emu.pointee.emu_secs
+        let targetSecs = startSecs + cappedSeconds
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(wallClockBudget * 1_000_000_000)
         var stepsSinceDeadlineCheck = 0
         while emu.pointee.emu_secs < targetSecs && !emu.pointee.stopped {
@@ -262,6 +281,8 @@ final class EmulatorEngine {
                 if DispatchTime.now().uptimeNanoseconds >= deadline { break }
             }
         }
+        let actuallyAdvanced = emu.pointee.emu_secs - startSecs
+        catchUpBacklog = max(0, requestedSeconds - actuallyAdvanced)
     }
 
     private func runLoop() {

@@ -27,6 +27,12 @@ final class PlayViewModel {
 
         if ActiveDeviceLookup.hasImportedROM(selectedDevice) {
             hasFirmware = true
+            // Covers anyone who imported firmware before this permission
+            // request existed — firmwareImported(for:at:) only asks on a
+            // brand-new import, which would otherwise leave existing users
+            // never actually prompted, so no notification could ever be
+            // delivered regardless of whether a call was detected.
+            NotificationScheduler.requestAuthorizationIfNeeded()
             startEngine()
         } else {
             lcdImage = LCDImageBuilder.makeImage(
@@ -98,9 +104,19 @@ final class PlayViewModel {
         displayTimer?.invalidate()
         displayTimer = nil
         // stop() must come first: it blocks until the emulator thread has
-        // actually exited, which save() depends on to safely read the Emu
-        // struct without a concurrent writer.
+        // actually exited, which save() and renderCurrentFrame() both
+        // depend on to safely read the Emu struct without a concurrent
+        // writer.
         engine?.stop()
+        // Publishes the actual last-seen frame to the widget — previously
+        // this only ever happened once, right at session start (before
+        // any play), so the widget never reflected anything the user had
+        // actually just done.
+        if let engine, let image = LCDImageBuilder.makeImage(
+            from: engine.renderCurrentFrame(), width: 128, height: 128
+        ) {
+            WidgetSharedState.publish(image: image, deviceTitle: selectedDevice.title)
+        }
         engine?.save()
         engine = nil
     }
