@@ -20,6 +20,7 @@ static const DeviceProfile devices[] = {
         .sleep_flag   = 0x0000146Cu,
         .ttbr_reset = 0x02400000u,
         .osc3_hz    = PS_OSC3_HZ,
+        .tone_hz    = PS_OSC3_HZ,  /* iOS port: unchanged, see CREDITS.md */
     },
     {
         .name = "idl",
@@ -38,6 +39,7 @@ static const DeviceProfile devices[] = {
         .sleep_flag = 0x00000FD8u,
         .ttbr_reset = 0x02400000u,
         .osc3_hz    = PS_OSC3_HZ,
+        .tone_hz    = PS_OSC3_HZ,  /* iOS port: unchanged, see CREDITS.md */
     },
     {
         .name = "id",
@@ -56,6 +58,7 @@ static const DeviceProfile devices[] = {
         .sleep_flag = 0x00000EFCu,
         .ttbr_reset = 0x00C00000u,
         .osc3_hz    = PS_OSC3_HZ,
+        .tone_hz    = PS_OSC3_HZ,  /* iOS port: unchanged, see CREDITS.md */
     },
     {
         .name = "id-melody",
@@ -74,6 +77,7 @@ static const DeviceProfile devices[] = {
         .sleep_flag = 0x000011E0u,
         .ttbr_reset = 0x00C00000u,
         .osc3_hz    = PS_OSC3_HZ,
+        .tone_hz    = PS_OSC3_HZ,  /* iOS port: unchanged, see CREDITS.md */
     },
     {
         .name = "4u",
@@ -96,6 +100,7 @@ static const DeviceProfile devices[] = {
         .wake_press_lost = true,
         .ttbr_reset = 0x02400000u,
         .osc3_hz    = 30000000.0,
+        .tone_hz    = 30000000.0,  /* iOS port: unchanged, see CREDITS.md */
     },
     /* Keep "4u-plain": saved settings already use "4u" for the 4U+. */
     {
@@ -119,6 +124,7 @@ static const DeviceProfile devices[] = {
         .wake_press_lost = true,
         .ttbr_reset = 0x02400000u,
         .osc3_hz    = 30000000.0,
+        .tone_hz    = 30000000.0,  /* iOS port: unchanged, see CREDITS.md */
     },
     /* Plus Color uses GPIO IR instead of the UART. */
     {
@@ -143,6 +149,7 @@ static const DeviceProfile devices[] = {
         .sleep_flag = 0x00000368u,
         .ttbr_reset = 0x00C00000u,
         .osc3_hz    = 12000000.0,  /* iOS port: measured against real hardware, see CREDITS.md */
+        .tone_hz    = 20000000.0,  /* iOS port: tone generation's own clock, see CREDITS.md */
     },
     /* Hexagontchi reverses the Plus Color debug-strap polarity. */
     {
@@ -167,6 +174,7 @@ static const DeviceProfile devices[] = {
         .sleep_flag = 0x00000000u,
         .ttbr_reset = 0x00C00000u,
         .osc3_hz    = 12000000.0,  /* iOS port: measured against real hardware, see CREDITS.md */
+        .tone_hz    = 20000000.0,  /* iOS port: tone generation's own clock, see CREDITS.md */
     },
 };
 #define N_DEVICES (sizeof devices / sizeof devices[0])

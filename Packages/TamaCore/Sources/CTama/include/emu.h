@@ -42,6 +42,11 @@ typedef struct DeviceProfile {
     /* TTBR reset value inside this device's NOR. */
     uint32_t ttbr_reset;
     double   osc3_hz;           /* OSC3 crystal frequency */
+    /* iOS port: audio tone generation runs off its own clock on real
+     * hardware, independent of whatever CPU/animation clock osc3_hz (via
+     * the CMU/PLL) ends up at — tone_update() reads this directly instead.
+     * See CREDITS.md. */
+    double   tone_hz;
     const char *name;          /* --device selects by this */
     const char *title;         /* window title and log banner */
 } DeviceProfile;
