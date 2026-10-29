@@ -19,6 +19,28 @@ and marked with a `// iOS port:` comment at the change site.
    ([TamaEmu_Android/CORE-CHANGES.md](https://github.com/mameise/TamaEmu_Android/blob/main/CORE-CHANGES.md)),
    applied here independently after hitting the identical build error.
 
+## `device.c`
+
+1. **Changed `osc3_hz` for the `plus-color` and `plus-color-hexa` profiles from
+   `20000000.0` (20 MHz) to `12000000.0` (12 MHz).** Found by timing a repeating idle
+   animation (eye blinks) against a real Tamagotchi Plus Color side by side with this
+   port: the real device blinked 10 times in 10 seconds and again ~30 times in a more
+   careful 30-second count (1/sec, exactly matching its own real-time clock), while this
+   port blinked roughly 50 times in the same 30 seconds with the original 20 MHz value —
+   a ~5∶3 ratio, i.e. `20 MHz ÷ 12 MHz`. The displayed time-of-day clock itself was
+   already correct (it's paced directly against wall-clock time, independent of this
+   constant — see `EmulatorEngine.runLoop()` in the iOS app), but every cycle-timed
+   animation (anything gated on a hardware timer counting raw CPU cycles rather than the
+   RTC-second counter) was running proportionally faster than real hardware because of
+   this one constant. `osc3_hz` only ever appears as a linear scale factor feeding
+   `periph.c`'s CMU/PLL math (`cmu_recalc`), so a uniform, device-wide speed error from a
+   single wrong crystal-frequency constant was consistent with every symptom observed:
+   internally self-consistent timing (buttons, sound, boot sequence all "worked"), just
+   uniformly sped up. Not yet re-verified against the desktop (`tamaemu`) or Android
+   (`TamaEmu_Android`) builds, which carry the same `20000000.0` value unchanged — this is
+   likely an upstream data error inherited by all three, not something introduced by
+   either port, but that comparison hasn't been done.
+
 Nothing else in the core is modified. `main.c` and `panel.c` from the upstream project are
 not part of this port at all — they are the SDL desktop front end, replaced here by Swift
 code in the main app target.

@@ -142,7 +142,7 @@ static const DeviceProfile devices[] = {
         .has_sleep_flag = true,
         .sleep_flag = 0x00000368u,
         .ttbr_reset = 0x00C00000u,
-        .osc3_hz    = 20000000.0,
+        .osc3_hz    = 12000000.0,  /* iOS port: measured against real hardware, see CREDITS.md */
     },
     /* Hexagontchi reverses the Plus Color debug-strap polarity. */
     {
@@ -166,7 +166,7 @@ static const DeviceProfile devices[] = {
         .has_sleep_flag = true,
         .sleep_flag = 0x00000000u,
         .ttbr_reset = 0x00C00000u,
-        .osc3_hz    = 20000000.0,
+        .osc3_hz    = 12000000.0,  /* iOS port: measured against real hardware, see CREDITS.md */
     },
 };
 #define N_DEVICES (sizeof devices / sizeof devices[0])
