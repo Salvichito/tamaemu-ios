@@ -10,7 +10,7 @@ struct PlayScreen: View {
                 .font(.title.bold())
             LCDView(image: viewModel.lcdImage)
                 .frame(maxWidth: 280)
-                .border(Color.gray)
+                .border(Color(.separator))
 
             if viewModel.hasFirmware {
                 Text("Running: \(viewModel.selectedDevice.title)")
