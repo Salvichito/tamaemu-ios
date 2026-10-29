@@ -287,7 +287,9 @@ final class EmulatorEngine {
 
     private func runLoop() {
         let frameNanos: UInt64 = 1_000_000_000 / 60
-        var nextDeadlineNanos = DispatchTime.now().uptimeNanoseconds + frameNanos
+        let startWallNanos = DispatchTime.now().uptimeNanoseconds
+        let startEmuSecs = emu.pointee.emu_secs
+        var nextDeadlineNanos = startWallNanos + frameNanos
         var pixels = [UInt32](repeating: 0xFF000000, count: Int(PANEL_W) * Int(PANEL_H))
         var w: Int32 = 0
         var h: Int32 = 0
@@ -296,7 +298,17 @@ final class EmulatorEngine {
             stopLock.lock(); let stop = shouldStop; stopLock.unlock()
             if stop { break }
 
-            let targetSecs = emu.pointee.emu_secs + (1.0 / 60.0)
+            // Anchored to real elapsed wall-clock time since this loop
+            // started, not incremented by a fixed 1/60s per iteration —
+            // a fixed increment silently drifts behind forever the moment
+            // any single iteration overruns its budget (sleep overshoot,
+            // scheduler jitter, thermal throttling), none of which are
+            // rare on real hardware the way they are in Simulator. This
+            // way a slow iteration's overrun is simply made up by the
+            // next one stepping further, the same self-correcting idea
+            // catchUp() already uses between sessions, just continuous.
+            let wallElapsed = Double(DispatchTime.now().uptimeNanoseconds - startWallNanos) / 1_000_000_000
+            let targetSecs = startEmuSecs + wallElapsed
             while emu.pointee.emu_secs < targetSecs && !emu.pointee.stopped {
                 let before = emu.pointee.cycles
                 cpu_step(emu)
