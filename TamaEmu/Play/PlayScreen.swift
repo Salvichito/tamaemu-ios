@@ -16,6 +16,10 @@ struct PlayScreen: View {
                 Text("Running: \(viewModel.selectedDevice.title)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                ButtonPad(
+                    onPress: { viewModel.pressButton($0) },
+                    onRelease: { viewModel.releaseButton($0) }
+                )
             } else {
                 FirmwareImportView(
                     selectedDevice: $viewModel.selectedDevice,

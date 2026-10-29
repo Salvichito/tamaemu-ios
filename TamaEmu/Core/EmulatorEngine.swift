@@ -25,6 +25,7 @@ private let buildID = "tamaemu-ios-mvp-1"
 /// CPU, a thread-safe framebuffer handoff, and save/flash persistence.
 final class EmulatorEngine {
     let device: TamaDevice
+    let input = InputController()
     private let savePaths: SavePaths
     private let emu: UnsafeMutablePointer<Emu>
     private let frameStore: FrameStore
@@ -141,7 +142,7 @@ final class EmulatorEngine {
                 let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
                 periph_tick(emu, delta)
             }
-            periph_buttons(emu, 0)
+            periph_buttons(emu, input.currentMask())
 
             pixels.withUnsafeMutableBufferPointer { buf in
                 lcd_render(emu, buf.baseAddress, &w, &h)

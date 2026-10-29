@@ -72,6 +72,14 @@ final class PlayViewModel {
         startEngine()
     }
 
+    func pressButton(_ button: InputController.Button) {
+        engine?.input.press(button)
+    }
+
+    func releaseButton(_ button: InputController.Button) {
+        engine?.input.release(button)
+    }
+
     private func startEngine() {
         stopEngine()
         do {

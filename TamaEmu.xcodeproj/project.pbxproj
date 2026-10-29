@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
+		EF5191F516084C0781B33906 /* InputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736990A9EB7F43B291B3E53F /* InputController.swift */; };
 		03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B76611C89874CD080A593F7 /* FirmwareImportView.swift */; };
 		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
 		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
@@ -20,6 +22,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2267519E09184C139C7BAC4C /* ButtonPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonPad.swift; sourceTree = "<group>"; };
+		736990A9EB7F43B291B3E53F /* InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputController.swift; sourceTree = "<group>"; };
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
 		48000D40ECD8B146CAD8EF8F /* TamaEmu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TamaEmu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
@@ -58,6 +62,7 @@
 			children = (
 				66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */,
 				94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */,
+				736990A9EB7F43B291B3E53F /* InputController.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -114,6 +119,7 @@
 				CE2071482F1952F86F44813F /* LCDView.swift */,
 				F78256880EA69DD157D2EBEE /* PlayScreen.swift */,
 				A9228514E9DDD678D810B062 /* PlayViewModel.swift */,
+				2267519E09184C139C7BAC4C /* ButtonPad.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -191,12 +197,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */,
+				0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */,
 				03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */,
 				219462947CE54CAE77590FBB /* LCDView.swift in Sources */,
 				5AFDD78582EA89F72D65FEAB /* PlayScreen.swift in Sources */,
 				76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */,
 				C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */,
 				E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */,
+				EF5191F516084C0781B33906 /* InputController.swift in Sources */,
 				FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
