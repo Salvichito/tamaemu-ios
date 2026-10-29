@@ -87,7 +87,11 @@ final class EmulatorEngine {
                 state_load(e, base, bid, &why, why.count)
             }
         }
-        if result != STATE_LOADED {
+        if result == STATE_LOADED {
+            if let lastSavedAt = savePaths.lastSavedAt {
+                catchUp(seconds: Date().timeIntervalSince(lastSavedAt))
+            }
+        } else {
             cpu_reset(e)
         }
     }
@@ -128,10 +132,13 @@ final class EmulatorEngine {
     /// returned — never while the emulator thread might still be running.
     func save() {
         var why = [CChar](repeating: 0, count: 256)
-        _ = savePaths.stateBasePath.path.withCString { base in
+        let saved = savePaths.stateBasePath.path.withCString { base in
             buildID.withCString { bid in
                 state_save(emu, base, bid, &why, why.count)
             }
+        }
+        if saved != 0 {
+            savePaths.lastSavedAt = Date()
         }
         if emu.pointee.flash_dirty, let rom = emu.pointee.rom {
             let romSize = Int(emu.pointee.dev.rom_size)
@@ -143,6 +150,34 @@ final class EmulatorEngine {
 
     func latestFrame() -> [UInt32]? {
         frameStore.readIfChanged()
+    }
+
+    /// Fast-forwards simulated time with no real-time pacing, to catch up
+    /// on real time that passed while nothing was running (app closed,
+    /// between background wake-ups) — mirrors the Android port's own
+    /// catch-up behavior: capped at 24h of simulated time, same as theirs.
+    /// Also capped on wall-clock compute time (checked periodically, not
+    /// every step, since that would dominate the cost of catching up
+    /// millions of instructions) since BGAppRefreshTask has a strict
+    /// execution budget — stopping early here just means less of the gap
+    /// got caught up, not a crash or lost progress.
+    private func catchUp(seconds: TimeInterval, wallClockBudget: TimeInterval = 5.0) {
+        let cappedSeconds = min(max(seconds, 0), 24 * 3600)
+        guard cappedSeconds > 0 else { return }
+        let targetSecs = emu.pointee.emu_secs + cappedSeconds
+        let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(wallClockBudget * 1_000_000_000)
+        var stepsSinceDeadlineCheck = 0
+        while emu.pointee.emu_secs < targetSecs && !emu.pointee.stopped {
+            let before = emu.pointee.cycles
+            cpu_step(emu)
+            let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
+            periph_tick(emu, delta)
+            stepsSinceDeadlineCheck += 1
+            if stepsSinceDeadlineCheck >= 4096 {
+                stepsSinceDeadlineCheck = 0
+                if DispatchTime.now().uptimeNanoseconds >= deadline { break }
+            }
+        }
     }
 
     private func runLoop() {

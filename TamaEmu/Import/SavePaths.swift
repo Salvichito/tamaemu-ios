@@ -31,4 +31,15 @@ struct SavePaths {
         try FileManager.default.createDirectory(at: romsDir, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: savesDir, withIntermediateDirectories: true)
     }
+
+    /// Real wall-clock time of the last successful save — not part of the
+    /// `.state` snapshot itself (that only knows the emulator's own
+    /// simulated clock). Used to compute how much real time to catch up on
+    /// the next resume.
+    var lastSavedAt: Date? {
+        get { UserDefaults.standard.object(forKey: lastSavedAtKey) as? Date }
+        nonmutating set { UserDefaults.standard.set(newValue, forKey: lastSavedAtKey) }
+    }
+
+    private var lastSavedAtKey: String { "lastSavedAt.\(device.id)" }
 }
