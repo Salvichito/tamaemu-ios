@@ -2,6 +2,10 @@ import SwiftUI
 
 @main
 struct TamaEmuApp: App {
+    init() {
+        NotificationScheduler.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             PlayScreen()
