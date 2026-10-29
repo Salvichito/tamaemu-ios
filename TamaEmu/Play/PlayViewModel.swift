@@ -45,6 +45,23 @@ final class PlayViewModel {
         startEngine()
     }
 
+    /// For when the wrong device was picked at import time: that data is
+    /// simply wrong (e.g. a black screen from a ROM mismatch), not progress
+    /// worth keeping, so it's deleted outright and the import screen comes
+    /// back to let the user try again.
+    func resetFirmware() {
+        stopEngine()
+        SavePaths(device: selectedDevice).deleteAll()
+        UserDefaults.standard.removeObject(forKey: ActiveDeviceLookup.selectedDeviceIDKey)
+        hasFirmware = false
+        errorMessage = nil
+        lcdImage = LCDImageBuilder.makeImage(
+            from: Self.testPattern(width: 128, height: 128),
+            width: 128,
+            height: 128
+        )
+    }
+
     /// Stops the emulator thread and audio (once there is audio) entirely,
     /// after persisting state — this app does not age in the background for
     /// the MVP. Call on scenePhase == .background.

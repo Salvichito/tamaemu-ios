@@ -13,19 +13,22 @@ struct PlayScreen: View {
                 .border(Color(.separator))
 
             if viewModel.hasFirmware {
-                Text("Running: \(viewModel.selectedDevice.title)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text("Running: \(viewModel.selectedDevice.title)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button("Not right? Switch device") { viewModel.resetFirmware() }
+                        .font(.footnote)
+                }
                 ButtonPad(
                     onPress: { viewModel.pressButton($0) },
                     onRelease: { viewModel.releaseButton($0) }
                 )
             } else {
                 FirmwareImportView(
-                    selectedDevice: $viewModel.selectedDevice,
                     devices: viewModel.devices,
-                    onImported: { url in
-                        viewModel.firmwareImported(for: viewModel.selectedDevice, at: url)
+                    onImported: { device, url in
+                        viewModel.firmwareImported(for: device, at: url)
                     }
                 )
             }

@@ -42,4 +42,20 @@ struct SavePaths {
     }
 
     private var lastSavedAtKey: String { "lastSavedAt.\(device.id)" }
+
+    /// Base path for the full snapshot, with `state_save`'s own suffixes
+    /// appended — mirrors the plain string concatenation `state_path()`
+    /// does in state.c (no extra dot).
+    private var stateFilePath: URL { stateBasePath.appendingPathExtension("state") }
+    private var stateLockPath: URL { stateBasePath.appendingPathExtension("lock") }
+
+    /// Removes every file this device's ROM/save data occupies, for when the
+    /// wrong device was picked at import time and the data underneath it is
+    /// simply wrong, not something worth keeping.
+    func deleteAll() {
+        for url in [importedROMPath, liveFlashPath, stateFilePath, stateLockPath] {
+            try? FileManager.default.removeItem(at: url)
+        }
+        UserDefaults.standard.removeObject(forKey: lastSavedAtKey)
+    }
 }

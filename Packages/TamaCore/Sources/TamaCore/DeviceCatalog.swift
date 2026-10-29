@@ -3,10 +3,16 @@ import CTama
 public struct TamaDevice: Identifiable, Hashable, Sendable {
     public let id: String
     public let title: String
+    /// Expected size, in bytes, of this device's ROM dump — the only thing
+    /// about a `.bin` file we can check before the user tells us what it is.
+    /// Several devices share the same size, so it narrows candidates rather
+    /// than uniquely identifying one.
+    public let romSize: Int
 
     fileprivate init(profile: UnsafePointer<DeviceProfile>) {
         id = String(cString: profile.pointee.name)
         title = String(cString: profile.pointee.title)
+        romSize = Int(profile.pointee.rom_size)
     }
 }
 
