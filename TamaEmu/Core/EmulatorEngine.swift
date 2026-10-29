@@ -42,10 +42,15 @@ final class EmulatorEngine {
     /// init()'s catch-up pass — never assume a particular thread.
     var onCallDetected: (() -> Void)?
 
-    private lazy var audioOutput = AudioOutput { [weak self] in
-        guard let self else { return (false, 0) }
-        return (self.emu.pointee.tone_on != 0, self.emu.pointee.tone_freq)
-    }
+    private lazy var audioOutput = AudioOutput(
+        toneProvider: { [weak self] in
+            guard let self else { return (false, 0) }
+            return (self.emu.pointee.tone_on != 0, self.emu.pointee.tone_freq)
+        },
+        settingsProvider: {
+            (AppSettings.muted, Float(AppSettings.volume))
+        }
+    )
 
     /// `onCallDetected` must be supplied here, not assigned after — init()
     /// itself may run a catch-up pass that detects a call, and a handler
@@ -105,6 +110,43 @@ final class EmulatorEngine {
         } else {
             cpu_reset(e)
         }
+        applySettings()
+    }
+
+    /// Pushes the live-adjustable settings (speed, stay-awake) onto the
+    /// running core. Safe to call any time — these are plain struct fields
+    /// the core reads every tick, not something requiring a restart, and
+    /// Android's own equivalent settings take effect immediately too.
+    func applySettings() {
+        emu.pointee.rtc_mult = Int32(AppSettings.speedMultiplier)
+        emu.pointee.stay_awake = AppSettings.stayAwake
+    }
+
+    /// Soft reset: same ROM/flash/RAM, just CPU state and the program
+    /// counter reset to the firmware's reset vector — "battery out and
+    /// in", not a wipe. Only safe to call while the dedicated thread is
+    /// stopped (same precondition as save()).
+    func resetCPU() {
+        cpu_reset(emu)
+    }
+
+    /// Jumps the firmware's own RTC registers straight to a wall-clock
+    /// time. This is a JUMP, unlike catch-up (which steps every emulated
+    /// second) — matches the Android port's own setClock exactly, writing
+    /// through periph_write8 (not a raw ioram poke) so any side effects
+    /// periph.c attaches to these addresses still run; in practice none do
+    /// for the RTC seconds/minutes/hours registers, confirmed by reading
+    /// periph_write8's own dispatch.
+    @discardableResult
+    func setClock(hour: Int, minute: Int, second: Int) -> Bool {
+        guard (0...23).contains(hour), (0...59).contains(minute), (0...59).contains(second) else {
+            return false
+        }
+        func bcd(_ v: Int) -> UInt8 { UInt8((v / 10) << 4 | (v % 10)) }
+        periph_write8(emu, 0x301910, bcd(second))
+        periph_write8(emu, 0x301914, bcd(minute))
+        periph_write8(emu, 0x301918, bcd(hour))
+        return true
     }
 
     deinit {
@@ -202,7 +244,8 @@ final class EmulatorEngine {
     /// execution budget — stopping early here just means less of the gap
     /// got caught up, not a crash or lost progress.
     private func catchUp(seconds: TimeInterval, wallClockBudget: TimeInterval = 5.0) {
-        let cappedSeconds = min(max(seconds, 0), 24 * 3600)
+        let capSeconds = AppSettings.catchUpCapHours * 3600
+        let cappedSeconds = min(max(seconds, 0), capSeconds)
         guard cappedSeconds > 0 else { return }
         let targetSecs = emu.pointee.emu_secs + cappedSeconds
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(wallClockBudget * 1_000_000_000)

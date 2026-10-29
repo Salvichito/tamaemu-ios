@@ -6,12 +6,14 @@ import SwiftUI
 struct LCDView: View {
     let image: CGImage?
 
+    @AppStorage(AppSettings.Keys.sharpPixels) private var sharpPixels = true
+
     var body: some View {
         Group {
             if let image {
                 Image(decorative: image, scale: 1)
                     .resizable()
-                    .interpolation(.none)
+                    .interpolation(sharpPixels ? .none : .high)
                     .aspectRatio(1, contentMode: .fit)
             } else {
                 Color.black.aspectRatio(1, contentMode: .fit)

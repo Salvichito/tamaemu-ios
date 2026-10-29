@@ -22,6 +22,9 @@ private struct ButtonView: View {
     let onPress: (InputController.Button) -> Void
     let onRelease: (InputController.Button) -> Void
 
+    @AppStorage(AppSettings.Keys.buttonColorIndex) private var buttonColorIndex = 0
+    @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
+
     // DragGesture's onChanged fires repeatedly for one physical touch (even
     // with no movement); track whether we've already reported this touch as
     // pressed so periph_buttons sees one press edge per touch, not several.
@@ -31,9 +34,12 @@ private struct ButtonView: View {
         Text(label)
             .font(.headline.bold())
             .frame(width: 56, height: 56)
-            .background(Circle().fill(Color(.secondarySystemBackground)))
+            .background(Circle().fill(TamaPalette.buttonColor(at: buttonColorIndex)))
             .scaleEffect(isPressed ? 0.9 : 1)
             .animation(.easeOut(duration: 0.08), value: isPressed)
+            .sensoryFeedback(trigger: isPressed) { _, new in
+                hapticsEnabled && new ? .impact(weight: .light) : nil
+            }
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in

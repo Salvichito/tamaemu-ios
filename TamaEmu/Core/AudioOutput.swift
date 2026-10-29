@@ -11,22 +11,33 @@ final class AudioOutput {
     private let engine = AVAudioEngine()
     private var phase: Double = 0
     private let toneProvider: () -> (on: Bool, freq: Float)
+    private let settingsProvider: () -> (muted: Bool, volume: Float)
     private var started = false
 
-    init(toneProvider: @escaping () -> (on: Bool, freq: Float)) {
+    /// `baseAmplitude` is the loudest the square wave ever gets; `volume`
+    /// (from settingsProvider) scales down from there, `muted` silences it
+    /// outright. Read once per render callback, not per sample — a
+    /// UserDefaults lookup per sample would be wasteful, not per-callback.
+    init(
+        toneProvider: @escaping () -> (on: Bool, freq: Float),
+        settingsProvider: @escaping () -> (muted: Bool, volume: Float)
+    ) {
         self.toneProvider = toneProvider
+        self.settingsProvider = settingsProvider
         let format = engine.mainMixerNode.outputFormat(forBus: 0)
         let sampleRate = format.sampleRate
-        let amplitude: Float = 0.2
+        let baseAmplitude: Float = 0.2
 
         let sourceNode = AVAudioSourceNode(format: format) { [weak self] _, _, frameCount, audioBufferList in
             guard let self else { return noErr }
             let (on, freq) = self.toneProvider()
+            let (muted, volume) = self.settingsProvider()
+            let amplitude = muted ? 0 : baseAmplitude * volume
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
             var localPhase = self.phase
             for frame in 0..<Int(frameCount) {
                 var sample: Float = 0
-                if on, freq > 0 {
+                if on, freq > 0, amplitude > 0 {
                     sample = localPhase < 0.5 ? amplitude : -amplitude
                     localPhase += Double(freq) / sampleRate
                     if localPhase >= 1.0 { localPhase -= 1.0 }

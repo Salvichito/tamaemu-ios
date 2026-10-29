@@ -45,6 +45,35 @@ final class PlayViewModel {
         startEngine()
     }
 
+    /// Devices that already have firmware imported — each keeps its own
+    /// independent save slot (see SavePaths), so switching between them
+    /// needs no re-import.
+    var importedDevices: [TamaDevice] {
+        devices.filter(ActiveDeviceLookup.hasImportedROM)
+    }
+
+    /// Switches the active device among ones that already have firmware
+    /// imported — no re-import, each device's own save data picks up where
+    /// it left off.
+    func switchToDevice(_ device: TamaDevice) {
+        guard device.id != selectedDevice.id, ActiveDeviceLookup.hasImportedROM(device) else { return }
+        selectedDevice = device
+        UserDefaults.standard.set(device.id, forKey: ActiveDeviceLookup.selectedDeviceIDKey)
+        hasFirmware = true
+        startEngine()
+    }
+
+    /// Deletes one device's ROM/save data outright. If it's the currently
+    /// active device, falls back to the import screen exactly like
+    /// `resetFirmware()`; otherwise it's just removed silently.
+    func removeDeviceData(_ device: TamaDevice) {
+        if device.id == selectedDevice.id {
+            resetFirmware()
+        } else {
+            SavePaths(device: device).deleteAll()
+        }
+    }
+
     /// For when the wrong device was picked at import time: that data is
     /// simply wrong (e.g. a black screen from a ROM mismatch), not progress
     /// worth keeping, so it's deleted outright and the import screen comes
@@ -91,6 +120,84 @@ final class PlayViewModel {
         engine?.input.release(button)
     }
 
+    /// Re-applies speed/stay-awake to the running engine right after a
+    /// Settings change — these take effect immediately, no restart needed.
+    func refreshSettings() {
+        engine?.applySettings()
+    }
+
+    /// Soft reset: same ROM/flash/RAM, CPU state and clock back to the
+    /// firmware's own boot vector. Distinct from `resetFirmware()`, which
+    /// deletes everything.
+    func restartTama() {
+        guard engine != nil else { return }
+        pauseEngine { $0.resetCPU() }
+    }
+
+    /// Runs an arbitrary action on the stopped engine (e.g. `setClock`)
+    /// between stop and save/restart, for Settings actions that need
+    /// direct engine access without exposing `engine` itself.
+    func restartTamaClock(_ action: (EmulatorEngine) -> Void) {
+        guard engine != nil else { return }
+        pauseEngine(action)
+    }
+
+    /// Path to the current device's live flash/save image, if any exists
+    /// yet — for the Settings screen's export action (disabled otherwise).
+    var exportableSaveURL: URL? {
+        let path = SavePaths(device: selectedDevice).liveFlashPath
+        return FileManager.default.fileExists(atPath: path.path) ? path : nil
+    }
+
+    /// Briefly stops and restarts the engine around `save()` so an export
+    /// reflects state current to the moment of export, not just the last
+    /// backgrounding — `save()` itself isn't safe to call while the
+    /// emulator thread might still be stepping (see `EmulatorEngine.save`).
+    func prepareExportURL() -> URL? {
+        if engine != nil { pauseEngine() }
+        return exportableSaveURL
+    }
+
+    /// Stops the engine, runs an optional action on it (e.g. a soft
+    /// reset) between stop and save, saves, then restarts it — the common
+    /// shape behind both a plain "flush to disk" and `restartTama()`.
+    private func pauseEngine(_ between: (EmulatorEngine) -> Void = { _ in }) {
+        displayTimer?.invalidate()
+        displayTimer = nil
+        guard let engine else { return }
+        engine.stop()
+        between(engine)
+        engine.save()
+        engine.start()
+        beginDisplayTimer()
+    }
+
+    /// Overwrites the active device's live flash image with an imported
+    /// `.sav` file and discards its CPU/RAM snapshot, so the next load
+    /// boots fresh from that flash content — mirrors the Android port's
+    /// own save-import (replace flash, drop state, reload).
+    func importSave(from url: URL) throws {
+        guard url.startAccessingSecurityScopedResource() else {
+            throw CocoaError(.fileReadNoPermission)
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
+        let paths = SavePaths(device: selectedDevice)
+        try paths.ensureDirectoriesExist()
+        if FileManager.default.fileExists(atPath: paths.liveFlashPath.path) {
+            try FileManager.default.removeItem(at: paths.liveFlashPath)
+        }
+        try FileManager.default.copyItem(at: url, to: paths.liveFlashPath)
+        paths.deleteStateOnly()
+        startEngine()
+    }
+
+    private func beginDisplayTimer() {
+        displayTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            guard let self, let frame = self.engine?.latestFrame() else { return }
+            self.lcdImage = LCDImageBuilder.makeImage(from: frame, width: 128, height: 128)
+        }
+    }
+
     private func startEngine() {
         stopEngine()
         do {
@@ -105,10 +212,7 @@ final class PlayViewModel {
             newEngine.start()
             engine = newEngine
             errorMessage = nil
-            displayTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-                guard let self, let frame = self.engine?.latestFrame() else { return }
-                self.lcdImage = LCDImageBuilder.makeImage(from: frame, width: 128, height: 128)
-            }
+            beginDisplayTimer()
         } catch {
             errorMessage = error.localizedDescription
             hasFirmware = false

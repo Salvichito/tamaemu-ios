@@ -58,4 +58,14 @@ struct SavePaths {
         }
         UserDefaults.standard.removeObject(forKey: lastSavedAtKey)
     }
+
+    /// Drops just the CPU/RAM snapshot, keeping the ROM and flash image —
+    /// for importing a `.sav` file, after which the next load should boot
+    /// fresh from that flash rather than resume the old (now mismatched)
+    /// snapshot.
+    func deleteStateOnly() {
+        for url in [stateFilePath, stateLockPath] {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
 }

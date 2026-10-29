@@ -84,7 +84,7 @@ struct FirmwareImportView: View {
             errorMessage = "Could not read the selected file."
             return
         }
-        let candidates = devices.filter { $0.romSize == size }
+        let candidates = DeviceDetector.candidates(forFileSize: size, in: devices)
         errorMessage = nil
         switch candidates.count {
         case 0:

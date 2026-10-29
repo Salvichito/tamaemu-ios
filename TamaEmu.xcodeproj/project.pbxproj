@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B76611C89874CD080A593F7 /* FirmwareImportView.swift */; };
+		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
+		5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1122334455667788990AABBC /* DeviceDetector.swift */; };
+		6677889900112233AABBCCFF /* TamaPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2233445566778899AABBCCDD /* TamaPalette.swift */; };
+		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
 		04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */; };
 		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
 		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
@@ -59,6 +63,10 @@
 
 /* Begin PBXFileReference section */
 		04981D1305DB4733ACBC657E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		1122334455667788990AABBC /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
+		2233445566778899AABBCCDD /* TamaPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPalette.swift; sourceTree = "<group>"; };
+		3344556677889900AABBCCEE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
 		14B814DDD09245609E359714 /* TamaEmu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaEmu.entitlements; sourceTree = "<group>"; };
@@ -140,6 +148,7 @@
 				FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */,
 				40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */,
 				36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */,
+				AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -166,8 +175,18 @@
 			children = (
 				ABE647F4A560420EAE69A61E /* SavePaths.swift */,
 				7B76611C89874CD080A593F7 /* FirmwareImportView.swift */,
+				1122334455667788990AABBC /* DeviceDetector.swift */,
 			);
 			path = Import;
+			sourceTree = "<group>";
+		};
+		8899001122334455AABBCC22 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				3344556677889900AABBCCEE /* SettingsView.swift */,
+				2233445566778899AABBCCDD /* TamaPalette.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		C3C94697C2E99148C09374B1 = {
@@ -189,6 +208,7 @@
 				A06D89750D2E0F66F7D32264 /* Core */,
 				C00599C1F0E1438891540EFD /* Import */,
 				DE104E757C15A22698966789 /* Play */,
+				8899001122334455AABBCC22 /* Settings */,
 				8E9FAE9C242B6BB117C6B454 /* Resources */,
 			);
 			path = TamaEmu;
@@ -330,6 +350,10 @@
 				E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */,
 				EF5191F516084C0781B33906 /* InputController.swift in Sources */,
 				FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */,
+				4455667788990011AABBCCDD /* AppSettings.swift in Sources */,
+				5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */,
+				6677889900112233AABBCCFF /* TamaPalette.swift in Sources */,
+				7788990011223344AABBCC11 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
