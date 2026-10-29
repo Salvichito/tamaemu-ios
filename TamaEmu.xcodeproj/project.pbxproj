@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
 		D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B094FAC77A244A49BB27D76A /* AudioOutput.swift */; };
 		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
 		EF5191F516084C0781B33906 /* InputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736990A9EB7F43B291B3E53F /* InputController.swift */; };
@@ -23,6 +24,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
 		2267519E09184C139C7BAC4C /* ButtonPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonPad.swift; sourceTree = "<group>"; };
 		736990A9EB7F43B291B3E53F /* InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputController.swift; sourceTree = "<group>"; };
@@ -66,6 +68,7 @@
 				94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */,
 				736990A9EB7F43B291B3E53F /* InputController.swift */,
 				B094FAC77A244A49BB27D76A /* AudioOutput.swift */,
+				08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -200,6 +203,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */,
+				5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */,
 				D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */,
 				0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */,
 				03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */,

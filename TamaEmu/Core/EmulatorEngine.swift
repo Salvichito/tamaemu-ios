@@ -35,6 +35,13 @@ final class EmulatorEngine {
     private var shouldStop = false
     private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
+    private let callDetector = CallDetector()
+    /// Set by whoever owns this engine to be told when the Tamagotchi
+    /// starts calling for attention (M9c wires this to a local
+    /// notification). May be called from the emulator thread or from
+    /// init()'s catch-up pass — never assume a particular thread.
+    var onCallDetected: (() -> Void)?
+
     private lazy var audioOutput = AudioOutput { [weak self] in
         guard let self else { return (false, 0) }
         return (self.emu.pointee.tone_on != 0, self.emu.pointee.tone_freq)
@@ -152,6 +159,20 @@ final class EmulatorEngine {
         frameStore.readIfChanged()
     }
 
+    /// Call once right after every `cpu_step`, from any loop (normal
+    /// real-time or catch-up) — the melody edge that signals a call can
+    /// happen at any point in either.
+    private func checkCallDetection() {
+        let detected = callDetector.checkToneEdge(
+            toneOn: emu.pointee.tone_on != 0,
+            toneFreq: emu.pointee.tone_freq,
+            emuSecs: emu.pointee.emu_secs
+        )
+        if detected {
+            onCallDetected?()
+        }
+    }
+
     /// Fast-forwards simulated time with no real-time pacing, to catch up
     /// on real time that passed while nothing was running (app closed,
     /// between background wake-ups) — mirrors the Android port's own
@@ -172,6 +193,7 @@ final class EmulatorEngine {
             cpu_step(emu)
             let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
             periph_tick(emu, delta)
+            checkCallDetection()
             stepsSinceDeadlineCheck += 1
             if stepsSinceDeadlineCheck >= 4096 {
                 stepsSinceDeadlineCheck = 0
@@ -197,6 +219,7 @@ final class EmulatorEngine {
                 cpu_step(emu)
                 let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
                 periph_tick(emu, delta)
+                checkCallDetection()
             }
             periph_buttons(emu, input.currentMask())
 
