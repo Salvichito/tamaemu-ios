@@ -54,16 +54,33 @@ final class AudioOutput {
         engine.connect(sourceNode, to: engine.mainMixerNode, format: format)
     }
 
+    /// All three AVAudioSession calls below (`setCategory`, `setActive`
+    /// true/false) are only ever invoked from the main actor in this
+    /// codebase — but AVAudioSession itself warns that calling them
+    /// synchronously there, especially setCategory while the session is
+    /// already active, can cause real UI unresponsiveness, and
+    /// specifically suggests its async activate/deactivate API instead.
+    /// They're pushed onto a background queue here rather than made
+    /// `async` outright, since every caller (EmulatorEngine.start/stop,
+    /// live Settings changes) already treats audio as fire-and-forget,
+    /// best-effort — matching the existing "audio is secondary" stance
+    /// below rather than threading `async`/`await` through call sites
+    /// that have no other reason to need it.
+    private static let sessionQueue = DispatchQueue(label: "TamaEmu.AudioSession", qos: .userInitiated)
+
     func start() {
         guard !started else { return }
-        do {
-            applySessionCategory()
-            try AVAudioSession.sharedInstance().setActive(true)
-            try engine.start()
-            started = true
-        } catch {
-            // Audio is secondary to emulation working at all for the MVP;
-            // a failure here shouldn't take anything else down.
+        started = true
+        Self.sessionQueue.async { [weak self] in
+            guard let self else { return }
+            do {
+                self.setCategoryNow()
+                try AVAudioSession.sharedInstance().setActive(true)
+                try self.engine.start()
+            } catch {
+                // Audio is secondary to emulation working at all for the
+                // MVP; a failure here shouldn't take anything else down.
+            }
         }
     }
 
@@ -74,14 +91,20 @@ final class AudioOutput {
     /// active session — e.g. from Settings, while playing — AVAudioSession
     /// picks up a category change without needing the engine restarted.
     func applySessionCategory() {
+        Self.sessionQueue.async { [weak self] in self?.setCategoryNow() }
+    }
+
+    private func setCategoryNow() {
         let category: AVAudioSession.Category = AppSettings.ignoreSilentSwitch ? .playback : .ambient
         try? AVAudioSession.sharedInstance().setCategory(category, options: [.mixWithOthers])
     }
 
     func stop() {
         guard started else { return }
-        engine.stop()
         started = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        engine.stop()
+        Self.sessionQueue.async {
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 }
