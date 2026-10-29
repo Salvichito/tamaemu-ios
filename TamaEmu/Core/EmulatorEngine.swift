@@ -131,6 +131,14 @@ final class EmulatorEngine {
     func applySettings() {
         emu.pointee.rtc_mult = Int32(AppSettings.speedMultiplier)
         emu.pointee.stay_awake = AppSettings.stayAwake
+        // Guarded on `thread != nil`, not called unconditionally: this is
+        // also called from init() for headless engines (BackgroundRefresh)
+        // that never call start() — touching `audioOutput` there would
+        // force-construct an AVAudioEngine that's never otherwise needed,
+        // against the whole point of that path staying lightweight.
+        if thread != nil {
+            audioOutput.applySessionCategory()
+        }
     }
 
     /// Soft reset: same ROM/flash/RAM, just CPU state and the program

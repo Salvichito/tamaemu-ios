@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.muted) private var muted = false
     @AppStorage(AppSettings.Keys.volume) private var volume = 0.6
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
+    @AppStorage(AppSettings.Keys.ignoreSilentSwitch) private var ignoreSilentSwitch = false
     @AppStorage(AppSettings.Keys.speedMultiplier) private var speedMultiplier = 1
     @AppStorage(AppSettings.Keys.stayAwake) private var stayAwake = false
     @AppStorage(AppSettings.Keys.catchUpCapHours) private var catchUpCapHours = 24.0
@@ -174,8 +175,14 @@ struct SettingsView: View {
             }
             .disabled(muted)
             Toggle("Haptics", isOn: $hapticsEnabled)
+            Toggle("Play in Silent Mode", isOn: Binding(
+                get: { ignoreSilentSwitch },
+                set: { ignoreSilentSwitch = $0; viewModel.refreshSettings() }
+            ))
         } header: {
             Text("Sound & Haptics")
+        } footer: {
+            Text("Overrides the phone's silent switch so the Tama's sound plays anyway — like any game, this also pauses whatever else might be playing while it's on.")
         }
 
         Section {

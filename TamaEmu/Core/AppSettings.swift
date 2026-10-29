@@ -22,6 +22,7 @@ enum AppSettings {
         static let buttonColorIndex = "settings.buttonColorIndex"
         static let accentColorIndex = "settings.accentColorIndex"
         static let sharpPixels = "settings.sharpPixels"
+        static let ignoreSilentSwitch = "settings.ignoreSilentSwitch"
     }
 
     /// Matches the core's own game-clock ladder (`periph_speed_step`), so
@@ -90,6 +91,16 @@ enum AppSettings {
     static var sharpPixels: Bool {
         get { UserDefaults.standard.object(forKey: Keys.sharpPixels) as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: Keys.sharpPixels) }
+    }
+
+    /// Off by default: the Tama stays a "toy" that respects the phone's
+    /// silent switch, matching the original product default. On, it plays
+    /// through the ring/silent switch — the AVAudioSession category this
+    /// drives also means it'll duck/pause other audio apps while active,
+    /// same as any game that offers this option.
+    static var ignoreSilentSwitch: Bool {
+        get { UserDefaults.standard.bool(forKey: Keys.ignoreSilentSwitch) }
+        set { UserDefaults.standard.set(newValue, forKey: Keys.ignoreSilentSwitch) }
     }
 }
 

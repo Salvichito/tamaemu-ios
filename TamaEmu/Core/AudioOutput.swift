@@ -57,15 +57,25 @@ final class AudioOutput {
     func start() {
         guard !started else { return }
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.ambient)
-            try session.setActive(true)
+            applySessionCategory()
+            try AVAudioSession.sharedInstance().setActive(true)
             try engine.start()
             started = true
         } catch {
             // Audio is secondary to emulation working at all for the MVP;
             // a failure here shouldn't take anything else down.
         }
+    }
+
+    /// `.ambient` respects the phone's silent switch (the original
+    /// default — a "toy"); `.playback` ignores it (a "game"), at the cost
+    /// of ducking/pausing whatever else might be playing, same tradeoff
+    /// any game with this option makes. Safe to call again on an already-
+    /// active session — e.g. from Settings, while playing — AVAudioSession
+    /// picks up a category change without needing the engine restarted.
+    func applySessionCategory() {
+        let category: AVAudioSession.Category = AppSettings.ignoreSilentSwitch ? .playback : .ambient
+        try? AVAudioSession.sharedInstance().setCategory(category, options: [.mixWithOthers])
     }
 
     func stop() {
