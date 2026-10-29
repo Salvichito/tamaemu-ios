@@ -66,7 +66,21 @@ final class EmulatorEngine {
     /// `onCallDetected` must be supplied here, not assigned after — init()
     /// itself may run a catch-up pass that detects a call, and a handler
     /// attached only after init() returns would silently miss it.
-    init(device: TamaDevice, savePaths: SavePaths, onCallDetected: (() -> Void)? = nil) throws {
+    ///
+    /// `catchUpWallClockBudget` defaults small because this init() runs
+    /// synchronously on whatever thread constructs it — for the normal
+    /// foreground/launch path that's the main thread, so this budget is
+    /// how long the UI visibly hangs. Any gap too large to fully catch up
+    /// in that time isn't lost (see catchUpBacklog) — it's picked up
+    /// gradually over the next few opens/refreshes instead. The headless
+    /// BackgroundRefresh path blocks no UI at all, so it passes a much
+    /// larger budget explicitly to catch up more aggressively instead.
+    init(
+        device: TamaDevice,
+        savePaths: SavePaths,
+        catchUpWallClockBudget: TimeInterval = 1.0,
+        onCallDetected: (() -> Void)? = nil
+    ) throws {
         guard let profile = device_find(device.id) else {
             throw EmulatorError.unknownDevice(device.id)
         }
@@ -116,7 +130,7 @@ final class EmulatorEngine {
         }
         if result == STATE_LOADED {
             if let lastSavedAt = savePaths.lastSavedAt {
-                catchUp(seconds: Date().timeIntervalSince(lastSavedAt))
+                catchUp(seconds: Date().timeIntervalSince(lastSavedAt), wallClockBudget: catchUpWallClockBudget)
             }
         } else {
             cpu_reset(e)

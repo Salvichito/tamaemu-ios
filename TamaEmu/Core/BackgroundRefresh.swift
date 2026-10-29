@@ -21,9 +21,19 @@ enum BackgroundRefresh {
     static func run() async {
         guard let device = ActiveDeviceLookup.find() else { return }
         let paths = SavePaths(device: device)
-        guard let engine = try? EmulatorEngine(device: device, savePaths: paths, onCallDetected: {
-            NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
-        }) else { return }
+        // No UI is blocked here, unlike the foreground launch path, so
+        // this can afford to catch up far more of the gap per wake-up —
+        // bounded well under BGAppRefreshTask's own execution ceiling
+        // (undocumented exactly, but on the order of 30s) rather than the
+        // ~1s that keeps app launch feeling instant.
+        guard let engine = try? EmulatorEngine(
+            device: device,
+            savePaths: paths,
+            catchUpWallClockBudget: 20.0,
+            onCallDetected: {
+                NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+            }
+        ) else { return }
         // init() already ran its catch-up pass. Publish + save, then let
         // `engine` deallocate — it was never start()ed, so there's no
         // thread to stop and no concurrent writer for save() to worry
