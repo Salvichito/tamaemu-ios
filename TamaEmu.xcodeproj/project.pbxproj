@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B76611C89874CD080A593F7 /* FirmwareImportView.swift */; };
 		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
 		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
+		76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */; };
+		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
 		5AFDD78582EA89F72D65FEAB /* PlayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78256880EA69DD157D2EBEE /* PlayScreen.swift */; };
 		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
 		C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9228514E9DDD678D810B062 /* PlayViewModel.swift */; };
@@ -20,6 +23,9 @@
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
 		48000D40ECD8B146CAD8EF8F /* TamaEmu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TamaEmu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
+		7B76611C89874CD080A593F7 /* FirmwareImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareImportView.swift; sourceTree = "<group>"; };
+		94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorEngine.swift; sourceTree = "<group>"; };
+		ABE647F4A560420EAE69A61E /* SavePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavePaths.swift; sourceTree = "<group>"; };
 		A9228514E9DDD678D810B062 /* PlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayViewModel.swift; sourceTree = "<group>"; };
 		AE4595FCF428E95973D802C6 /* TamaCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TamaCore; path = Packages/TamaCore; sourceTree = SOURCE_ROOT; };
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -51,8 +57,18 @@
 			isa = PBXGroup;
 			children = (
 				66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */,
+				94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		C00599C1F0E1438891540EFD /* Import */ = {
+			isa = PBXGroup;
+			children = (
+				ABE647F4A560420EAE69A61E /* SavePaths.swift */,
+				7B76611C89874CD080A593F7 /* FirmwareImportView.swift */,
+			);
+			path = Import;
 			sourceTree = "<group>";
 		};
 		AB66E2F7B5777459637B33B0 /* Packages */ = {
@@ -85,6 +101,7 @@
 			children = (
 				0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */,
 				A06D89750D2E0F66F7D32264 /* Core */,
+				C00599C1F0E1438891540EFD /* Import */,
 				DE104E757C15A22698966789 /* Play */,
 				8E9FAE9C242B6BB117C6B454 /* Resources */,
 			);
@@ -174,9 +191,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */,
+				03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */,
 				219462947CE54CAE77590FBB /* LCDView.swift in Sources */,
 				5AFDD78582EA89F72D65FEAB /* PlayScreen.swift in Sources */,
+				76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */,
 				C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */,
+				E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */,
 				FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

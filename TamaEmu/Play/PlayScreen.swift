@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlayScreen: View {
     @State private var viewModel = PlayViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 16) {
@@ -10,13 +11,40 @@ struct PlayScreen: View {
             LCDView(image: viewModel.lcdImage)
                 .frame(maxWidth: 280)
                 .border(Color.gray)
-            Text(viewModel.deviceSummary)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+
+            if viewModel.hasFirmware {
+                Text("Running: \(viewModel.selectedDevice.title)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                FirmwareImportView(
+                    selectedDevice: $viewModel.selectedDevice,
+                    devices: viewModel.devices,
+                    onImported: { url in
+                        viewModel.firmwareImported(for: viewModel.selectedDevice, at: url)
+                    }
+                )
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
         }
         .padding()
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                viewModel.stopEngine()
+            case .active:
+                viewModel.resumeIfNeeded()
+            default:
+                break
+            }
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 import CTama
 
-public struct TamaDevice: Identifiable, Sendable {
+public struct TamaDevice: Identifiable, Hashable, Sendable {
     public let id: String
     public let title: String
 

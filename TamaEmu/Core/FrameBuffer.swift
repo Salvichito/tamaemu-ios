@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import os
 
 /// Builds a CGImage from an RGBA8888 (0xAARRGGBB-per-word) pixel buffer,
 /// the exact format `lcd_render` in the C core writes.
@@ -22,5 +23,35 @@ enum LCDImageBuilder {
             shouldInterpolate: false,
             intent: .defaultIntent
         )
+    }
+}
+
+/// Lock-guarded handoff of the latest framebuffer from the emulator thread
+/// to whichever thread reads it for display. Writer and reader never block
+/// each other for more than the time of a 64KB copy.
+final class FrameStore: @unchecked Sendable {
+    private var lock = os_unfair_lock_s()
+    private var buffer: [UInt32]
+    private var changeCounter: UInt64 = 0
+    private var lastRead: UInt64 = 0
+
+    init(width: Int, height: Int) {
+        buffer = [UInt32](repeating: 0xFF000000, count: width * height)
+    }
+
+    func write(_ newBuffer: [UInt32]) {
+        withUnsafeMutablePointer(to: &lock) { os_unfair_lock_lock($0) }
+        buffer = newBuffer
+        changeCounter &+= 1
+        withUnsafeMutablePointer(to: &lock) { os_unfair_lock_unlock($0) }
+    }
+
+    /// Returns the latest frame only if it changed since the last call.
+    func readIfChanged() -> [UInt32]? {
+        withUnsafeMutablePointer(to: &lock) { os_unfair_lock_lock($0) }
+        defer { withUnsafeMutablePointer(to: &lock) { os_unfair_lock_unlock($0) } }
+        guard changeCounter != lastRead else { return nil }
+        lastRead = changeCounter
+        return buffer
     }
 }
