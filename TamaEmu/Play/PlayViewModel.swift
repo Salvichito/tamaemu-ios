@@ -51,6 +51,7 @@ final class PlayViewModel {
         selectedDevice = device
         UserDefaults.standard.set(device.id, forKey: Self.selectedDeviceIDKey)
         hasFirmware = true
+        NotificationScheduler.requestAuthorizationIfNeeded()
         startEngine()
     }
 
@@ -87,7 +88,10 @@ final class PlayViewModel {
         stopEngine()
         do {
             let paths = SavePaths(device: selectedDevice)
-            let newEngine = try EmulatorEngine(device: selectedDevice, savePaths: paths)
+            let deviceTitle = selectedDevice.title
+            let newEngine = try EmulatorEngine(device: selectedDevice, savePaths: paths) {
+                NotificationScheduler.fireCallingNotification(deviceTitle: deviceTitle)
+            }
             newEngine.start()
             engine = newEngine
             errorMessage = nil

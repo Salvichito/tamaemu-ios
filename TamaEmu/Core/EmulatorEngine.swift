@@ -47,13 +47,17 @@ final class EmulatorEngine {
         return (self.emu.pointee.tone_on != 0, self.emu.pointee.tone_freq)
     }
 
-    init(device: TamaDevice, savePaths: SavePaths) throws {
+    /// `onCallDetected` must be supplied here, not assigned after — init()
+    /// itself may run a catch-up pass that detects a call, and a handler
+    /// attached only after init() returns would silently miss it.
+    init(device: TamaDevice, savePaths: SavePaths, onCallDetected: (() -> Void)? = nil) throws {
         guard let profile = device_find(device.id) else {
             throw EmulatorError.unknownDevice(device.id)
         }
         self.device = device
         self.savePaths = savePaths
         self.frameStore = FrameStore(width: Int(PANEL_W), height: Int(PANEL_H))
+        self.onCallDetected = onCallDetected
 
         // Don't assume the caller already created these — state_save/the
         // flash-image write would otherwise fail silently (missing
