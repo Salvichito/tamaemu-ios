@@ -34,6 +34,11 @@ final class EmulatorEngine {
     private let stopLock = NSLock()
     private var shouldStop = false
 
+    private lazy var audioOutput = AudioOutput { [weak self] in
+        guard let self else { return (false, 0) }
+        return (self.emu.pointee.tone_on != 0, self.emu.pointee.tone_freq)
+    }
+
     init(device: TamaDevice, savePaths: SavePaths) throws {
         guard let profile = device_find(device.id) else {
             throw EmulatorError.unknownDevice(device.id)
@@ -95,11 +100,13 @@ final class EmulatorEngine {
         t.qualityOfService = .userInteractive
         thread = t
         t.start()
+        audioOutput.start()
     }
 
     func stop() {
         stopLock.lock(); shouldStop = true; stopLock.unlock()
         thread = nil
+        audioOutput.stop()
     }
 
     /// Persists the full snapshot and, if the firmware has written to its
