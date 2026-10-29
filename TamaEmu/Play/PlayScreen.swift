@@ -15,13 +15,9 @@ struct PlayScreen: View {
                     .border(Color(.separator))
 
                 if viewModel.hasFirmware {
-                    HStack(spacing: 8) {
-                        Text("Running: \(viewModel.selectedDevice.title)")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        Button("Not right? Switch device") { viewModel.resetFirmware() }
-                            .font(.footnote)
-                    }
+                    Text(viewModel.selectedDevice.title)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     ButtonPad(
                         onPress: { viewModel.pressButton($0) },
                         onRelease: { viewModel.releaseButton($0) }
