@@ -75,14 +75,15 @@ final class EmulatorEngine {
     /// itself may run a catch-up pass that detects a call, and a handler
     /// attached only after init() returns would silently miss it.
     ///
-    /// `catchUpWallClockBudget` defaults small because this init() runs
-    /// synchronously on whatever thread constructs it — for the normal
-    /// foreground/launch path that's the main thread, so this budget is
-    /// how long the UI visibly hangs. Any gap too large to fully catch up
-    /// in that time isn't lost (see catchUpBacklog) — it's picked up
-    /// gradually over the next few opens/refreshes instead. The headless
-    /// BackgroundRefresh path blocks no UI at all, so it passes a much
-    /// larger budget explicitly to catch up more aggressively instead.
+    /// `catchUpWallClockBudget` runs synchronously inside this init(), on
+    /// whatever thread constructs it — every real caller (PlayViewModel's
+    /// startEngine(), BackgroundRefresh) now does that off the main
+    /// thread specifically so this can take however long it actually
+    /// needs without the UI appearing to hang. The small 1.0s default
+    /// here only matters if some future caller constructs this directly
+    /// on a thread that *does* need to stay responsive. Any gap too large
+    /// to fully catch up in the given budget isn't lost either way (see
+    /// catchUpBacklog) — it's picked up gradually over the next attempt.
     init(
         device: TamaDevice,
         savePaths: SavePaths,

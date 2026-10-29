@@ -14,6 +14,11 @@ final class PlayViewModel {
 
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
+    /// Bumped by stopEngine() and every startEngine() call — a load that
+    /// finishes after being superseded (stopped, switched, restarted
+    /// again) checks this before applying its result, so it discards
+    /// itself instead of resurrecting a stale engine.
+    private var startGeneration = 0
 
     init() {
         // The filesystem is the ground truth — a lost/stale preference
@@ -101,6 +106,7 @@ final class PlayViewModel {
     /// after persisting state — this app does not age in the background for
     /// the MVP. Call on scenePhase == .background.
     func stopEngine() {
+        startGeneration += 1  // invalidates any startEngine() load still in flight
         displayTimer?.invalidate()
         displayTimer = nil
         // stop() must come first: it blocks until the emulator thread has
@@ -214,24 +220,68 @@ final class PlayViewModel {
         }
     }
 
+    /// Loading an engine runs catch-up synchronously inside its init() —
+    /// and real-device throughput turned out to be far below what the
+    /// previous fixed, blocking budget assumed (measured ~12x real time
+    /// on an actual phone, not the ~230x Simulator figure the budget was
+    /// originally sized against). No fixed synchronous budget can both
+    /// keep launch instant AND make real progress at that throughput, so
+    /// this now runs entirely off the main thread instead of inside
+    /// PlayViewModel's (and ultimately the UI's) call stack — the catch-up
+    /// pass can take however long it actually needs without the app ever
+    /// appearing to hang. A larger per-attempt budget is safe now that
+    /// nothing is waiting on it.
+    private nonisolated static let catchUpWallClockBudget: TimeInterval = 10.0
+
     private func startEngine() {
         stopEngine()
-        do {
-            let paths = SavePaths(device: selectedDevice)
-            let deviceTitle = selectedDevice.title
-            let newEngine = try EmulatorEngine(device: selectedDevice, savePaths: paths) {
-                NotificationScheduler.fireCallingNotification(deviceTitle: deviceTitle)
+        startGeneration += 1
+        let generation = startGeneration
+        let device = selectedDevice
+        let paths = SavePaths(device: device)
+        let deviceTitle = device.title
+
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let result = Result {
+                try EmulatorEngine(
+                    device: device,
+                    savePaths: paths,
+                    catchUpWallClockBudget: Self.catchUpWallClockBudget,
+                    onCallDetected: {
+                        NotificationScheduler.fireCallingNotification(deviceTitle: deviceTitle)
+                    }
+                )
             }
-            if let image = LCDImageBuilder.makeImage(from: newEngine.renderCurrentFrame(), width: 128, height: 128) {
-                WidgetSharedState.publish(image: image, deviceTitle: deviceTitle)
+            guard let self else { return }
+            switch result {
+            case .success(let newEngine):
+                let image = LCDImageBuilder.makeImage(
+                    from: newEngine.renderCurrentFrame(), width: 128, height: 128
+                )
+                await MainActor.run {
+                    guard self.startGeneration == generation else {
+                        // Superseded while this was loading (stopped,
+                        // switched devices, restarted) — this engine
+                        // never started running, so just persist whatever
+                        // catch-up progress it made and let it go.
+                        newEngine.save()
+                        return
+                    }
+                    if let image {
+                        WidgetSharedState.publish(image: image, deviceTitle: deviceTitle)
+                    }
+                    newEngine.start()
+                    self.engine = newEngine
+                    self.errorMessage = nil
+                    self.beginDisplayTimer()
+                }
+            case .failure(let error):
+                await MainActor.run {
+                    guard self.startGeneration == generation else { return }
+                    self.errorMessage = error.localizedDescription
+                    self.hasFirmware = false
+                }
             }
-            newEngine.start()
-            engine = newEngine
-            errorMessage = nil
-            beginDisplayTimer()
-        } catch {
-            errorMessage = error.localizedDescription
-            hasFirmware = false
         }
     }
 
