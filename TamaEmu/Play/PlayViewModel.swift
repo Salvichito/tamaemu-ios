@@ -60,8 +60,11 @@ final class PlayViewModel {
     func stopEngine() {
         displayTimer?.invalidate()
         displayTimer = nil
-        engine?.save()
+        // stop() must come first: it blocks until the emulator thread has
+        // actually exited, which save() depends on to safely read the Emu
+        // struct without a concurrent writer.
         engine?.stop()
+        engine?.save()
         engine = nil
     }
 

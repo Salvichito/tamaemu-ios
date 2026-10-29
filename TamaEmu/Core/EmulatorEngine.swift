@@ -33,6 +33,7 @@ final class EmulatorEngine {
     private var thread: Thread?
     private let stopLock = NSLock()
     private var shouldStop = false
+    private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
     private lazy var audioOutput = AudioOutput { [weak self] in
         guard let self else { return (false, 0) }
@@ -46,6 +47,12 @@ final class EmulatorEngine {
         self.device = device
         self.savePaths = savePaths
         self.frameStore = FrameStore(width: Int(PANEL_W), height: Int(PANEL_H))
+
+        // Don't assume the caller already created these — state_save/the
+        // flash-image write would otherwise fail silently (missing
+        // directory) the first time a device is driven without going
+        // through the import flow.
+        try? savePaths.ensureDirectoriesExist()
 
         let e = UnsafeMutablePointer<Emu>.allocate(capacity: 1)
         memset(e, 0, MemoryLayout<Emu>.stride)
@@ -103,15 +110,22 @@ final class EmulatorEngine {
         audioOutput.start()
     }
 
+    /// Signals the emulator thread to stop and blocks until it actually has
+    /// — `save()` reads the whole Emu struct, so it must never run while
+    /// the thread could still be concurrently stepping it. The 1s timeout
+    /// is only a safety net against a true hang; the thread normally exits
+    /// within one frame.
     func stop() {
+        guard thread != nil else { return }
         stopLock.lock(); shouldStop = true; stopLock.unlock()
+        _ = stoppedSemaphore.wait(timeout: .now() + 1.0)
         thread = nil
         audioOutput.stop()
     }
 
     /// Persists the full snapshot and, if the firmware has written to its
-    /// flash, the live flash image too. Call on backgrounding and
-    /// periodically.
+    /// flash, the live flash image too. Call only after stop() has
+    /// returned — never while the emulator thread might still be running.
     func save() {
         var why = [CChar](repeating: 0, count: 256)
         _ = savePaths.stateBasePath.path.withCString { base in
@@ -164,5 +178,6 @@ final class EmulatorEngine {
             }
             nextDeadlineNanos += frameNanos
         }
+        stoppedSemaphore.signal()
     }
 }
