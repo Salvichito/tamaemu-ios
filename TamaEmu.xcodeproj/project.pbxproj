@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
 		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
 		D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B094FAC77A244A49BB27D76A /* AudioOutput.swift */; };
@@ -25,6 +26,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
+		14B814DDD09245609E359714 /* TamaEmu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaEmu.entitlements; sourceTree = "<group>"; };
 		6071AE0290284B2485601BEE /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
@@ -72,6 +75,7 @@
 				B094FAC77A244A49BB27D76A /* AudioOutput.swift */,
 				08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */,
 				6071AE0290284B2485601BEE /* NotificationScheduler.swift */,
+				FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -114,6 +118,7 @@
 			isa = PBXGroup;
 			children = (
 				0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */,
+				14B814DDD09245609E359714 /* TamaEmu.entitlements */,
 				A06D89750D2E0F66F7D32264 /* Core */,
 				C00599C1F0E1438891540EFD /* Import */,
 				DE104E757C15A22698966789 /* Play */,
@@ -208,6 +213,7 @@
 				0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */,
 				5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */,
 				5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */,
+				4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */,
 				D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */,
 				0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */,
 				03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */,
@@ -229,6 +235,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -250,6 +257,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;

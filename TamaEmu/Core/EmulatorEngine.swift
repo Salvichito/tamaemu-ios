@@ -163,6 +163,21 @@ final class EmulatorEngine {
         frameStore.readIfChanged()
     }
 
+    /// Renders the current frame synchronously, for one-off uses (e.g.
+    /// publishing to the widget right after init()'s catch-up pass, before
+    /// the dedicated thread has rendered anything into FrameStore yet).
+    /// Safe to call before start() (nothing else is touching `emu` yet)
+    /// or after stop() has joined (same reasoning as save()).
+    func renderCurrentFrame() -> [UInt32] {
+        var pixels = [UInt32](repeating: 0xFF000000, count: Int(PANEL_W) * Int(PANEL_H))
+        var w: Int32 = 0
+        var h: Int32 = 0
+        pixels.withUnsafeMutableBufferPointer { buf in
+            lcd_render(emu, buf.baseAddress, &w, &h)
+        }
+        return pixels
+    }
+
     /// Call once right after every `cpu_step`, from any loop (normal
     /// real-time or catch-up) — the melody edge that signals a call can
     /// happen at any point in either.

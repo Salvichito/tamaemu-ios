@@ -92,6 +92,9 @@ final class PlayViewModel {
             let newEngine = try EmulatorEngine(device: selectedDevice, savePaths: paths) {
                 NotificationScheduler.fireCallingNotification(deviceTitle: deviceTitle)
             }
+            if let image = LCDImageBuilder.makeImage(from: newEngine.renderCurrentFrame(), width: 128, height: 128) {
+                WidgetSharedState.publish(image: image, deviceTitle: deviceTitle)
+            }
             newEngine.start()
             engine = newEngine
             errorMessage = nil
