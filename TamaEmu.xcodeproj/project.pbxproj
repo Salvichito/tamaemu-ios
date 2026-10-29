@@ -1,0 +1,384 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
+		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
+		5AFDD78582EA89F72D65FEAB /* PlayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78256880EA69DD157D2EBEE /* PlayScreen.swift */; };
+		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
+		C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9228514E9DDD678D810B062 /* PlayViewModel.swift */; };
+		E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7594ABE9067A97A1A2D888F3 /* TamaCore */; };
+		FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
+		48000D40ECD8B146CAD8EF8F /* TamaEmu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TamaEmu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
+		A9228514E9DDD678D810B062 /* PlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayViewModel.swift; sourceTree = "<group>"; };
+		AE4595FCF428E95973D802C6 /* TamaCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TamaCore; path = Packages/TamaCore; sourceTree = SOURCE_ROOT; };
+		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
+		F78256880EA69DD157D2EBEE /* PlayScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayScreen.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B536D9A96CC802A0C2F886D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		8E9FAE9C242B6BB117C6B454 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A06D89750D2E0F66F7D32264 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		AB66E2F7B5777459637B33B0 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				AE4595FCF428E95973D802C6 /* TamaCore */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		B0CC56E460754400D65818A7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				48000D40ECD8B146CAD8EF8F /* TamaEmu.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C3C94697C2E99148C09374B1 = {
+			isa = PBXGroup;
+			children = (
+				AB66E2F7B5777459637B33B0 /* Packages */,
+				DB258A04DE97642CF7DF85FD /* TamaEmu */,
+				B0CC56E460754400D65818A7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DB258A04DE97642CF7DF85FD /* TamaEmu */ = {
+			isa = PBXGroup;
+			children = (
+				0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */,
+				A06D89750D2E0F66F7D32264 /* Core */,
+				DE104E757C15A22698966789 /* Play */,
+				8E9FAE9C242B6BB117C6B454 /* Resources */,
+			);
+			path = TamaEmu;
+			sourceTree = "<group>";
+		};
+		DE104E757C15A22698966789 /* Play */ = {
+			isa = PBXGroup;
+			children = (
+				CE2071482F1952F86F44813F /* LCDView.swift */,
+				F78256880EA69DD157D2EBEE /* PlayScreen.swift */,
+				A9228514E9DDD678D810B062 /* PlayViewModel.swift */,
+			);
+			path = Play;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B439B3BD28C3C79AAF386EED /* TamaEmu */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 172A4AF1A72A077FD9F56EA3 /* Build configuration list for PBXNativeTarget "TamaEmu" */;
+			buildPhases = (
+				A343ABF042C4922CC0E458BA /* Sources */,
+				85530BAB898D3A7620382C73 /* Resources */,
+				B536D9A96CC802A0C2F886D9 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TamaEmu;
+			packageProductDependencies = (
+				7594ABE9067A97A1A2D888F3 /* TamaCore */,
+			);
+			productName = TamaEmu;
+			productReference = 48000D40ECD8B146CAD8EF8F /* TamaEmu.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		79EE1E46263308E7329E29E1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 3E881963CA10CE125A9DE81C /* Build configuration list for PBXProject "TamaEmu" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C3C94697C2E99148C09374B1;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9C4F7219BFB510234668F893 /* XCLocalSwiftPackageReference "Packages/TamaCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B0CC56E460754400D65818A7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B439B3BD28C3C79AAF386EED /* TamaEmu */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		85530BAB898D3A7620382C73 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A343ABF042C4922CC0E458BA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */,
+				219462947CE54CAE77590FBB /* LCDView.swift in Sources */,
+				5AFDD78582EA89F72D65FEAB /* PlayScreen.swift in Sources */,
+				C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */,
+				FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		36F3512EEA8E21D9A4A7D9E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TamaEmu;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.fluorescente.TamaEmu;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6B2D3D1FA88C0C29A789FEE0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TamaEmu;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.fluorescente.TamaEmu;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7B73CEECB807ECC396954D91 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7C6A478A2492AEC2E405B0B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		172A4AF1A72A077FD9F56EA3 /* Build configuration list for PBXNativeTarget "TamaEmu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B2D3D1FA88C0C29A789FEE0 /* Debug */,
+				36F3512EEA8E21D9A4A7D9E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3E881963CA10CE125A9DE81C /* Build configuration list for PBXProject "TamaEmu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B73CEECB807ECC396954D91 /* Debug */,
+				7C6A478A2492AEC2E405B0B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		9C4F7219BFB510234668F893 /* XCLocalSwiftPackageReference "Packages/TamaCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TamaCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7594ABE9067A97A1A2D888F3 /* TamaCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TamaCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 79EE1E46263308E7329E29E1 /* Project object */;
+}
