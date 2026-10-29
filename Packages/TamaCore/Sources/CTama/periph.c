@@ -144,7 +144,10 @@ static void tone_update(Emu *e)
     uint16_t crb = (uint16_t)(IOB(0x300782) | (IOB(0x300783) << 8));
     uint8_t  ctl = IOB(0x300786), ck = IOB(0x3007E0);
     uint8_t on = (ctl & 1) && (ctl & 4) && (ck & 8) && cra > 0 && cra < crb;
-    double mhz = e->cmu.mclk_hz > 0 ? e->cmu.mclk_hz : e->dev.osc3_hz;
+    /* iOS port: tone_hz (when set) decouples audio pitch from osc3_hz —
+     * see device.c and CREDITS.md. */
+    double mhz = e->dev.tone_hz > 0 ? e->dev.tone_hz
+                : e->cmu.mclk_hz > 0 ? e->cmu.mclk_hz : e->dev.osc3_hz;
     float freq = (float)(mhz / pd[ck & 7] / (double)(crb + 1));
     if (on == e->tone_on && (!on || freq == e->tone_freq)) return;
     e->tone_on = on; e->tone_freq = freq;
@@ -412,7 +415,8 @@ void periph_write8(Emu *e, uint32_t a, uint8_t v)
     /* Restarting T2 emits one decaying note even if firmware leaves the timer on. */
     if (a == 0x3007E4 && (v & 8)) {
         static const uint32_t pd[8] = {1,2,4,16,64,256,1024,4096};
-        double mhz = e->cmu.mclk_hz > 0 ? e->cmu.mclk_hz : e->dev.osc3_hz;
+        double mhz = e->dev.tone_hz > 0 ? e->dev.tone_hz
+                    : e->cmu.mclk_hz > 0 ? e->cmu.mclk_hz : e->dev.osc3_hz;
         uint16_t cra = (uint16_t)(IOB(0x300790) | (IOB(0x300791) << 8));
         uint16_t crb = (uint16_t)(IOB(0x300792) | (IOB(0x300793) << 8));
         if (crb > 1) {
