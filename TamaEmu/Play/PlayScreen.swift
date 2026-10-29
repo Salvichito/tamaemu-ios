@@ -43,6 +43,7 @@ struct PlayScreen: View {
             switch newPhase {
             case .background:
                 viewModel.stopEngine()
+                BackgroundRefresh.scheduleNext()
             case .active:
                 viewModel.resumeIfNeeded()
             default:

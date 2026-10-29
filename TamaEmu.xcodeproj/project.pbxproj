@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */; };
+		04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
 		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
@@ -26,6 +28,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveDeviceLookup.swift; sourceTree = "<group>"; };
+		36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
+		33A5894F6DD24F569DA1474D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
 		14B814DDD09245609E359714 /* TamaEmu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaEmu.entitlements; sourceTree = "<group>"; };
 		6071AE0290284B2485601BEE /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
@@ -76,6 +81,8 @@
 				08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */,
 				6071AE0290284B2485601BEE /* NotificationScheduler.swift */,
 				FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */,
+				40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */,
+				36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -119,6 +126,7 @@
 			children = (
 				0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */,
 				14B814DDD09245609E359714 /* TamaEmu.entitlements */,
+				33A5894F6DD24F569DA1474D /* Info.plist */,
 				A06D89750D2E0F66F7D32264 /* Core */,
 				C00599C1F0E1438891540EFD /* Import */,
 				DE104E757C15A22698966789 /* Play */,
@@ -214,6 +222,8 @@
 				5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */,
 				5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */,
 				4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */,
+				7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */,
+				04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */,
 				D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */,
 				0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */,
 				03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */,
@@ -238,9 +248,7 @@
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = TamaEmu;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_FILE = TamaEmu/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -260,9 +268,7 @@
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = TamaEmu;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_FILE = TamaEmu/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

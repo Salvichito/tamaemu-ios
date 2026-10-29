@@ -15,27 +15,17 @@ final class PlayViewModel {
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
 
-    private static let selectedDeviceIDKey = "selectedDeviceID"
-
     init() {
-        // Prefer the remembered device, but fall back to scanning for
-        // whichever device actually has an imported ROM on disk — the
-        // filesystem is the ground truth, a lost/stale preference should
-        // never hide an already-imported firmware behind the import screen.
-        let remembered = UserDefaults.standard.string(forKey: Self.selectedDeviceIDKey)
-            .flatMap(DeviceCatalog.find(name:))
-        func hasImportedROM(_ device: TamaDevice) -> Bool {
-            FileManager.default.fileExists(atPath: SavePaths(device: device).importedROMPath.path)
-        }
-        if let remembered, hasImportedROM(remembered) {
-            selectedDevice = remembered
-        } else if let found = devices.first(where: hasImportedROM) {
+        // The filesystem is the ground truth — a lost/stale preference
+        // should never hide an already-imported firmware behind the
+        // import screen.
+        if let found = ActiveDeviceLookup.find() {
             selectedDevice = found
         } else {
             selectedDevice = DeviceCatalog.defaultDevice()
         }
 
-        if hasImportedROM(selectedDevice) {
+        if ActiveDeviceLookup.hasImportedROM(selectedDevice) {
             hasFirmware = true
             startEngine()
         } else {
@@ -49,7 +39,7 @@ final class PlayViewModel {
 
     func firmwareImported(for device: TamaDevice, at url: URL) {
         selectedDevice = device
-        UserDefaults.standard.set(device.id, forKey: Self.selectedDeviceIDKey)
+        UserDefaults.standard.set(device.id, forKey: ActiveDeviceLookup.selectedDeviceIDKey)
         hasFirmware = true
         NotificationScheduler.requestAuthorizationIfNeeded()
         startEngine()

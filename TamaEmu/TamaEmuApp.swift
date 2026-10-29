@@ -6,5 +6,9 @@ struct TamaEmuApp: App {
         WindowGroup {
             PlayScreen()
         }
+        .backgroundTask(.appRefresh(BackgroundRefresh.taskID)) {
+            await BackgroundRefresh.run()
+            BackgroundRefresh.scheduleNext()
+        }
     }
 }
