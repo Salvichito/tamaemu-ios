@@ -39,7 +39,7 @@ struct PlayScreen: View {
                 }
             }
             .padding()
-            .navigationTitle("TamaEmu")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
