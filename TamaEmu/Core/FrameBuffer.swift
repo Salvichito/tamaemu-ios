@@ -39,10 +39,20 @@ final class FrameStore: @unchecked Sendable {
         buffer = [UInt32](repeating: 0xFF000000, count: width * height)
     }
 
+    /// Only bumps `changeCounter` when the pixels actually differ from the
+    /// last write — `runLoop()` calls this every emulated frame (60Hz)
+    /// regardless of whether anything visibly changed, and this display is
+    /// mostly static (a watch LCD, not video), so without this check the
+    /// display timer would rebuild a CGImage and redraw the whole LCDView
+    /// (including the scanline/glare Canvas overlay) 60 times a second even
+    /// while the Tama is just sitting idle on screen — real, needless
+    /// CPU/GPU work for a picture that hasn't moved.
     func write(_ newBuffer: [UInt32]) {
         withUnsafeMutablePointer(to: &lock) { os_unfair_lock_lock($0) }
-        buffer = newBuffer
-        changeCounter &+= 1
+        if newBuffer != buffer {
+            buffer = newBuffer
+            changeCounter &+= 1
+        }
         withUnsafeMutablePointer(to: &lock) { os_unfair_lock_unlock($0) }
     }
 
