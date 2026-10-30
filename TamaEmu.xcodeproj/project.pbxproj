@@ -19,6 +19,8 @@
 		2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
+		7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
+		8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
 		5AFDD78582EA89F72D65FEAB /* PlayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78256880EA69DD157D2EBEE /* PlayScreen.swift */; };
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
@@ -94,6 +96,7 @@
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
 		F78256880EA69DD157D2EBEE /* PlayScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayScreen.swift; sourceTree = "<group>"; };
 		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDScreenEffect.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +149,7 @@
 				08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */,
 				6071AE0290284B2485601BEE /* NotificationScheduler.swift */,
 				FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */,
+				9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */,
 				40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */,
 				36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */,
 				AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */,
@@ -327,6 +331,7 @@
 				F847517F815D45A390B05D05 /* TamaProvider.swift in Sources */,
 				B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */,
 				5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */,
+				7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -338,6 +343,7 @@
 				5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */,
 				5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */,
 				4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */,
+				8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */,
 				7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */,
 				04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */,
 				D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */,

@@ -15,6 +15,8 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.buttonColorIndex) private var buttonColorIndex = 0
     @AppStorage(AppSettings.Keys.accentColorIndex) private var accentColorIndex = 0
     @AppStorage(AppSettings.Keys.sharpPixels) private var sharpPixels = true
+    @AppStorage(WidgetSharedState.lcdEffectEnabledKey, store: WidgetSharedState.sharedDefaultsOrStandard)
+    private var lcdEffectEnabled = true
 
     @State private var showingImportSheet = false
     @State private var showingSaveImporter = false
@@ -231,10 +233,14 @@ struct SettingsView: View {
                 }
             }
             Toggle("Sharp pixels", isOn: $sharpPixels)
+            Toggle("LCD Screen Effect", isOn: Binding(
+                get: { lcdEffectEnabled },
+                set: { lcdEffectEnabled = $0; WidgetSharedState.requestWidgetRefresh() }
+            ))
         } header: {
             Text("Display")
         } footer: {
-            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead.")
+            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike.")
         }
     }
 }

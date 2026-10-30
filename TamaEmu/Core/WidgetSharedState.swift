@@ -27,8 +27,21 @@ enum WidgetSharedState {
         UserDefaults(suiteName: appGroupID)
     }
 
+    /// Non-optional, for @AppStorage call sites (which need a concrete
+    /// store) — falls back to .standard only if the App Group container
+    /// somehow isn't available, same silent-degrade posture as `publish`.
+    static var sharedDefaultsOrStandard: UserDefaults {
+        sharedDefaults ?? .standard
+    }
+
     private static let deviceTitleKey = "deviceTitle"
     private static let lastUpdatedKey = "lastUpdated"
+
+    /// Settings' "LCD Screen Effect" toggle, stored in the App Group suite
+    /// (not AppSettings' UserDefaults.standard) specifically so the widget
+    /// reads the exact same value the in-app screen does — one source of
+    /// truth instead of a value that needs mirroring between the two.
+    static let lcdEffectEnabledKey = "lcdEffectEnabled"
 
     static var deviceTitle: String? {
         get { sharedDefaults?.string(forKey: deviceTitleKey) }
@@ -38,6 +51,18 @@ enum WidgetSharedState {
     static var lastUpdated: Date? {
         get { sharedDefaults?.object(forKey: lastUpdatedKey) as? Date }
         set { sharedDefaults?.set(newValue, forKey: lastUpdatedKey) }
+    }
+
+    static var lcdEffectEnabled: Bool {
+        get { sharedDefaults?.object(forKey: lcdEffectEnabledKey) as? Bool ?? true }
+        set { sharedDefaults?.set(newValue, forKey: lcdEffectEnabledKey) }
+    }
+
+    /// Settings changes to lcdEffectEnabled don't touch the frame/timestamp
+    /// `publish()` already handles, so they need their own nudge to reach
+    /// the widget before its next natural refresh (which can be ~30min out).
+    static func requestWidgetRefresh() {
+        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
     }
 
     /// Writes the current LCD frame + device title to the shared

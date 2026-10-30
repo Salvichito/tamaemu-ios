@@ -12,7 +12,6 @@ struct PlayScreen: View {
             VStack(spacing: 16) {
                 LCDView(image: viewModel.lcdImage)
                     .frame(maxWidth: 280)
-                    .border(Color(.separator))
 
                 if viewModel.hasFirmware {
                     Text(viewModel.selectedDevice.title)
