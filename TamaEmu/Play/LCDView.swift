@@ -13,8 +13,8 @@ struct LCDView: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            // Same curvature convention as an app icon's squircle.
-            let corner = side * 0.2237
+            // Subtle rounding, closer to a standard rounded rect than an icon's squircle.
+            let corner = side * 0.08
 
             Group {
                 if let image {
