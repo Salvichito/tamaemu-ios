@@ -85,11 +85,11 @@ final class AudioOutput {
     }
 
     /// `.ambient` respects the phone's silent switch (the original
-    /// default — a "toy"); `.playback` ignores it (a "game"), at the cost
-    /// of ducking/pausing whatever else might be playing, same tradeoff
-    /// any game with this option makes. Safe to call again on an already-
-    /// active session — e.g. from Settings, while playing — AVAudioSession
-    /// picks up a category change without needing the engine restarted.
+    /// default — a "toy"); `.playback` ignores it (a "game"), with
+    /// `.mixWithOthers` so it plays over whatever else is already going
+    /// rather than silencing it. Safe to call again on an already-active
+    /// session — e.g. from Settings, while playing — AVAudioSession picks
+    /// up a category change without needing the engine restarted.
     func applySessionCategory() {
         Self.sessionQueue.async { [weak self] in self?.setCategoryNow() }
     }
@@ -99,12 +99,17 @@ final class AudioOutput {
         try? AVAudioSession.sharedInstance().setCategory(category, options: [.mixWithOthers])
     }
 
+    /// Deliberately does NOT deactivate the shared AVAudioSession — only
+    /// the engine, which is what actually costs CPU/battery while
+    /// backgrounded. start()/stop() run on every scenePhase change, so a
+    /// session that's fully deactivated here and reactivated on the next
+    /// foreground is a *cold* activation each time, which — even with
+    /// `.mixWithOthers` already set on the category — has been observed to
+    /// still interrupt whatever else (e.g. Music/Spotify) was playing.
+    /// Leaving the session active makes that reactivation a no-op instead.
     func stop() {
         guard started else { return }
         started = false
         engine.stop()
-        Self.sessionQueue.async {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        }
     }
 }

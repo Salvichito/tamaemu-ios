@@ -8,27 +8,27 @@
 
 /* Begin PBXBuildFile section */
 		03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B76611C89874CD080A593F7 /* FirmwareImportView.swift */; };
-		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
-		5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1122334455667788990AABBC /* DeviceDetector.swift */; };
-		6677889900112233AABBCCFF /* TamaPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2233445566778899AABBCCDD /* TamaPalette.swift */; };
-		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
 		04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */; };
 		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
 		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
 		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
 		2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
+		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
-		7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
-		8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
+		5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1122334455667788990AABBC /* DeviceDetector.swift */; };
 		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
 		5AFDD78582EA89F72D65FEAB /* PlayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78256880EA69DD157D2EBEE /* PlayScreen.swift */; };
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
 		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
-		8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */ = {isa = PBXBuildFile; fileRef = A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */; };
+		6677889900112233AABBCCFF /* TamaPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2233445566778899AABBCCDD /* TamaPalette.swift */; };
 		76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */; };
+		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
+		7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */; };
+		8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */ = {isa = PBXBuildFile; fileRef = A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */; };
+		8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
 		C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9228514E9DDD678D810B062 /* PlayViewModel.swift */; };
 		C919374E85E040D38477FC99 /* TamaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */; };
@@ -66,16 +66,15 @@
 
 /* Begin PBXFileReference section */
 		04981D1305DB4733ACBC657E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
-		1122334455667788990AABBC /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
-		2233445566778899AABBCCDD /* TamaPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPalette.swift; sourceTree = "<group>"; };
-		3344556677889900AABBCCEE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
+		1122334455667788990AABBC /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		14B814DDD09245609E359714 /* TamaEmu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaEmu.entitlements; sourceTree = "<group>"; };
 		1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TamaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2233445566778899AABBCCDD /* TamaPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPalette.swift; sourceTree = "<group>"; };
 		2267519E09184C139C7BAC4C /* ButtonPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonPad.swift; sourceTree = "<group>"; };
 		2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaWidget.entitlements; sourceTree = "<group>"; };
+		3344556677889900AABBCCEE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		33A5894F6DD24F569DA1474D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveDeviceLookup.swift; sourceTree = "<group>"; };
@@ -87,18 +86,19 @@
 		736990A9EB7F43B291B3E53F /* InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputController.swift; sourceTree = "<group>"; };
 		7B76611C89874CD080A593F7 /* FirmwareImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareImportView.swift; sourceTree = "<group>"; };
 		94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorEngine.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDScreenEffect.swift; sourceTree = "<group>"; };
+		A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = TamaEmu.icon; sourceTree = "<group>"; };
 		A9228514E9DDD678D810B062 /* PlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayViewModel.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		ABE647F4A560420EAE69A61E /* SavePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavePaths.swift; sourceTree = "<group>"; };
 		AE4595FCF428E95973D802C6 /* TamaCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TamaCore; path = Packages/TamaCore; sourceTree = SOURCE_ROOT; };
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = TamaEmu.icon; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
 		F78256880EA69DD157D2EBEE /* PlayScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayScreen.swift; sourceTree = "<group>"; };
 		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
-		9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDScreenEffect.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +131,15 @@
 				2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */,
 			);
 			path = TamaWidget;
+			sourceTree = "<group>";
+		};
+		8899001122334455AABBCC22 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				3344556677889900AABBCCEE /* SettingsView.swift */,
+				2233445566778899AABBCCDD /* TamaPalette.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		8E9FAE9C242B6BB117C6B454 /* Resources */ = {
@@ -185,15 +194,6 @@
 				1122334455667788990AABBC /* DeviceDetector.swift */,
 			);
 			path = Import;
-			sourceTree = "<group>";
-		};
-		8899001122334455AABBCC22 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				3344556677889900AABBCCEE /* SettingsView.swift */,
-				2233445566778899AABBCCDD /* TamaPalette.swift */,
-			);
-			path = Settings;
 			sourceTree = "<group>";
 		};
 		C3C94697C2E99148C09374B1 = {
@@ -281,7 +281,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2710;
 			};
 			buildConfigurationList = 3E881963CA10CE125A9DE81C /* Build configuration list for PBXProject "TamaEmu" */;
 			developmentRegion = en;
@@ -384,7 +384,6 @@
 				CODE_SIGN_ENTITLEMENTS = TamaWidget/TamaWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 8TJ5X76J45;
 				INFOPLIST_FILE = TamaWidget/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fluorescente.TamaEmu.TamaWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -403,7 +402,6 @@
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 8TJ5X76J45;
 				INFOPLIST_FILE = TamaEmu/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -422,7 +420,6 @@
 				CODE_SIGN_ENTITLEMENTS = TamaWidget/TamaWidget.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 8TJ5X76J45;
 				INFOPLIST_FILE = TamaWidget/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fluorescente.TamaEmu.TamaWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -441,7 +438,6 @@
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 8TJ5X76J45;
 				INFOPLIST_FILE = TamaEmu/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -489,8 +485,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 8TJ5X76J45;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -511,6 +509,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -552,8 +551,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 8TJ5X76J45;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -567,6 +568,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
