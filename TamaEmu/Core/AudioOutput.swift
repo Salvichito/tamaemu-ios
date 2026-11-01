@@ -18,6 +18,14 @@ final class AudioOutput {
     /// (from settingsProvider) scales down from there, `muted` silences it
     /// outright. Read once per render callback, not per sample — a
     /// UserDefaults lookup per sample would be wasteful, not per-callback.
+    ///
+    /// `volume` is squared rather than applied linearly: loudness
+    /// perception is roughly logarithmic, so a linear 0...1 scale packs
+    /// nearly all the audible change into the slider's last 20% and makes
+    /// the rest of its range feel like it's doing nothing. Squaring keeps
+    /// the two endpoints the same (0 stays silent, 1 stays at
+    /// `baseAmplitude`) while spreading the perceptible change more evenly
+    /// across the slider.
     init(
         toneProvider: @escaping () -> (on: Bool, freq: Float),
         settingsProvider: @escaping () -> (muted: Bool, volume: Float)
@@ -32,7 +40,7 @@ final class AudioOutput {
             guard let self else { return noErr }
             let (on, freq) = self.toneProvider()
             let (muted, volume) = self.settingsProvider()
-            let amplitude = muted ? 0 : baseAmplitude * volume
+            let amplitude = muted ? 0 : baseAmplitude * volume * volume
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
             var localPhase = self.phase
             for frame in 0..<Int(frameCount) {
