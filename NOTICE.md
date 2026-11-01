@@ -48,9 +48,8 @@ source URLs work on your device.
 
 ### Maintaining the source on each release
 
-[`apps.json`](apps.json) at the repo root is an AltStore/SideStore source.
-Fill in `<github-user>/<repo>` once the repo has a GitHub remote, then on
-every release:
+[`apps.json`](apps.json) at the repo root is an AltStore/SideStore source,
+served from https://github.com/Salvichito/tamaemu-ios. On every release:
 
 1. Bump `CFBundleShortVersionString`/`CFBundleVersion` in `TamaEmu/Info.plist`.
 2. Build and sign the `.ipa`, attach it to a new GitHub Release (tag it

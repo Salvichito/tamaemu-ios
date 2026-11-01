@@ -1,7 +1,7 @@
 {
   "name": "TamaEmu",
   "identifier": "com.fluorescente.TamaEmu.source",
-  "sourceURL": "https://raw.githubusercontent.com/<github-user>/<repo>/main/apps.json",
+  "sourceURL": "https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps.json",
   "apps": [
     {
       "name": "TamaEmu",
@@ -9,7 +9,7 @@
       "developerName": "fluorescente",
       "subtitle": "Tamagotchi emulator",
       "localizedDescription": "An iOS emulator for Tamagotchi-family devices. Does not include any firmware/ROM — bring your own.",
-      "iconURL": "https://raw.githubusercontent.com/<github-user>/<repo>/main/apps-icon.png",
+      "iconURL": "https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps-icon.png",
       "tintColor": "FF6FA5",
       "size": 6228296,
       "versions": [
@@ -17,8 +17,8 @@
           "version": "1.0",
           "date": "2026-10-31T00:00:00Z",
           "localizedDescription": "Initial release.",
-          "downloadURL": "https://github.com/<github-user>/<repo>/releases/download/v1.0/TamaEmu.ipa",
-          "size": 6228296,
+          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.0/TamaEmu.ipa",
+          "size": 6228039,
           "minOSVersion": "17.0"
         }
       ]
