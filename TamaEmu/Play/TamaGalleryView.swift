@@ -54,6 +54,20 @@ struct TamaGalleryView: View {
         }
     }
 
+    /// Pulled out of `galleryStack`'s ForEach so that closure stays a single
+    /// call — with all five of TamaPageView's closures inlined there the
+    /// type checker couldn't resolve the TabView/ForEach builder in
+    /// reasonable time.
+    private func pageView(for device: TamaDevice) -> some View {
+        TamaPageView(
+            viewModel: gallery.viewModel(for: device),
+            onDelete: { gallery.removeDevice(device) },
+            onDeviceImported: { gallery.deviceImported($0) },
+            onAddTama: { gallery.showingImport = true },
+            onRearrange: { gallery.showingReorder = true }
+        )
+    }
+
     private var galleryStack: some View {
         NavigationStack {
             TabView(selection: Binding(
@@ -61,13 +75,8 @@ struct TamaGalleryView: View {
                 set: { gallery.selectedPage = $0 }
             )) {
                 ForEach(gallery.ownedDevices) { device in
-                    TamaPageView(
-                        viewModel: gallery.viewModel(for: device),
-                        onDelete: { gallery.removeDevice(device) },
-                        onDeviceImported: { gallery.deviceImported($0) },
-                        onAddTama: { gallery.showingImport = true }
-                    )
-                    .tag(device.id)
+                    pageView(for: device)
+                        .tag(device.id)
                 }
             }
             .tabViewStyle(.page)
@@ -81,6 +90,9 @@ struct TamaGalleryView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(ambientBackgroundEnabled ? .hidden : .automatic, for: .navigationBar)
+            .sheet(isPresented: $gallery.showingReorder) {
+                ReorderTamasView(gallery: gallery)
+            }
             .sheet(isPresented: $gallery.showingImport) {
                 NavigationStack {
                     FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in

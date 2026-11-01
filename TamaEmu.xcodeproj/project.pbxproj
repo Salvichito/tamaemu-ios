@@ -31,6 +31,7 @@
 		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
 		7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */; };
+		832BCB74B2DFD79FFC09EC39 /* ReorderTamasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */; };
 		8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */ = {isa = PBXBuildFile; fileRef = A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */; };
 		8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		8DCF8788183AD7BA77EAD00B /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291654CFB51D6F793B885E33 /* GalleryViewModel.swift */; };
@@ -112,6 +113,7 @@
 		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
+		D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReorderTamasView.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
 		DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "CGImage+GlowColor.swift"; path = "CGImage+GlowColor.swift"; sourceTree = "<group>"; };
 		F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaGalleryView.swift; sourceTree = "<group>"; };
@@ -254,6 +256,7 @@
 				BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */,
 				9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */,
 				04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */,
+				D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -401,6 +404,7 @@
 				748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */,
 				F3BF9890B6B4109C098E7B84 /* ScreenGlow.swift in Sources */,
 				4CF56E64D9B116A97407FC59 /* CGImage+GlowColor.swift in Sources */,
+				832BCB74B2DFD79FFC09EC39 /* ReorderTamasView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

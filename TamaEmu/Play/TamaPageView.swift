@@ -10,6 +10,7 @@ struct TamaPageView: View {
     var onDelete: () -> Void
     var onDeviceImported: (TamaDevice) -> Void
     var onAddTama: () -> Void
+    var onRearrange: () -> Void
 
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
@@ -36,6 +37,11 @@ struct TamaPageView: View {
                             onAddTama()
                         } label: {
                             Label("Add a Tama", systemImage: "plus")
+                        }
+                        Button {
+                            onRearrange()
+                        } label: {
+                            Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
                         }
                         Button(role: .destructive) {
                             showingDeleteConfirm = true

@@ -13,16 +13,30 @@ final class GalleryViewModel {
     private(set) var ownedDevices: [TamaDevice]
     var selectedPage: TamaDevice.ID?
     var showingImport = false
+    var showingReorder = false
 
     private var viewModels: [TamaDevice.ID: PlayViewModel] = [:]
 
     init() {
-        ownedDevices = ActiveDeviceLookup.allImported()
+        ownedDevices = Self.restoreOrder(of: ActiveDeviceLookup.allImported())
         selectedPage = ownedDevices.first?.id
         WidgetSharedState.publishOwnedDevices(ownedDevices)
         if let first = ownedDevices.first {
             pageDidAppear(first)
         }
+    }
+
+    /// Restores the player's last saved gallery order (so the first Tama
+    /// they added keeps leading the gallery across relaunches instead of
+    /// resetting to catalog order every time). Any device with no saved
+    /// position — the very first launch, or one imported before this
+    /// ordering existed — falls back to catalog order, after the ones we
+    /// do have a position for.
+    private static func restoreOrder(of devices: [TamaDevice]) -> [TamaDevice] {
+        var remaining = Dictionary(uniqueKeysWithValues: devices.map { ($0.id, $0) })
+        var ordered = WidgetSharedState.ownedDeviceIDs().compactMap { remaining.removeValue(forKey: $0) }
+        ordered.append(contentsOf: devices.filter { remaining[$0.id] != nil })
+        return ordered
     }
 
     func viewModel(for device: TamaDevice) -> PlayViewModel {
@@ -62,6 +76,13 @@ final class GalleryViewModel {
             ownedDevices.append(device)
         }
         selectedPage = device.id
+        WidgetSharedState.publishOwnedDevices(ownedDevices)
+    }
+
+    /// The player dragged a Tama to a new spot in the gallery — persist the
+    /// new order so it survives relaunch and reaches the widget's picker.
+    func moveDevices(fromOffsets offsets: IndexSet, toOffset destination: Int) {
+        ownedDevices.move(fromOffsets: offsets, toOffset: destination)
         WidgetSharedState.publishOwnedDevices(ownedDevices)
     }
 
