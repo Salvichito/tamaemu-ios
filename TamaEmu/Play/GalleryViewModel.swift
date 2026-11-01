@@ -19,6 +19,7 @@ final class GalleryViewModel {
     init() {
         ownedDevices = ActiveDeviceLookup.allImported()
         selectedPage = ownedDevices.first?.id
+        WidgetSharedState.publishOwnedDevices(ownedDevices)
         if let first = ownedDevices.first {
             pageDidAppear(first)
         }
@@ -61,6 +62,7 @@ final class GalleryViewModel {
             ownedDevices.append(device)
         }
         selectedPage = device.id
+        WidgetSharedState.publishOwnedDevices(ownedDevices)
     }
 
     /// Removes a Tama entirely: stop its engine, delete its save data, and
@@ -70,6 +72,7 @@ final class GalleryViewModel {
         PlayViewModel.removeDeviceData(device)
         viewModels[device.id] = nil
         ownedDevices.removeAll { $0.id == device.id }
+        WidgetSharedState.publishOwnedDevices(ownedDevices)
         if selectedPage == device.id {
             selectedPage = ownedDevices.first?.id
             if let newSelection = selectedPage, let newDevice = self.device(withID: newSelection) {

@@ -14,7 +14,7 @@ struct TamaGalleryView: View {
                     FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in
                         gallery.deviceImported(device)
                     }
-                    .navigationTitle("")
+                    .navigationTitle("TamaEmu")
                     .navigationBarTitleDisplayMode(.inline)
                 }
             } else {
@@ -27,7 +27,8 @@ struct TamaGalleryView: View {
                             TamaPageView(
                                 viewModel: gallery.viewModel(for: device),
                                 onDelete: { gallery.removeDevice(device) },
-                                onDeviceImported: { gallery.deviceImported($0) }
+                                onDeviceImported: { gallery.deviceImported($0) },
+                                onAddTama: { gallery.showingImport = true }
                             )
                             .tag(device.id)
                         }
@@ -36,15 +37,6 @@ struct TamaGalleryView: View {
                     .indexViewStyle(.page(backgroundDisplayMode: .always))
                     .navigationTitle("")
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button {
-                                gallery.showingImport = true
-                            } label: {
-                                Image(systemName: "plus")
-                            }
-                        }
-                    }
                     .sheet(isPresented: $gallery.showingImport) {
                         NavigationStack {
                             FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in

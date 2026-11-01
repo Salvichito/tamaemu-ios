@@ -53,6 +53,25 @@ enum WidgetSharedState {
         sharedDefaults?.object(forKey: "lastUpdated.\(device.id)") as? Date
     }
 
+    private static let ownedDeviceIDsKey = "ownedDeviceIDs"
+
+    /// The widget extension runs in its own sandbox — `FileManager`'s
+    /// `.applicationSupportDirectory` resolves to a different, per-process
+    /// container there than in the main app, so `SavePaths`/
+    /// `ActiveDeviceLookup`'s on-disk checks silently see nothing when
+    /// called from the widget. The App Group suite is the only thing
+    /// actually shared between the two processes, so the main app mirrors
+    /// "which devices are owned" here whenever it changes, and the
+    /// widget's configuration picker (`SelectTamaIntent`) reads from here
+    /// instead of trying to stat files itself.
+    static func publishOwnedDevices(_ devices: [TamaDevice]) {
+        sharedDefaults?.set(devices.map(\.id), forKey: ownedDeviceIDsKey)
+    }
+
+    static func ownedDeviceIDs() -> [String] {
+        sharedDefaults?.stringArray(forKey: ownedDeviceIDsKey) ?? []
+    }
+
     static var lcdEffectEnabled: Bool {
         get { sharedDefaults?.object(forKey: lcdEffectEnabledKey) as? Bool ?? true }
         set { sharedDefaults?.set(newValue, forKey: lcdEffectEnabledKey) }

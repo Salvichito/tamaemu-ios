@@ -193,8 +193,14 @@ final class PlayViewModel {
 
     private func beginDisplayTimer() {
         displayTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            guard let self, let frame = self.engine?.latestFrame() else { return }
-            self.lcdImage = LCDImageBuilder.makeImage(from: frame, width: 128, height: 128)
+            // Timer's closure type is nonisolated/Sendable as far as the
+            // compiler knows, but this timer is always created from — and
+            // therefore always fires on — the main actor's run loop, so
+            // this assumption is safe, not just convenient.
+            MainActor.assumeIsolated {
+                guard let self, let frame = self.engine?.latestFrame() else { return }
+                self.lcdImage = LCDImageBuilder.makeImage(from: frame, width: 128, height: 128)
+            }
         }
     }
 

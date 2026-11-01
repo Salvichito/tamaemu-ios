@@ -115,7 +115,10 @@ struct SettingsView: View {
                 isPresented: $showingRestartConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Restart", role: .destructive) { viewModel.restartTama() }
+                Button("Restart", role: .destructive) {
+                    dismiss()
+                    viewModel.restartTama()
+                }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Same save data, but the CPU and clock reset — like taking the battery out and back in.")

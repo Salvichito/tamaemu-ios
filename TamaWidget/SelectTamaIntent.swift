@@ -15,14 +15,26 @@ struct TamaEntity: AppEntity {
 }
 
 struct TamaEntityQuery: EntityQuery {
+    /// "Owned" here means "the main app last told us about it" — the
+    /// widget extension runs in its own sandbox, so it can't stat the main
+    /// app's save files itself (ActiveDeviceLookup/SavePaths resolve to a
+    /// different, empty container when called from here). WidgetSharedState
+    /// mirrors the owned-device list into the one place both processes
+    /// actually share: the App Group's UserDefaults suite.
+    private func ownedDevices() -> [TamaDevice] {
+        let ownedIDs = Set(WidgetSharedState.ownedDeviceIDs())
+        return DeviceCatalog.all().filter { ownedIDs.contains($0.id) }
+    }
+
     func entities(for identifiers: [String]) async -> [TamaEntity] {
-        DeviceCatalog.all()
-            .filter { identifiers.contains($0.id) && ActiveDeviceLookup.hasImportedROM($0) }
+        let idSet = Set(identifiers)
+        return ownedDevices()
+            .filter { idSet.contains($0.id) }
             .map { TamaEntity(id: $0.id, displayName: $0.title) }
     }
 
     func suggestedEntities() async -> [TamaEntity] {
-        ActiveDeviceLookup.allImported().map { TamaEntity(id: $0.id, displayName: $0.title) }
+        ownedDevices().map { TamaEntity(id: $0.id, displayName: $0.title) }
     }
 }
 

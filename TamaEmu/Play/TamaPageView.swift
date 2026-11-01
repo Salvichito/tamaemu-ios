@@ -9,6 +9,7 @@ struct TamaPageView: View {
     let viewModel: PlayViewModel
     var onDelete: () -> Void
     var onDeviceImported: (TamaDevice) -> Void
+    var onAddTama: () -> Void
 
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
@@ -82,6 +83,11 @@ struct TamaPageView: View {
                         showingSettings = true
                     } label: {
                         Label("Settings for \(viewModel.selectedDevice.title)", systemImage: "gearshape")
+                    }
+                    Button {
+                        onAddTama()
+                    } label: {
+                        Label("Add a Tama", systemImage: "plus")
                     }
                     Button(role: .destructive) {
                         showingDeleteConfirm = true

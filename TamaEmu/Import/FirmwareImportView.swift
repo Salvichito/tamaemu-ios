@@ -32,8 +32,6 @@ struct FirmwareImportView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("No firmware loaded")
-                .font(.headline)
             Text("Import a ROM dump (.bin) from a Tamagotchi device you own. Firmware is never bundled with this app and never leaves your device.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
