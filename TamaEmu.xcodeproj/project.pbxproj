@@ -26,6 +26,7 @@
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
 		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
+		8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */ = {isa = PBXBuildFile; fileRef = A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */; };
 		76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */; };
 		7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */; };
 		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
@@ -91,6 +92,7 @@
 		AE4595FCF428E95973D802C6 /* TamaCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TamaCore; path = Packages/TamaCore; sourceTree = SOURCE_ROOT; };
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = TamaEmu.icon; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */,
+				A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -316,6 +319,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */,
+				8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -394,7 +398,7 @@
 		36F3512EEA8E21D9A4A7D9E7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = TamaEmu;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -432,7 +436,7 @@
 		6B2D3D1FA88C0C29A789FEE0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = TamaEmu;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
