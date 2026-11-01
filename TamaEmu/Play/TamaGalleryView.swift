@@ -63,6 +63,7 @@ struct TamaGalleryView: View {
     private func pageView(for device: TamaDevice) -> some View {
         TamaPageView(
             viewModel: gallery.viewModel(for: device),
+            ambientBackgroundEnabled: ambientBackgroundEnabled,
             onDelete: { gallery.removeDevice(device) },
             onDeviceImported: { gallery.deviceImported($0) },
             onAddTama: { gallery.showingImport = true },

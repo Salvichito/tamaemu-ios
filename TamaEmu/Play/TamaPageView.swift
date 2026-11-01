@@ -7,6 +7,7 @@ import TamaCore
 /// togglePause() is safe to act on its own engine directly.
 struct TamaPageView: View {
     let viewModel: PlayViewModel
+    let ambientBackgroundEnabled: Bool
     var onDelete: () -> Void
     var onDeviceImported: (TamaDevice) -> Void
     var onAddTama: () -> Void
@@ -108,9 +109,24 @@ struct TamaPageView: View {
             .contentShape(Rectangle())
             .onTapGesture { viewModel.togglePause() }
 
-            Text(viewModel.selectedDevice.title)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            // The ambient background is a blurred copy of the Tama's own
+            // screen, so its brightness and hue swing all over the place —
+            // plain .secondary text can vanish into it. A thin material
+            // chip gives the label guaranteed contrast against anything
+            // behind it without reading as a loud badge. Off ambient, the
+            // backdrop is just the system background, so the plain label
+            // already reads fine and keeps its original look.
+            if ambientBackgroundEnabled {
+                Text(viewModel.selectedDevice.title)
+                    .font(.footnote)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: Capsule())
+            } else {
+                Text(viewModel.selectedDevice.title)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
 
             ButtonPad(
                 onPress: { viewModel.pressButton($0) },
