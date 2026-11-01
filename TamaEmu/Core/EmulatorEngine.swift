@@ -318,6 +318,20 @@ final class EmulatorEngine {
         }
         let actuallyAdvanced = emu.pointee.emu_secs - startSecs
         catchUpBacklog = max(0, requestedSeconds - actuallyAdvanced)
+
+        // A long, unpaced catch-up can run millions of steps in one go —
+        // far more than normal real-time play ever does between saves —
+        // so a rare core edge case (wild jump, bad decode) is far more
+        // likely to actually fire here. `stop()` sets `emu.pointee.stopped`
+        // permanently (cleared only by cpu_reset), and runLoop() gates its
+        // own stepping on that same flag, so leaving it set would freeze
+        // the engine — and whatever was on screen at the moment it died —
+        // forever. Recovering here, the same way a corrupt/missing save
+        // already falls back to cpu_reset() in init(), costs the Tama's
+        // exact position but is far better than a permanently dead screen.
+        if emu.pointee.stopped {
+            cpu_reset(emu)
+        }
     }
 
     private func runLoop() {
