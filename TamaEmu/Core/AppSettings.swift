@@ -1,4 +1,5 @@
 import Foundation
+import TamaCore
 
 /// User-adjustable preferences that affect playback, independent of any one
 /// device's save data. Backed by UserDefaults.standard (app-only — nothing
@@ -16,13 +17,22 @@ enum AppSettings {
         static let muted = "settings.muted"
         static let volume = "settings.volume"
         static let hapticsEnabled = "settings.hapticsEnabled"
-        static let speedMultiplier = "settings.speedMultiplier"
-        static let stayAwake = "settings.stayAwake"
         static let catchUpCapHours = "settings.catchUpCapHours"
         static let buttonColorIndex = "settings.buttonColorIndex"
         static let accentColorIndex = "settings.accentColorIndex"
         static let sharpPixels = "settings.sharpPixels"
         static let ignoreSilentSwitch = "settings.ignoreSilentSwitch"
+
+        /// Per-device keys — speed and stay-awake are the two settings that
+        /// already have a per-instance home on the C Emu struct (rtc_mult,
+        /// stay_awake), so their storage is keyed per device too, mirroring
+        /// SavePaths' lastSavedAt.<id> pattern.
+        static func speedMultiplier(for device: TamaDevice) -> String {
+            "settings.speedMultiplier.\(device.id)"
+        }
+        static func stayAwake(for device: TamaDevice) -> String {
+            "settings.stayAwake.\(device.id)"
+        }
     }
 
     /// Matches the core's own game-clock ladder (`periph_speed_step`), so
@@ -51,21 +61,25 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: Keys.hapticsEnabled) }
     }
 
-    static var speedMultiplier: Int {
-        get {
-            let stored = UserDefaults.standard.object(forKey: Keys.speedMultiplier) as? Int ?? 1
-            return speedLadder.contains(stored) ? stored : 1
-        }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.speedMultiplier) }
+    static func speedMultiplier(for device: TamaDevice) -> Int {
+        let stored = UserDefaults.standard.object(forKey: Keys.speedMultiplier(for: device)) as? Int ?? 1
+        return speedLadder.contains(stored) ? stored : 1
+    }
+
+    static func setSpeedMultiplier(_ value: Int, for device: TamaDevice) {
+        UserDefaults.standard.set(value, forKey: Keys.speedMultiplier(for: device))
     }
 
     /// On by default: a real Tamagotchi's screen goes black to save its
     /// own battery, but that's pointless to reproduce here — the host
     /// device already has its own screen-sleep, and the blanked emulated
     /// panel just looked like a bug (e.g. right after relaunch).
-    static var stayAwake: Bool {
-        get { UserDefaults.standard.object(forKey: Keys.stayAwake) as? Bool ?? true }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.stayAwake) }
+    static func stayAwake(for device: TamaDevice) -> Bool {
+        UserDefaults.standard.object(forKey: Keys.stayAwake(for: device)) as? Bool ?? true
+    }
+
+    static func setStayAwake(_ value: Bool, for device: TamaDevice) {
+        UserDefaults.standard.set(value, forKey: Keys.stayAwake(for: device))
     }
 
     /// How much real elapsed time a single catch-up pass will attempt to

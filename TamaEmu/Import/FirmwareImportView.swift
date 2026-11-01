@@ -17,11 +17,17 @@ struct FirmwareImportView: View {
     @State private var showingPicker = false
     @State private var errorMessage: String?
     @State private var pendingImport: PendingImport?
+    @State private var pendingOverwrite: PendingOverwrite?
 
     private struct PendingImport {
         let url: URL
         let candidates: [TamaDevice]
         var selected: TamaDevice
+    }
+
+    private struct PendingOverwrite {
+        let url: URL
+        let device: TamaDevice
     }
 
     var body: some View {
@@ -72,6 +78,16 @@ struct FirmwareImportView: View {
                 errorMessage = error.localizedDescription
             }
         }
+        .confirmationDialog(
+            "You already have a Tama for \(pendingOverwrite?.device.title ?? "")",
+            isPresented: Binding(get: { pendingOverwrite != nil }, set: { if !$0 { cancelOverwrite() } }),
+            titleVisibility: .visible
+        ) {
+            Button("Replace it", role: .destructive) { confirmOverwrite() }
+            Button("Cancel", role: .cancel) { cancelOverwrite() }
+        } message: {
+            Text("Importing here replaces its current save data. This can't be undone.")
+        }
     }
 
     private func handlePicked(_ url: URL) {
@@ -114,6 +130,31 @@ struct FirmwareImportView: View {
     }
 
     private func importFile(url: URL, device: TamaDevice) {
+        // Several real Tamas can be owned at once now, each keyed by
+        // device.id — don't silently clobber an existing one's save data
+        // just because the ambiguous-size picker (or a re-import) landed
+        // on an already-owned model. Access stays open until confirmed or
+        // cancelled, same as the ambiguous-device picker above.
+        if ActiveDeviceLookup.hasImportedROM(device) {
+            pendingOverwrite = PendingOverwrite(url: url, device: device)
+            errorMessage = nil
+            return
+        }
+        performImport(url: url, device: device)
+    }
+
+    private func confirmOverwrite() {
+        guard let pending = pendingOverwrite else { return }
+        pendingOverwrite = nil
+        performImport(url: pending.url, device: pending.device)
+    }
+
+    private func cancelOverwrite() {
+        pendingOverwrite?.url.stopAccessingSecurityScopedResource()
+        pendingOverwrite = nil
+    }
+
+    private func performImport(url: URL, device: TamaDevice) {
         defer { url.stopAccessingSecurityScopedResource() }
         do {
             let paths = SavePaths(device: device)

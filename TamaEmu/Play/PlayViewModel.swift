@@ -3,118 +3,82 @@ import Foundation
 import Observation
 import TamaCore
 
+/// Owns exactly one Tama's engine lifecycle. One instance per owned device,
+/// cached for the gallery's lifetime by GalleryViewModel — device identity
+/// is fixed for this instance's whole life; there is no more
+/// `switchToDevice`, because "switching" is now just which gallery page is
+/// selected.
 @MainActor
 @Observable
 final class PlayViewModel {
-    let devices = DeviceCatalog.all()
-    var selectedDevice: TamaDevice
+    let selectedDevice: TamaDevice
     private(set) var lcdImage: CGImage?
-    private(set) var hasFirmware = false
     private(set) var errorMessage: String?
     /// True while an engine load (catch-up included) is in flight off the
     /// main thread — the screen already shows the last known frame during
     /// this (see startEngine()), but it isn't live/interactive yet.
     private(set) var isLoading = false
+    /// Mirrors DevicePauseState, cached here so SwiftUI observes changes —
+    /// a paused Tama is excluded from catch-up and, if it happens to be the
+    /// visible page right now, its engine is stopped immediately so the
+    /// screen visibly freezes.
+    private(set) var isPaused: Bool
 
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
     /// Bumped by stopEngine() and every startEngine() call — a load that
-    /// finishes after being superseded (stopped, switched, restarted
-    /// again) checks this before applying its result, so it discards
-    /// itself instead of resurrecting a stale engine.
+    /// finishes after being superseded (stopped, paused, restarted again)
+    /// checks this before applying its result, so it discards itself
+    /// instead of resurrecting a stale engine.
     private var startGeneration = 0
 
-    init() {
-        // The filesystem is the ground truth — a lost/stale preference
-        // should never hide an already-imported firmware behind the
-        // import screen.
-        if let found = ActiveDeviceLookup.find() {
-            selectedDevice = found
-        } else {
-            selectedDevice = DeviceCatalog.defaultDevice()
-        }
+    /// Does NOT start the engine — construction is cheap and side-effect
+    /// free (just a cached widget snapshot, if any) so the gallery can
+    /// create a PlayViewModel for every owned device up front without
+    /// spinning up N live engines. Only `resumeIfNeeded()`, called by the
+    /// gallery exactly when a page actually becomes visible, starts it.
+    init(device: TamaDevice) {
+        selectedDevice = device
+        isPaused = DevicePauseState.isPaused(device)
+        // Shows the last real frame instantly instead of a black screen
+        // once this page becomes visible, stale by however long it's been
+        // since this Tama was last live, but immediately tells the user
+        // their Tama is there rather than leaving them guessing.
+        lcdImage = WidgetSharedState.loadLastFrameImage(for: device)
+    }
 
-        if ActiveDeviceLookup.hasImportedROM(selectedDevice) {
-            hasFirmware = true
-            // Shows the last real frame instantly instead of a black
-            // screen while the engine loads below — stale by however long
-            // the app's been closed, but immediately tells the user their
-            // Tama is there and roughly how it's doing, rather than
-            // leaving them guessing whether anything is alive.
-            lcdImage = WidgetSharedState.loadLastFrameImage()
-            // Covers anyone who imported firmware before this permission
-            // request existed — firmwareImported(for:at:) only asks on a
-            // brand-new import, which would otherwise leave existing users
-            // never actually prompted, so no notification could ever be
-            // delivered regardless of whether a call was detected.
-            NotificationScheduler.requestAuthorizationIfNeeded()
+    /// Deletes one device's ROM/save data and any pause flag outright — the
+    /// caller (GalleryViewModel) is responsible for stopping this device's
+    /// engine first, since this is a plain disk operation with no engine
+    /// awareness of its own.
+    static func removeDeviceData(_ device: TamaDevice) {
+        SavePaths(device: device).deleteAll()
+        DevicePauseState.clear(device)
+    }
+
+    /// Tapping the LCD. Can only ever be called on the page currently on
+    /// screen (nothing else has a way to trigger it), so it's safe to
+    /// directly stop/restart this instance's own engine rather than asking
+    /// the gallery whether this page is "the visible one."
+    func togglePause() {
+        isPaused.toggle()
+        DevicePauseState.setPaused(isPaused, for: selectedDevice)
+        if isPaused {
+            stopEngine()
+        } else {
+            // "Frozen while paused" is literal: no time should be counted
+            // as having passed during the pause, so pin the clock to right
+            // now before bringing the engine back — otherwise catch-up
+            // would measure the entire paused interval as a backlog to
+            // fast-forward through, the opposite of what pausing means.
+            SavePaths(device: selectedDevice).lastSavedAt = Date()
             startEngine()
-        } else {
-            lcdImage = LCDImageBuilder.makeImage(
-                from: Self.testPattern(width: 128, height: 128),
-                width: 128,
-                height: 128
-            )
         }
     }
 
-    func firmwareImported(for device: TamaDevice, at url: URL) {
-        selectedDevice = device
-        UserDefaults.standard.set(device.id, forKey: ActiveDeviceLookup.selectedDeviceIDKey)
-        hasFirmware = true
-        NotificationScheduler.requestAuthorizationIfNeeded()
-        startEngine()
-    }
-
-    /// Devices that already have firmware imported — each keeps its own
-    /// independent save slot (see SavePaths), so switching between them
-    /// needs no re-import.
-    var importedDevices: [TamaDevice] {
-        devices.filter(ActiveDeviceLookup.hasImportedROM)
-    }
-
-    /// Switches the active device among ones that already have firmware
-    /// imported — no re-import, each device's own save data picks up where
-    /// it left off.
-    func switchToDevice(_ device: TamaDevice) {
-        guard device.id != selectedDevice.id, ActiveDeviceLookup.hasImportedROM(device) else { return }
-        selectedDevice = device
-        UserDefaults.standard.set(device.id, forKey: ActiveDeviceLookup.selectedDeviceIDKey)
-        hasFirmware = true
-        startEngine()
-    }
-
-    /// Deletes one device's ROM/save data outright. If it's the currently
-    /// active device, falls back to the import screen exactly like
-    /// `resetFirmware()`; otherwise it's just removed silently.
-    func removeDeviceData(_ device: TamaDevice) {
-        if device.id == selectedDevice.id {
-            resetFirmware()
-        } else {
-            SavePaths(device: device).deleteAll()
-        }
-    }
-
-    /// For when the wrong device was picked at import time: that data is
-    /// simply wrong (e.g. a black screen from a ROM mismatch), not progress
-    /// worth keeping, so it's deleted outright and the import screen comes
-    /// back to let the user try again.
-    func resetFirmware() {
-        stopEngine()
-        SavePaths(device: selectedDevice).deleteAll()
-        UserDefaults.standard.removeObject(forKey: ActiveDeviceLookup.selectedDeviceIDKey)
-        hasFirmware = false
-        errorMessage = nil
-        lcdImage = LCDImageBuilder.makeImage(
-            from: Self.testPattern(width: 128, height: 128),
-            width: 128,
-            height: 128
-        )
-    }
-
-    /// Stops the emulator thread and audio (once there is audio) entirely,
-    /// after persisting state — this app does not age in the background for
-    /// the MVP. Call on scenePhase == .background.
+    /// Stops the emulator thread and audio entirely, after persisting
+    /// state. Call when this page stops being visible (swiped away) or on
+    /// scenePhase == .background for whichever page is currently visible.
     func stopEngine() {
         startGeneration += 1  // invalidates any startEngine() load still in flight
         displayTimer?.invalidate()
@@ -124,23 +88,20 @@ final class PlayViewModel {
         // depend on to safely read the Emu struct without a concurrent
         // writer.
         engine?.stop()
-        // Publishes the actual last-seen frame to the widget — previously
-        // this only ever happened once, right at session start (before
-        // any play), so the widget never reflected anything the user had
-        // actually just done.
         if let engine, let image = LCDImageBuilder.makeImage(
             from: engine.renderCurrentFrame(), width: 128, height: 128
         ) {
-            WidgetSharedState.publish(image: image, deviceTitle: selectedDevice.title)
+            WidgetSharedState.publish(image: image, device: selectedDevice)
         }
         engine?.save()
         engine = nil
     }
 
-    /// Call on scenePhase == .active. Re-creates the engine (which restores
-    /// from the state/flash saved in stopEngine()) if it isn't running.
+    /// Call when this page becomes visible (swiped to) or on
+    /// scenePhase == .active for whichever page is currently visible.
+    /// A no-op if already running.
     func resumeIfNeeded() {
-        guard hasFirmware, engine == nil else { return }
+        guard engine == nil, !isPaused else { return }
         startEngine()
     }
 
@@ -159,7 +120,7 @@ final class PlayViewModel {
     }
 
     /// Soft reset: same ROM/flash/RAM, CPU state and clock back to the
-    /// firmware's own boot vector. Distinct from `resetFirmware()`, which
+    /// firmware's own boot vector. Distinct from removeDeviceData, which
     /// deletes everything.
     func restartTama() {
         guard engine != nil else { return }
@@ -174,8 +135,8 @@ final class PlayViewModel {
         pauseEngine(action)
     }
 
-    /// Path to the current device's live flash/save image, if any exists
-    /// yet — for the Settings screen's export action (disabled otherwise).
+    /// Path to this device's live flash/save image, if any exists yet —
+    /// for the Settings screen's export action (disabled otherwise).
     var exportableSaveURL: URL? {
         let path = SavePaths(device: selectedDevice).liveFlashPath
         return FileManager.default.fileExists(atPath: path.path) ? path : nil
@@ -204,10 +165,10 @@ final class PlayViewModel {
         beginDisplayTimer()
     }
 
-    /// Overwrites the active device's live flash image with an imported
-    /// `.sav` file and discards its CPU/RAM snapshot, so the next load
-    /// boots fresh from that flash content — mirrors the Android port's
-    /// own save-import (replace flash, drop state, reload).
+    /// Overwrites this device's live flash image with an imported `.sav`
+    /// file and discards its CPU/RAM snapshot, so the next load boots
+    /// fresh from that flash content — mirrors the Android port's own
+    /// save-import (replace flash, drop state, reload).
     func importSave(from url: URL) throws {
         guard url.startAccessingSecurityScopedResource() else {
             throw CocoaError(.fileReadNoPermission)
@@ -220,6 +181,13 @@ final class PlayViewModel {
         }
         try FileManager.default.copyItem(at: url, to: paths.liveFlashPath)
         paths.deleteStateOnly()
+        // Replacing the save implies resuming play with it, regardless of
+        // whatever pause state this Tama was in before.
+        if isPaused {
+            isPaused = false
+            DevicePauseState.setPaused(false, for: selectedDevice)
+        }
+        paths.lastSavedAt = Date()
         startEngine()
     }
 
@@ -231,12 +199,12 @@ final class PlayViewModel {
     }
 
     /// Loading an engine runs catch-up synchronously inside its init() —
-    /// and real-device throughput turned out to be far below what the
-    /// previous fixed, blocking budget assumed (measured ~12x real time
-    /// on an actual phone, not the ~230x Simulator figure the budget was
+    /// and real-device throughput turned out to be far below what a
+    /// previous fixed, blocking budget assumed (measured ~12x real time on
+    /// an actual phone, not the ~230x Simulator figure the budget was
     /// originally sized against). No fixed synchronous budget can both
     /// keep launch instant AND make real progress at that throughput, so
-    /// this now runs entirely off the main thread instead of inside
+    /// this runs entirely off the main thread instead of inside
     /// PlayViewModel's (and ultimately the UI's) call stack — the catch-up
     /// pass can take however long it actually needs without the app ever
     /// appearing to hang. A larger per-attempt budget is safe now that
@@ -250,7 +218,8 @@ final class PlayViewModel {
         isLoading = true
         let device = selectedDevice
         let paths = SavePaths(device: device)
-        let deviceTitle = device.title
+        let isPausedNow = isPaused
+        NotificationScheduler.requestAuthorizationIfNeeded()
 
         Task.detached(priority: .userInitiated) { [weak self] in
             let result = Result {
@@ -258,8 +227,9 @@ final class PlayViewModel {
                     device: device,
                     savePaths: paths,
                     catchUpWallClockBudget: Self.catchUpWallClockBudget,
+                    isPaused: isPausedNow,
                     onCallDetected: {
-                        NotificationScheduler.fireCallingNotification(deviceTitle: deviceTitle)
+                        NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
                     }
                 )
             }
@@ -272,19 +242,18 @@ final class PlayViewModel {
                 await MainActor.run {
                     guard self.startGeneration == generation else {
                         // Superseded while this was loading (stopped,
-                        // switched devices, restarted) — this engine
-                        // never started running, so just persist whatever
-                        // catch-up progress it made and let it go.
+                        // paused, restarted) — this engine never started
+                        // running, so just persist whatever catch-up
+                        // progress it made and let it go.
                         newEngine.save()
                         return
                     }
                     if let image {
-                        WidgetSharedState.publish(image: image, deviceTitle: deviceTitle)
-                        // Shows the real post-catch-up frame the instant loading
-                        // ends, rather than leaving the stale cached snapshot on
-                        // screen until the display timer happens to notice a
-                        // pixel change — that's an indirect trigger with no
-                        // guarantee of firing right away.
+                        WidgetSharedState.publish(image: image, device: device)
+                        // Shows the real post-catch-up frame the instant
+                        // loading ends, rather than leaving the stale
+                        // cached snapshot on screen until the display timer
+                        // happens to notice a pixel change.
                         self.lcdImage = image
                     }
                     newEngine.start()
@@ -297,27 +266,9 @@ final class PlayViewModel {
                 await MainActor.run {
                     guard self.startGeneration == generation else { return }
                     self.errorMessage = error.localizedDescription
-                    self.hasFirmware = false
                     self.isLoading = false
                 }
             }
         }
-    }
-
-    /// Eight vertical color bars in the same 0xAARRGGBB word format
-    /// `lcd_render` writes. Shown only until firmware is imported.
-    private static func testPattern(width: Int, height: Int) -> [UInt32] {
-        let bars: [UInt32] = [
-            0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFFFF,
-            0xFF000000, 0xFFFFFF00, 0xFF00FFFF, 0xFFFF00FF
-        ]
-        var buffer = [UInt32](repeating: 0, count: width * height)
-        let barWidth = max(1, width / bars.count)
-        for y in 0..<height {
-            for x in 0..<width {
-                buffer[y * width + x] = bars[min(x / barWidth, bars.count - 1)]
-            }
-        }
-        return buffer
     }
 }

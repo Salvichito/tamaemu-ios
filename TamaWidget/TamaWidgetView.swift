@@ -22,8 +22,9 @@ struct TamaWidgetView: View {
                     VStack(spacing: 4) {
                         Image(systemName: "pawprint.fill")
                             .font(.title2)
-                        Text("Open TamaEmu")
+                        Text(entry.isConfigured ? "Open TamaEmu" : "Long-press to choose a Tama")
                             .font(.caption2)
+                            .multilineTextAlignment(.center)
                     }
                     .foregroundStyle(.secondary)
                 }

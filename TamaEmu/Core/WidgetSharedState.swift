@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import TamaCore
 import UIKit
 import WidgetKit
 
@@ -19,8 +20,11 @@ enum WidgetSharedState {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
     }
 
-    static var latestFramePath: URL? {
-        containerURL?.appendingPathComponent("latest_frame.png")
+    /// Per device, since several Tamas can now be live/published
+    /// independently — filenames keyed by device.id, mirroring
+    /// SavePaths' own `<id>.bin`/`<id>.sav` naming.
+    static func latestFramePath(for device: TamaDevice) -> URL? {
+        containerURL?.appendingPathComponent("latest_frame_\(device.id).png")
     }
 
     static var sharedDefaults: UserDefaults? {
@@ -34,23 +38,19 @@ enum WidgetSharedState {
         sharedDefaults ?? .standard
     }
 
-    private static let deviceTitleKey = "deviceTitle"
-    private static let lastUpdatedKey = "lastUpdated"
-
     /// Settings' "LCD Screen Effect" toggle, stored in the App Group suite
     /// (not AppSettings' UserDefaults.standard) specifically so the widget
     /// reads the exact same value the in-app screen does — one source of
     /// truth instead of a value that needs mirroring between the two.
+    /// Stays global/flat — it's a display preference, not per-pet data.
     static let lcdEffectEnabledKey = "lcdEffectEnabled"
 
-    static var deviceTitle: String? {
-        get { sharedDefaults?.string(forKey: deviceTitleKey) }
-        set { sharedDefaults?.set(newValue, forKey: deviceTitleKey) }
+    static func deviceTitle(for device: TamaDevice) -> String? {
+        sharedDefaults?.string(forKey: "deviceTitle.\(device.id)")
     }
 
-    static var lastUpdated: Date? {
-        get { sharedDefaults?.object(forKey: lastUpdatedKey) as? Date }
-        set { sharedDefaults?.set(newValue, forKey: lastUpdatedKey) }
+    static func lastUpdated(for device: TamaDevice) -> Date? {
+        sharedDefaults?.object(forKey: "lastUpdated.\(device.id)") as? Date
     }
 
     static var lcdEffectEnabled: Bool {
@@ -70,12 +70,12 @@ enum WidgetSharedState {
     /// the write is atomic, and a missing App Group container (e.g. the
     /// entitlement isn't set up yet) just silently no-ops rather than
     /// crashing.
-    static func publish(image: CGImage, deviceTitle: String) {
-        guard let framePath = latestFramePath else { return }
+    static func publish(image: CGImage, device: TamaDevice) {
+        guard let framePath = latestFramePath(for: device) else { return }
         guard let pngData = UIImage(cgImage: image).pngData() else { return }
         try? pngData.write(to: framePath, options: .atomic)
-        self.deviceTitle = deviceTitle
-        lastUpdated = Date()
+        sharedDefaults?.set(device.title, forKey: "deviceTitle.\(device.id)")
+        sharedDefaults?.set(Date(), forKey: "lastUpdated.\(device.id)")
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
     }
 
@@ -83,8 +83,8 @@ enum WidgetSharedState {
     /// fast enough to call synchronously on launch so the play screen has
     /// *something* real to show immediately, instead of a black screen,
     /// while the engine loads/catches up off the main thread.
-    static func loadLastFrameImage() -> CGImage? {
-        guard let framePath = latestFramePath,
+    static func loadLastFrameImage(for device: TamaDevice) -> CGImage? {
+        guard let framePath = latestFramePath(for: device),
               let image = UIImage(contentsOfFile: framePath.path) else { return nil }
         return image.cgImage
     }

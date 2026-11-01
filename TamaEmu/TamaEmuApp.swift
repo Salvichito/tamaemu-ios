@@ -8,7 +8,7 @@ struct TamaEmuApp: App {
 
     var body: some Scene {
         WindowGroup {
-            PlayScreen()
+            TamaGalleryView()
         }
         .backgroundTask(.appRefresh(BackgroundRefresh.taskID)) {
             await BackgroundRefresh.run()

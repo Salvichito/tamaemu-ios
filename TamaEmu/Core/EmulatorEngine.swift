@@ -88,6 +88,7 @@ final class EmulatorEngine {
         device: TamaDevice,
         savePaths: SavePaths,
         catchUpWallClockBudget: TimeInterval = 1.0,
+        isPaused: Bool = false,
         onCallDetected: (() -> Void)? = nil
     ) throws {
         guard let profile = device_find(device.id) else {
@@ -138,7 +139,13 @@ final class EmulatorEngine {
             }
         }
         if result == STATE_LOADED {
-            if let lastSavedAt = savePaths.lastSavedAt {
+            // A paused Tama's clock is frozen on purpose — PlayViewModel
+            // keeps lastSavedAt pinned to "now" on every save while paused
+            // (see stopEngine()), so there's never a backlog to apply here;
+            // skipping the call outright is just the explicit version of
+            // that same intent, in case something else ever sets a stale
+            // lastSavedAt while paused.
+            if !isPaused, let lastSavedAt = savePaths.lastSavedAt {
                 catchUp(seconds: Date().timeIntervalSince(lastSavedAt), wallClockBudget: catchUpWallClockBudget)
             }
         } else {
@@ -152,8 +159,8 @@ final class EmulatorEngine {
     /// the core reads every tick, not something requiring a restart, and
     /// Android's own equivalent settings take effect immediately too.
     func applySettings() {
-        emu.pointee.rtc_mult = Int32(AppSettings.speedMultiplier)
-        emu.pointee.stay_awake = AppSettings.stayAwake
+        emu.pointee.rtc_mult = Int32(AppSettings.speedMultiplier(for: device))
+        emu.pointee.stay_awake = AppSettings.stayAwake(for: device)
         // Guarded on `thread != nil`, not called unconditionally: this is
         // also called from init() for headless engines (BackgroundRefresh)
         // that never call start() — touching `audioOutput` there would

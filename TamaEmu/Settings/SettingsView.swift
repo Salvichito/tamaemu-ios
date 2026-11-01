@@ -1,16 +1,22 @@
 import SwiftUI
 import TamaCore
 
+/// Always scoped to one device — there's no more global "selected device"
+/// to switch between in here; switching is just swiping the gallery.
+/// Opened per-page from TamaPageView's overflow menu.
 struct SettingsView: View {
+    let device: TamaDevice
     let viewModel: PlayViewModel
+    var onDelete: () -> Void
+    var onDeviceImported: (TamaDevice) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage(AppSettings.Keys.muted) private var muted = false
     @AppStorage(AppSettings.Keys.volume) private var volume = 0.6
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(AppSettings.Keys.ignoreSilentSwitch) private var ignoreSilentSwitch = false
-    @AppStorage(AppSettings.Keys.speedMultiplier) private var speedMultiplier = 1
-    @AppStorage(AppSettings.Keys.stayAwake) private var stayAwake = true
+    @AppStorage private var speedMultiplier: Int
+    @AppStorage private var stayAwake: Bool
     @AppStorage(AppSettings.Keys.catchUpCapHours) private var catchUpCapHours = 24.0
     @AppStorage(AppSettings.Keys.buttonColorIndex) private var buttonColorIndex = 0
     @AppStorage(AppSettings.Keys.accentColorIndex) private var accentColorIndex = 0
@@ -22,10 +28,28 @@ struct SettingsView: View {
     @State private var showingSaveImporter = false
     @State private var showingSaveExporter = false
     @State private var exportURL: URL?
-    @State private var pendingRemoval: TamaDevice?
+    @State private var showingRemoveConfirm = false
     @State private var showingRestartConfirm = false
     @State private var showingSetClockConfirm = false
     @State private var toast: String?
+
+    init(
+        device: TamaDevice,
+        viewModel: PlayViewModel,
+        onDelete: @escaping () -> Void,
+        onDeviceImported: @escaping (TamaDevice) -> Void
+    ) {
+        self.device = device
+        self.viewModel = viewModel
+        self.onDelete = onDelete
+        self.onDeviceImported = onDeviceImported
+        // Speed and stay-awake are per-device — the key itself depends on
+        // `device`, so the usual static-key @AppStorage shorthand can't
+        // express it; this underscore-prefixed form is the standard way to
+        // give @AppStorage a key known only at instance-init time.
+        _speedMultiplier = AppStorage(wrappedValue: 1, AppSettings.Keys.speedMultiplier(for: device))
+        _stayAwake = AppStorage(wrappedValue: true, AppSettings.Keys.stayAwake(for: device))
+    }
 
     var body: some View {
         NavigationStack {
@@ -34,7 +58,7 @@ struct SettingsView: View {
                 soundAndGameplaySection
                 displaySection
             }
-            .navigationTitle("Settings")
+            .navigationTitle("Settings for \(device.title)")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -42,9 +66,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingImportSheet) {
                 NavigationStack {
-                    FirmwareImportView(devices: viewModel.devices) { device, url in
-                        viewModel.firmwareImported(for: device, at: url)
+                    FirmwareImportView(devices: DeviceCatalog.all()) { importedDevice, url in
                         showingImportSheet = false
+                        onDeviceImported(importedDevice)
                     }
                     .navigationTitle("Import firmware")
                     .toolbar {
@@ -73,20 +97,21 @@ struct SettingsView: View {
                 }
             }
             .confirmationDialog(
-                "Remove \(pendingRemoval?.title ?? "")'s save data?",
-                isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
+                "Remove \(device.title)'s save data?",
+                isPresented: $showingRemoveConfirm,
                 titleVisibility: .visible
             ) {
                 Button("Remove", role: .destructive) {
-                    if let device = pendingRemoval { viewModel.removeDeviceData(device) }
-                    pendingRemoval = nil
+                    showingRemoveConfirm = false
+                    dismiss()
+                    onDelete()
                 }
-                Button("Cancel", role: .cancel) { pendingRemoval = nil }
+                Button("Cancel", role: .cancel) { showingRemoveConfirm = false }
             } message: {
                 Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
             }
             .confirmationDialog(
-                "Restart \(viewModel.selectedDevice.title)?",
+                "Restart \(device.title)?",
                 isPresented: $showingRestartConfirm,
                 titleVisibility: .visible
             ) {
@@ -116,31 +141,6 @@ struct SettingsView: View {
     @ViewBuilder
     private var firmwareSection: some View {
         Section {
-            ForEach(viewModel.importedDevices) { device in
-                Button {
-                    viewModel.switchToDevice(device)
-                } label: {
-                    HStack {
-                        Text(device.title)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if device.id == viewModel.selectedDevice.id {
-                            Image(systemName: "checkmark").foregroundStyle(.tint)
-                        }
-                    }
-                }
-                .swipeActions {
-                    Button("Remove", role: .destructive) { pendingRemoval = device }
-                }
-            }
-            Button("Import additional firmware…") { showingImportSheet = true }
-        } header: {
-            Text("Firmware")
-        } footer: {
-            Text("Each imported firmware keeps its own save data. Switching doesn't need a re-import.")
-        }
-
-        Section {
             Button("Export save file…") {
                 exportURL = viewModel.prepareExportURL()
                 if exportURL != nil { showingSaveExporter = true }
@@ -150,10 +150,18 @@ struct SettingsView: View {
             Button("Set clock to current time…") { showingSetClockConfirm = true }
             Button("Restart (soft reset)…") { showingRestartConfirm = true }
             Button("Remove this device's data…", role: .destructive) {
-                pendingRemoval = viewModel.selectedDevice
+                showingRemoveConfirm = true
             }
         } header: {
             Text("Save")
+        } footer: {
+            Text("Add more Tamas from the \"+\" button in the gallery, or re-import this one's firmware below.")
+        }
+
+        Section {
+            Button("Import additional firmware…") { showingImportSheet = true }
+        } header: {
+            Text("Firmware")
         }
     }
 
@@ -210,7 +218,7 @@ struct SettingsView: View {
         } header: {
             Text("Gameplay")
         } footer: {
-            Text("Speed only changes how fast the Tamagotchi's own clock runs, not how it responds to buttons. Catch-up controls how much time it ages through the next time it's opened or refreshed in the background.")
+            Text("Speed and stay-awake apply to this Tama only. Catch-up controls how much time it ages through the next time it's opened or refreshed in the background.")
         }
     }
 
@@ -241,7 +249,7 @@ struct SettingsView: View {
         } header: {
             Text("Display")
         } footer: {
-            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike.")
+            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. These apply app-wide, not just to this Tama.")
         }
     }
 }
