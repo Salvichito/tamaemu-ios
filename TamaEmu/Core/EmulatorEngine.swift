@@ -61,6 +61,17 @@ final class EmulatorEngine {
     /// init()'s catch-up pass — never assume a particular thread.
     var onCallDetected: (() -> Void)?
 
+    /// Whether a call detected during init()'s catch-up pass should still
+    /// invoke `onCallDetected`. BackgroundRefresh wants this (it's the only
+    /// chance to notify the player *before* they open the app). The
+    /// foreground launch path (PlayViewModel) does not: that catch-up pass
+    /// runs because the player just opened the app, so by the time it
+    /// could fire, they're already looking at the live screen — a
+    /// notification at that point is pure noise, not a heads-up. A call
+    /// detected live, during `runLoop()`, always notifies regardless of
+    /// this flag — that's a real-time event, not a backlog replay.
+    private let notifyOnCatchUpCalls: Bool
+
     private lazy var audioOutput = AudioOutput(
         toneProvider: { [weak self] in
             guard let self else { return (false, 0) }
@@ -89,6 +100,7 @@ final class EmulatorEngine {
         savePaths: SavePaths,
         catchUpWallClockBudget: TimeInterval = 1.0,
         isPaused: Bool = false,
+        notifyOnCatchUpCalls: Bool = true,
         onCallDetected: (() -> Void)? = nil
     ) throws {
         guard let profile = device_find(device.id) else {
@@ -97,6 +109,7 @@ final class EmulatorEngine {
         self.device = device
         self.savePaths = savePaths
         self.frameStore = FrameStore(width: Int(PANEL_W), height: Int(PANEL_H))
+        self.notifyOnCatchUpCalls = notifyOnCatchUpCalls
         self.onCallDetected = onCallDetected
 
         // Don't assume the caller already created these — state_save/the
@@ -275,14 +288,15 @@ final class EmulatorEngine {
 
     /// Call once right after every `cpu_step`, from any loop (normal
     /// real-time or catch-up) — the melody edge that signals a call can
-    /// happen at any point in either.
-    private func checkCallDetection() {
+    /// happen at any point in either. `duringCatchUp` controls whether a
+    /// detection here is allowed to notify — see `notifyOnCatchUpCalls`.
+    private func checkCallDetection(duringCatchUp: Bool = false) {
         let detected = callDetector.checkToneEdge(
             toneOn: emu.pointee.tone_on != 0,
             toneFreq: emu.pointee.tone_freq,
             emuSecs: emu.pointee.emu_secs
         )
-        if detected {
+        if detected && (!duringCatchUp || notifyOnCatchUpCalls) {
             onCallDetected?()
         }
     }
@@ -316,7 +330,7 @@ final class EmulatorEngine {
             cpu_step(emu)
             let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
             periph_tick(emu, delta)
-            checkCallDetection()
+            checkCallDetection(duringCatchUp: true)
             stepsSinceDeadlineCheck += 1
             if stepsSinceDeadlineCheck >= 4096 {
                 stepsSinceDeadlineCheck = 0

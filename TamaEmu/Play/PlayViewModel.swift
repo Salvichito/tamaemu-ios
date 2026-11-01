@@ -234,6 +234,13 @@ final class PlayViewModel {
                     savePaths: paths,
                     catchUpWallClockBudget: Self.catchUpWallClockBudget,
                     isPaused: isPausedNow,
+                    // This engine's catch-up pass runs because the player
+                    // just opened (or unpaused) the app — any call it
+                    // detects is about to be visible on screen within
+                    // moments, so a notification for it would just be
+                    // noise. A call during live play afterwards still
+                    // notifies normally (see checkCallDetection).
+                    notifyOnCatchUpCalls: false,
                     onCallDetected: {
                         NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
                     }
