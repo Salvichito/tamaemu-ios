@@ -170,12 +170,13 @@ struct SettingsView: View {
     private var soundAndGameplaySection: some View {
         Section {
             Toggle("Mute", isOn: $muted)
-            Picker("Volume", selection: $volume) {
-                Text("Low").tag(0.3)
-                Text("Medium").tag(0.6)
-                Text("High").tag(1.0)
+            HStack {
+                Image(systemName: "speaker.fill")
+                Slider(value: $volume, in: 0...1)
+                Image(systemName: "speaker.wave.3.fill")
             }
             .disabled(muted)
+            .foregroundStyle(muted ? .secondary : .primary)
             Toggle("Haptics", isOn: $hapticsEnabled)
             Toggle("Play in Silent Mode", isOn: Binding(
                 get: { ignoreSilentSwitch },
