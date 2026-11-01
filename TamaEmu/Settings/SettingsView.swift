@@ -10,7 +10,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(AppSettings.Keys.ignoreSilentSwitch) private var ignoreSilentSwitch = false
     @AppStorage(AppSettings.Keys.speedMultiplier) private var speedMultiplier = 1
-    @AppStorage(AppSettings.Keys.stayAwake) private var stayAwake = false
+    @AppStorage(AppSettings.Keys.stayAwake) private var stayAwake = true
     @AppStorage(AppSettings.Keys.catchUpCapHours) private var catchUpCapHours = 24.0
     @AppStorage(AppSettings.Keys.buttonColorIndex) private var buttonColorIndex = 0
     @AppStorage(AppSettings.Keys.accentColorIndex) private var accentColorIndex = 0

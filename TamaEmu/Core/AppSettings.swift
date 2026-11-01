@@ -59,8 +59,12 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: Keys.speedMultiplier) }
     }
 
+    /// On by default: a real Tamagotchi's screen goes black to save its
+    /// own battery, but that's pointless to reproduce here — the host
+    /// device already has its own screen-sleep, and the blanked emulated
+    /// panel just looked like a bug (e.g. right after relaunch).
     static var stayAwake: Bool {
-        get { UserDefaults.standard.bool(forKey: Keys.stayAwake) }
+        get { UserDefaults.standard.object(forKey: Keys.stayAwake) as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: Keys.stayAwake) }
     }
 
