@@ -21,11 +21,12 @@ and marked with a `// iOS port:` comment at the change site.
 
 ## `device.c` and `include/emu.h`
 
-1. **`osc3_hz` lowered from `20000000.0` to `12000000.0` for `plus-color` and
-   `plus-color-hexa`.** Idle blink-animation speed was measured against real
-   Ps/Mix hardware (a careful stopwatch blink-count, not a guess) running
-   about 1.7-1.8x too fast. `osc3_hz` feeds the CMU/PLL math in `periph.c`
-   that paces every CPU cycle, so it's the right lever for a uniform
+1. **`osc3_hz` lowered from the `20000000.0` datasheet value for `plus-color`
+   and `plus-color-hexa`, currently `12000000.0`.** Idle blink-animation
+   speed was measured against real Ps/Mix hardware (a careful stopwatch
+   blink-count, not a guess) running about 1.7-1.8x too fast at the
+   datasheet value. `osc3_hz` feeds the CMU/PLL math in `periph.c` that
+   paces every CPU cycle, so it's the right lever for a uniform
    animation-speed scale factor.
 
    This was first believed to be a port-side bug (a missing cycle ceiling in
@@ -49,18 +50,48 @@ and marked with a `// iOS port:` comment at the change site.
    animation timing, so lowering `osc3_hz` alone dropped pitch too — and it
    had been correct at `20000000.0`. `tone_hz` decouples it.
 
-   Melody *tempo* (not pitch) is driven by the same T16 hardware-timer
-   mechanism as general CPU cycle throughput (`periph_tick()`'s "Timer
-   clocks use MCLK-derived prescalers"), which is tied to `osc3_hz`, not
-   `tone_hz` — so tempo is not fully independent of the animation-speed
-   constant the way pitch is. In practice this has been reported as an
-   acceptable trade (a short melody's tempo is far less perceptually
-   sensitive to a clock-rate shift than many seconds of continuously
-   compounding animation drift), but it's a known, structural limitation of
-   this fix, not a coincidence — a fully independent tempo clock would need
-   splitting the CPU's single shared cycle counter into separate animation
-   and timer-interrupt streams, which is a materially bigger change than
-   this one constant.
+   Melody *tempo* (not pitch) is not independent of `osc3_hz` the way pitch
+   is, and neither are a few other things discovered since: minigame pacing
+   (apple-catching felt slow) and part of at least one longer intro
+   animation. First guess was that tempo shared the T16 hardware-timer
+   mechanism (`periph_tick()`'s "Timer clocks use MCLK-derived
+   prescalers"), so a `tone_hz`-style rescale of every T16 channel's
+   prescaler divisor was tried. That was reverted: `periph_tick()`'s six
+   T16 channels are shared by more than melody tempo (the 12MHz `osc3_hz`
+   value was itself tuned against a real-hardware blink-count measurement,
+   which strongly suggests idle/egg-phase blink animation also rides one or
+   more of these same channels), so rescaling all six for tempo's sake sped
+   up blinking past real hardware too — confirmed by a user-measured blink
+   count (~20 blinks/10s on real hardware vs. 50+ and visibly uneven with
+   the rescale applied).
+
+   Temporary debug logging (added and removed in the same pass — see git
+   history, not left in the tree) then traced an actual melody frame by
+   frame: no T16 channel fires anywhere near the note-change rate. Tempo is
+   instead a plain firmware busy-wait loop counting raw CPU cycles — the
+   same clock as general CPU/animation throughput, with no separate timer
+   involved at all (the gap between notes measured out to a fixed 2,457,600
+   cycles, which is exactly 0.12288s at the real 20MHz clock — a classic
+   round crystal-divisor number — confirming the loop's cycle count is
+   fixed and its real-world duration is purely a function of `osc3_hz`).
+   This means tempo, minigame pacing, and any other cycle-counted firmware
+   delay are structurally tied to `osc3_hz` with no clean way to decouple
+   them the way `tone_hz` decouples pitch (which sidesteps the issue
+   entirely by recomputing frequency from register values instead of
+   counting ticks) — short of detecting specific ROM address ranges and
+   giving them their own cycle rate, which is fragile, firmware-version-
+   specific reverse-engineering, not attempted here.
+
+   Given that, `osc3_hz` is inherently a compromise, not a value that makes
+   everything correct: blinking and tempo/minigame-pacing pull it in
+   opposite directions (raising it from `12000000.0` toward the datasheet
+   value helps the cycle-counted stuff but makes blinking faster than
+   ideal, and vice versa), so there is no single number that's right for
+   both. `14000000.0` was tried as a middle ground and reverted by direct
+   side-by-side comparison against this value — it made blink/animation
+   speed noticeably worse without melody tempo or minigame pacing feeling
+   enough better to justify that. `12000000.0` — prioritizing blink-
+   animation accuracy — is the preferred value until proven otherwise.
 
 See `EmulatorEngine.swift`'s `runLoop()` in the iOS app for the cycle-ceiling
 fix mentioned above.
