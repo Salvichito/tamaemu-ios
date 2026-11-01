@@ -10,8 +10,21 @@ struct PlayScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                LCDView(image: viewModel.lcdImage)
-                    .frame(maxWidth: 280)
+                ZStack {
+                    LCDView(image: viewModel.lcdImage)
+                        .frame(maxWidth: 280)
+
+                    if viewModel.isLoading {
+                        VStack(spacing: 6) {
+                            ProgressView()
+                            Text("Catching up…")
+                                .font(.caption2)
+                                .foregroundStyle(.white)
+                        }
+                        .padding(10)
+                        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                }
 
                 if viewModel.hasFirmware {
                     Text(viewModel.selectedDevice.title)
@@ -21,6 +34,8 @@ struct PlayScreen: View {
                         onPress: { viewModel.pressButton($0) },
                         onRelease: { viewModel.releaseButton($0) }
                     )
+                    .disabled(viewModel.isLoading)
+                    .opacity(viewModel.isLoading ? 0.4 : 1)
                 } else {
                     FirmwareImportView(
                         devices: viewModel.devices,

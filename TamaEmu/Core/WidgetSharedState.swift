@@ -78,4 +78,14 @@ enum WidgetSharedState {
         lastUpdated = Date()
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
     }
+
+    /// The last frame this device actually showed, read straight off disk —
+    /// fast enough to call synchronously on launch so the play screen has
+    /// *something* real to show immediately, instead of a black screen,
+    /// while the engine loads/catches up off the main thread.
+    static func loadLastFrameImage() -> CGImage? {
+        guard let framePath = latestFramePath,
+              let image = UIImage(contentsOfFile: framePath.path) else { return nil }
+        return image.cgImage
+    }
 }

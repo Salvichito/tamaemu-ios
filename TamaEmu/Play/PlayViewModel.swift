@@ -11,6 +11,10 @@ final class PlayViewModel {
     private(set) var lcdImage: CGImage?
     private(set) var hasFirmware = false
     private(set) var errorMessage: String?
+    /// True while an engine load (catch-up included) is in flight off the
+    /// main thread — the screen already shows the last known frame during
+    /// this (see startEngine()), but it isn't live/interactive yet.
+    private(set) var isLoading = false
 
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
@@ -32,6 +36,12 @@ final class PlayViewModel {
 
         if ActiveDeviceLookup.hasImportedROM(selectedDevice) {
             hasFirmware = true
+            // Shows the last real frame instantly instead of a black
+            // screen while the engine loads below — stale by however long
+            // the app's been closed, but immediately tells the user their
+            // Tama is there and roughly how it's doing, rather than
+            // leaving them guessing whether anything is alive.
+            lcdImage = WidgetSharedState.loadLastFrameImage()
             // Covers anyone who imported firmware before this permission
             // request existed — firmwareImported(for:at:) only asks on a
             // brand-new import, which would otherwise leave existing users
@@ -237,6 +247,7 @@ final class PlayViewModel {
         stopEngine()
         startGeneration += 1
         let generation = startGeneration
+        isLoading = true
         let device = selectedDevice
         let paths = SavePaths(device: device)
         let deviceTitle = device.title
@@ -269,10 +280,17 @@ final class PlayViewModel {
                     }
                     if let image {
                         WidgetSharedState.publish(image: image, deviceTitle: deviceTitle)
+                        // Shows the real post-catch-up frame the instant loading
+                        // ends, rather than leaving the stale cached snapshot on
+                        // screen until the display timer happens to notice a
+                        // pixel change — that's an indirect trigger with no
+                        // guarantee of firing right away.
+                        self.lcdImage = image
                     }
                     newEngine.start()
                     self.engine = newEngine
                     self.errorMessage = nil
+                    self.isLoading = false
                     self.beginDisplayTimer()
                 }
             case .failure(let error):
@@ -280,6 +298,7 @@ final class PlayViewModel {
                     guard self.startGeneration == generation else { return }
                     self.errorMessage = error.localizedDescription
                     self.hasFirmware = false
+                    self.isLoading = false
                 }
             }
         }
