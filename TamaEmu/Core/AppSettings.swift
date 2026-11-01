@@ -22,6 +22,7 @@ enum AppSettings {
         static let accentColorIndex = "settings.accentColorIndex"
         static let sharpPixels = "settings.sharpPixels"
         static let ignoreSilentSwitch = "settings.ignoreSilentSwitch"
+        static let ambientBackgroundEnabled = "settings.ambientBackgroundEnabled"
 
         /// Per-device keys — speed and stay-awake are the two settings that
         /// already have a per-instance home on the C Emu struct (rtc_mult,
@@ -109,6 +110,13 @@ enum AppSettings {
     static var sharpPixels: Bool {
         get { UserDefaults.standard.object(forKey: Keys.sharpPixels) as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: Keys.sharpPixels) }
+    }
+
+    /// On by default: the full-bleed blurred backdrop and screen glow
+    /// described by the play-screen look (see BlurredLCDBackground).
+    static var ambientBackgroundEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: Keys.ambientBackgroundEnabled) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: Keys.ambientBackgroundEnabled) }
     }
 
     /// Off by default: the Tama stays a "toy" that respects the phone's

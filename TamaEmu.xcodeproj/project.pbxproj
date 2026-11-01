@@ -11,11 +11,14 @@
 		04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */; };
 		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
 		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
+		105C8B5E80F65564F54A08A6 /* BackgroundRefreshCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */; };
 		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
 		2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
+		344D1C96652FA73744DB0B24 /* SelectTamaIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */; };
 		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
+		4CF56E64D9B116A97407FC59 /* CGImage+GlowColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */; };
 		5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1122334455667788990AABBC /* DeviceDetector.swift */; };
 		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
 		5AFDD78582EA89F72D65FEAB /* TamaGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */; };
@@ -23,25 +26,25 @@
 		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
 		6677889900112233AABBCCFF /* TamaPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2233445566778899AABBCCDD /* TamaPalette.swift */; };
+		748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */; };
 		76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */; };
 		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
 		7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */; };
 		8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */ = {isa = PBXBuildFile; fileRef = A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */; };
 		8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
+		8DCF8788183AD7BA77EAD00B /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291654CFB51D6F793B885E33 /* GalleryViewModel.swift */; };
+		9A728C37BBD35895FD2E3205 /* TamaPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */; };
 		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
 		C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9228514E9DDD678D810B062 /* PlayViewModel.swift */; };
 		C919374E85E040D38477FC99 /* TamaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */; };
-		344D1C96652FA73744DB0B24 /* SelectTamaIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */; };
-		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
+		CFCC6A6FD42DD0017938FBD0 /* DevicePauseState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */; };
 		D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B094FAC77A244A49BB27D76A /* AudioOutput.swift */; };
+		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
 		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
 		E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7594ABE9067A97A1A2D888F3 /* TamaCore */; };
 		EF5191F516084C0781B33906 /* InputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736990A9EB7F43B291B3E53F /* InputController.swift */; };
-		CFCC6A6FD42DD0017938FBD0 /* DevicePauseState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */; };
-		105C8B5E80F65564F54A08A6 /* BackgroundRefreshCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */; };
-		8DCF8788183AD7BA77EAD00B /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291654CFB51D6F793B885E33 /* GalleryViewModel.swift */; };
-		9A728C37BBD35895FD2E3205 /* TamaPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */; };
+		F3BF9890B6B4109C098E7B84 /* ScreenGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */; };
 		F847517F815D45A390B05D05 /* TamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69860A54686643F895D85D5D /* TamaProvider.swift */; };
 		FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */; };
 /* End PBXBuildFile section */
@@ -72,6 +75,7 @@
 
 /* Begin PBXFileReference section */
 		04981D1305DB4733ACBC657E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenGlow.swift; path = ScreenGlow.swift; sourceTree = "<group>"; };
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
 		1122334455667788990AABBC /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
@@ -79,12 +83,16 @@
 		1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TamaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2233445566778899AABBCCDD /* TamaPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPalette.swift; sourceTree = "<group>"; };
 		2267519E09184C139C7BAC4C /* ButtonPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonPad.swift; sourceTree = "<group>"; };
+		291654CFB51D6F793B885E33 /* GalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryViewModel.swift; sourceTree = "<group>"; };
 		2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaWidget.entitlements; sourceTree = "<group>"; };
 		3344556677889900AABBCCEE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		33A5894F6DD24F569DA1474D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveDeviceLookup.swift; sourceTree = "<group>"; };
+		42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectTamaIntent.swift; sourceTree = "<group>"; };
 		48000D40ECD8B146CAD8EF8F /* TamaEmu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TamaEmu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshCursor.swift; sourceTree = "<group>"; };
+		5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePauseState.swift; sourceTree = "<group>"; };
 		6071AE0290284B2485601BEE /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
 		66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
 		69860A54686643F895D85D5D /* TamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaProvider.swift; sourceTree = "<group>"; };
@@ -92,6 +100,7 @@
 		736990A9EB7F43B291B3E53F /* InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputController.swift; sourceTree = "<group>"; };
 		7B76611C89874CD080A593F7 /* FirmwareImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareImportView.swift; sourceTree = "<group>"; };
 		94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorEngine.swift; sourceTree = "<group>"; };
+		9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BlurredLCDBackground.swift; path = BlurredLCDBackground.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDScreenEffect.swift; sourceTree = "<group>"; };
 		A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = TamaEmu.icon; sourceTree = "<group>"; };
 		A9228514E9DDD678D810B062 /* PlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayViewModel.swift; sourceTree = "<group>"; };
@@ -100,16 +109,13 @@
 		AE4595FCF428E95973D802C6 /* TamaCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TamaCore; path = Packages/TamaCore; sourceTree = SOURCE_ROOT; };
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
-		42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectTamaIntent.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
+		DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "CGImage+GlowColor.swift"; path = "CGImage+GlowColor.swift"; sourceTree = "<group>"; };
 		F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaGalleryView.swift; sourceTree = "<group>"; };
 		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
-		5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePauseState.swift; sourceTree = "<group>"; };
-		56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshCursor.swift; sourceTree = "<group>"; };
-		291654CFB51D6F793B885E33 /* GalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryViewModel.swift; sourceTree = "<group>"; };
-		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -180,6 +186,7 @@
 				AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */,
 				5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */,
 				56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */,
+				DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -245,6 +252,8 @@
 				2267519E09184C139C7BAC4C /* ButtonPad.swift */,
 				291654CFB51D6F793B885E33 /* GalleryViewModel.swift */,
 				BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */,
+				9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */,
+				04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -313,7 +322,7 @@
 			mainGroup = C3C94697C2E99148C09374B1;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				9C4F7219BFB510234668F893 /* XCLocalSwiftPackageReference "Packages/TamaCore" */,
+				9C4F7219BFB510234668F893 /* XCLocalSwiftPackageReference "TamaCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B0CC56E460754400D65818A7 /* Products */;
@@ -389,6 +398,9 @@
 				105C8B5E80F65564F54A08A6 /* BackgroundRefreshCursor.swift in Sources */,
 				8DCF8788183AD7BA77EAD00B /* GalleryViewModel.swift in Sources */,
 				9A728C37BBD35895FD2E3205 /* TamaPageView.swift in Sources */,
+				748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */,
+				F3BF9890B6B4109C098E7B84 /* ScreenGlow.swift in Sources */,
+				4CF56E64D9B116A97407FC59 /* CGImage+GlowColor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -633,7 +645,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		9C4F7219BFB510234668F893 /* XCLocalSwiftPackageReference "Packages/TamaCore" */ = {
+		9C4F7219BFB510234668F893 /* XCLocalSwiftPackageReference "TamaCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TamaCore;
 		};

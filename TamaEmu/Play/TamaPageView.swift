@@ -15,10 +15,64 @@ struct TamaPageView: View {
     @State private var showingDeleteConfirm = false
 
     var body: some View {
+        pageContent
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            viewModel.togglePause()
+                        } label: {
+                            Label(
+                                viewModel.isPaused ? "Resume" : "Pause",
+                                systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
+                            )
+                        }
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Label("Settings for \(viewModel.selectedDevice.title)", systemImage: "gearshape")
+                        }
+                        Button {
+                            onAddTama()
+                        } label: {
+                            Label("Add a Tama", systemImage: "plus")
+                        }
+                        Button(role: .destructive) {
+                            showingDeleteConfirm = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView(
+                    device: viewModel.selectedDevice,
+                    viewModel: viewModel,
+                    onDelete: onDelete,
+                    onDeviceImported: onDeviceImported
+                )
+            }
+            .confirmationDialog(
+                "Delete \(viewModel.selectedDevice.title)?",
+                isPresented: $showingDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) { onDelete() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
+            }
+    }
+
+    private var pageContent: some View {
         VStack(spacing: 16) {
             ZStack {
                 LCDView(image: viewModel.lcdImage)
                     .frame(maxWidth: 280)
+                    .screenGlow(image: viewModel.lcdImage)
 
                 if viewModel.isPaused {
                     VStack(spacing: 6) {
@@ -68,54 +122,5 @@ struct TamaPageView: View {
             }
         }
         .padding()
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        viewModel.togglePause()
-                    } label: {
-                        Label(
-                            viewModel.isPaused ? "Resume" : "Pause",
-                            systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
-                        )
-                    }
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Label("Settings for \(viewModel.selectedDevice.title)", systemImage: "gearshape")
-                    }
-                    Button {
-                        onAddTama()
-                    } label: {
-                        Label("Add a Tama", systemImage: "plus")
-                    }
-                    Button(role: .destructive) {
-                        showingDeleteConfirm = true
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
-        }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView(
-                device: viewModel.selectedDevice,
-                viewModel: viewModel,
-                onDelete: onDelete,
-                onDeviceImported: onDeviceImported
-            )
-        }
-        .confirmationDialog(
-            "Delete \(viewModel.selectedDevice.title)?",
-            isPresented: $showingDeleteConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) { onDelete() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
-        }
     }
 }

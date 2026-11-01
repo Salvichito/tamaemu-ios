@@ -6,6 +6,11 @@ import SwiftUI
 struct LCDView: View {
     let image: CGImage?
 
+    /// Subtle rounding, closer to a standard rounded rect than an icon's
+    /// squircle — shared with ScreenGlow so its halo's corners match this
+    /// view's own clip shape exactly.
+    static let cornerRadiusRatio: CGFloat = 0.08
+
     @AppStorage(AppSettings.Keys.sharpPixels) private var sharpPixels = true
     @AppStorage(WidgetSharedState.lcdEffectEnabledKey, store: WidgetSharedState.sharedDefaultsOrStandard)
     private var lcdEffectEnabled = true
@@ -13,8 +18,7 @@ struct LCDView: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            // Subtle rounding, closer to a standard rounded rect than an icon's squircle.
-            let corner = side * 0.08
+            let corner = side * Self.cornerRadiusRatio
 
             Group {
                 if let image {

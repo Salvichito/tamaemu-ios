@@ -6,6 +6,14 @@ struct TamaGalleryView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage(AppSettings.Keys.accentColorIndex) private var accentColorIndex = 0
+    @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
+
+    /// The page currently on screen — the one whose colors the full-bleed
+    /// background should show, since that's the only page actually visible.
+    private var selectedViewModel: PlayViewModel? {
+        guard let id = gallery.selectedPage, let device = gallery.device(withID: id) else { return nil }
+        return gallery.viewModel(for: device)
+    }
 
     var body: some View {
         Group {
@@ -18,40 +26,7 @@ struct TamaGalleryView: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
             } else {
-                NavigationStack {
-                    TabView(selection: Binding(
-                        get: { gallery.selectedPage ?? gallery.ownedDevices[0].id },
-                        set: { gallery.selectedPage = $0 }
-                    )) {
-                        ForEach(gallery.ownedDevices) { device in
-                            TamaPageView(
-                                viewModel: gallery.viewModel(for: device),
-                                onDelete: { gallery.removeDevice(device) },
-                                onDeviceImported: { gallery.deviceImported($0) },
-                                onAddTama: { gallery.showingImport = true }
-                            )
-                            .tag(device.id)
-                        }
-                    }
-                    .tabViewStyle(.page)
-                    .indexViewStyle(.page(backgroundDisplayMode: .always))
-                    .navigationTitle("")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .sheet(isPresented: $gallery.showingImport) {
-                        NavigationStack {
-                            FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in
-                                gallery.deviceImported(device)
-                                gallery.showingImport = false
-                            }
-                            .navigationTitle("Add a Tama")
-                            .toolbar {
-                                ToolbarItem(placement: .cancellationAction) {
-                                    Button("Cancel") { gallery.showingImport = false }
-                                }
-                            }
-                        }
-                    }
-                }
+                galleryStack
             }
         }
         .tint(TamaPalette.accentColor(at: accentColorIndex))
@@ -75,6 +50,50 @@ struct TamaGalleryView: View {
                 gallery.pageDidAppear(current)
             default:
                 break
+            }
+        }
+    }
+
+    private var galleryStack: some View {
+        NavigationStack {
+            TabView(selection: Binding(
+                get: { gallery.selectedPage ?? gallery.ownedDevices[0].id },
+                set: { gallery.selectedPage = $0 }
+            )) {
+                ForEach(gallery.ownedDevices) { device in
+                    TamaPageView(
+                        viewModel: gallery.viewModel(for: device),
+                        onDelete: { gallery.removeDevice(device) },
+                        onDeviceImported: { gallery.deviceImported($0) },
+                        onAddTama: { gallery.showingImport = true }
+                    )
+                    .tag(device.id)
+                }
+            }
+            .tabViewStyle(.page)
+            .indexViewStyle(.page(backgroundDisplayMode: ambientBackgroundEnabled ? .interactive : .always))
+            .scrollContentBackground(ambientBackgroundEnabled ? .hidden : .visible)
+            .background {
+                if ambientBackgroundEnabled {
+                    BlurredLCDBackground(image: selectedViewModel?.lcdImage)
+                }
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(ambientBackgroundEnabled ? .hidden : .automatic, for: .navigationBar)
+            .sheet(isPresented: $gallery.showingImport) {
+                NavigationStack {
+                    FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in
+                        gallery.deviceImported(device)
+                        gallery.showingImport = false
+                    }
+                    .navigationTitle("Add a Tama")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { gallery.showingImport = false }
+                        }
+                    }
+                }
             }
         }
     }

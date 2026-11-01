@@ -23,6 +23,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.sharpPixels) private var sharpPixels = true
     @AppStorage(WidgetSharedState.lcdEffectEnabledKey, store: WidgetSharedState.sharedDefaultsOrStandard)
     private var lcdEffectEnabled = true
+    @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
 
     @State private var showingImportSheet = false
     @State private var showingSaveImporter = false
@@ -249,10 +250,11 @@ struct SettingsView: View {
                 get: { lcdEffectEnabled },
                 set: { lcdEffectEnabled = $0; WidgetSharedState.requestWidgetRefresh() }
             ))
+            Toggle("Ambient Background", isOn: $ambientBackgroundEnabled)
         } header: {
             Text("Display")
         } footer: {
-            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. These apply app-wide, not just to this Tama.")
+            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it. These apply app-wide, not just to this Tama.")
         }
     }
 }
