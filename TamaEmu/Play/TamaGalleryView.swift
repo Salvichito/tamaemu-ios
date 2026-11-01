@@ -46,8 +46,10 @@ struct TamaGalleryView: View {
             case .background:
                 gallery.pageDidDisappear(current)
                 BackgroundRefresh.scheduleNext()
+                ReminderNotificationScheduler.scheduleIfEnabled()
             case .active:
                 gallery.pageDidAppear(current)
+                ReminderNotificationScheduler.cancel()
             default:
                 break
             }

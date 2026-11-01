@@ -23,6 +23,8 @@ enum AppSettings {
         static let sharpPixels = "settings.sharpPixels"
         static let ignoreSilentSwitch = "settings.ignoreSilentSwitch"
         static let ambientBackgroundEnabled = "settings.ambientBackgroundEnabled"
+        static let reminderNotificationsEnabled = "settings.reminderNotificationsEnabled"
+        static let reminderIntervalHours = "settings.reminderIntervalHours"
 
         /// Per-device keys — speed and stay-awake are the two settings that
         /// already have a per-instance home on the C Emu struct (rtc_mult,
@@ -41,6 +43,7 @@ enum AppSettings {
     /// itself steps between.
     static let speedLadder = [1, 2, 5, 10, 30, 60, 120, 300, 600]
     static let catchUpCapOptions: [Double] = [0, 1, 6, 24]
+    static let reminderIntervalOptions: [Double] = [4, 8, 12, 24]
 
     static var muted: Bool {
         get { UserDefaults.standard.bool(forKey: Keys.muted) }
@@ -117,6 +120,23 @@ enum AppSettings {
     static var ambientBackgroundEnabled: Bool {
         get { UserDefaults.standard.object(forKey: Keys.ambientBackgroundEnabled) as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: Keys.ambientBackgroundEnabled) }
+    }
+
+    /// Off by default: this is a state-blind fallback (see
+    /// ReminderNotificationScheduler) — it doesn't know whether the Tama
+    /// actually needs anything, just that the app hasn't been opened in a
+    /// while, so it's opt-in rather than nagging everyone out of the box.
+    static var reminderNotificationsEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: Keys.reminderNotificationsEnabled) }
+        set { UserDefaults.standard.set(newValue, forKey: Keys.reminderNotificationsEnabled) }
+    }
+
+    static var reminderIntervalHours: Double {
+        get {
+            let stored = UserDefaults.standard.object(forKey: Keys.reminderIntervalHours) as? Double ?? 8
+            return reminderIntervalOptions.contains(stored) ? stored : 8
+        }
+        set { UserDefaults.standard.set(newValue, forKey: Keys.reminderIntervalHours) }
     }
 
     /// Off by default: the Tama stays a "toy" that respects the phone's

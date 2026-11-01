@@ -24,6 +24,8 @@ struct SettingsView: View {
     @AppStorage(WidgetSharedState.lcdEffectEnabledKey, store: WidgetSharedState.sharedDefaultsOrStandard)
     private var lcdEffectEnabled = true
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
+    @AppStorage(AppSettings.Keys.reminderNotificationsEnabled) private var reminderNotificationsEnabled = false
+    @AppStorage(AppSettings.Keys.reminderIntervalHours) private var reminderIntervalHours = 8.0
 
     @State private var showingImportSheet = false
     @State private var showingSaveImporter = false
@@ -57,6 +59,7 @@ struct SettingsView: View {
             Form {
                 firmwareSection
                 soundAndGameplaySection
+                remindersSection
                 displaySection
             }
             .navigationTitle("Settings for \(device.title)")
@@ -229,6 +232,36 @@ struct SettingsView: View {
     private func setSpeed(_ value: Int) {
         speedMultiplier = value
         viewModel.refreshSettings()
+    }
+
+    // MARK: - Reminders
+
+    private var remindersSection: some View {
+        Section {
+            Toggle("Reminder Notifications", isOn: Binding(
+                get: { reminderNotificationsEnabled },
+                set: { newValue in
+                    reminderNotificationsEnabled = newValue
+                    if newValue {
+                        NotificationScheduler.requestAuthorizationIfNeeded()
+                    } else {
+                        ReminderNotificationScheduler.cancel()
+                    }
+                }
+            ))
+            if reminderNotificationsEnabled {
+                Picker("Remind me after", selection: $reminderIntervalHours) {
+                    Text("4 hours").tag(4.0)
+                    Text("8 hours").tag(8.0)
+                    Text("12 hours").tag(12.0)
+                    Text("24 hours").tag(24.0)
+                }
+            }
+        } header: {
+            Text("Reminders")
+        } footer: {
+            Text("A plain nudge to open the app if you haven't in a while — it has no idea whether your Tama actually needs anything, just that time has passed. Applies app-wide, not just to this Tama.")
+        }
     }
 
     // MARK: - Display

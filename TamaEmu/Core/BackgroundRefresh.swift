@@ -42,6 +42,9 @@ enum BackgroundRefresh {
                 catchUpWallClockBudget: perDeviceBudget,
                 onCallDetected: {
                     NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+                    // A real heads-up just went out — no need for the dumb
+                    // "it's been a while" reminder on top of it.
+                    ReminderNotificationScheduler.cancel()
                 }
             ) else {
                 BackgroundRefreshCursor.recordStoppedAfter(device)
