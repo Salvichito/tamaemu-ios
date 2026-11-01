@@ -146,10 +146,12 @@ static const DeviceProfile devices[] = {
          * running ~1.7x too fast at the datasheet osc3_hz; lowered it to
          * match, and decoupled tone_hz so audio pitch keeps the original
          * value. See CREDITS.md. A 14MHz blink-vs-tempo compromise was
-         * tried and reverted - it made animation/blink speed noticeably
-         * worse without melody tempo/minigame pacing feeling enough better
-         * to justify it, by direct comparison against this value. */
-        .osc3_hz    = 12000000.0,
+         * tried and reverted via desktop comparison - it made animation/
+         * blink speed noticeably worse without melody tempo/minigame
+         * pacing feeling enough better to justify it. Retrying at 14MHz
+         * now for an on-device feel check (never actually tested on
+         * hardware before). */
+        .osc3_hz    = 14000000.0,
         .tone_hz    = 20000000.0,
     },
     /* Hexagontchi reverses the Plus Color debug-strap polarity. */
@@ -174,7 +176,7 @@ static const DeviceProfile devices[] = {
         .has_sleep_flag = true,
         .sleep_flag = 0x00000000u,
         .ttbr_reset = 0x00C00000u,
-        .osc3_hz    = 12000000.0,
+        .osc3_hz    = 14000000.0,
         .tone_hz    = 20000000.0,
     },
 };
