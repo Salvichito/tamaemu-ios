@@ -77,8 +77,8 @@ final class EmulatorEngine {
             guard let self else { return (false, 0) }
             return (self.emu.pointee.tone_on != 0, self.emu.pointee.tone_freq)
         },
-        settingsProvider: {
-            (AppSettings.muted, Float(AppSettings.volume))
+        volumeProvider: {
+            Float(AppSettings.volume)
         }
     )
 

@@ -12,7 +12,6 @@ struct SettingsView: View {
     var onDeviceImported: (TamaDevice) -> Void
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage(AppSettings.Keys.muted) private var muted = false
     @AppStorage(AppSettings.Keys.volume) private var volume = 0.6
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(AppSettings.Keys.ignoreSilentSwitch) private var ignoreSilentSwitch = false
@@ -184,14 +183,11 @@ struct SettingsView: View {
     @ViewBuilder
     private var soundAndGameplaySection: some View {
         Section {
-            Toggle("Mute", isOn: $muted)
             HStack {
                 Image(systemName: "speaker.fill")
                 Slider(value: $volume, in: 0...1)
                 Image(systemName: "speaker.wave.3.fill")
             }
-            .disabled(muted)
-            .foregroundStyle(muted ? .secondary : .primary)
             Toggle("Haptics", isOn: $hapticsEnabled)
             Toggle("Play in Silent Mode", isOn: Binding(
                 get: { ignoreSilentSwitch },

@@ -9,13 +9,12 @@ import TamaCore
 ///
 /// Plain static accessors, not an @Observable object: these are read from
 /// the emulator thread (speed/stay-awake applied at engine start) and the
-/// real-time audio render callback (mute/volume), the same informal
+/// real-time audio render callback (volume), the same informal
 /// cross-thread read pattern EmulatorEngine/AudioOutput already use for the
 /// core's own tone state. SwiftUI reads/writes them via @AppStorage using
 /// the same key strings, so the Settings UI and engine always agree.
 enum AppSettings {
     enum Keys {
-        static let muted = "settings.muted"
         static let volume = "settings.volume"
         static let hapticsEnabled = "settings.hapticsEnabled"
         static let catchUpCapHours = "settings.catchUpCapHours"
@@ -68,11 +67,6 @@ enum AppSettings {
     static let speedLadder = [1, 2, 5, 10, 30, 60, 120, 300, 600]
     static let catchUpCapOptions: [Double] = [0, 1, 6, 24]
     static let reminderIntervalOptions: [Double] = [4, 8, 12, 24]
-
-    static var muted: Bool {
-        get { UserDefaults.standard.bool(forKey: Keys.muted) }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.muted) }
-    }
 
     /// Double, not Float — @AppStorage only binds to Double directly, and
     /// the Settings UI needs a live binding to this same key.

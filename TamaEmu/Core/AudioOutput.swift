@@ -11,13 +11,13 @@ final class AudioOutput {
     private let engine = AVAudioEngine()
     private var phase: Double = 0
     private let toneProvider: () -> (on: Bool, freq: Float)
-    private let settingsProvider: () -> (muted: Bool, volume: Float)
+    private let volumeProvider: () -> Float
     private var started = false
 
     /// `baseAmplitude` is the loudest the square wave ever gets; `volume`
-    /// (from settingsProvider) scales down from there, `muted` silences it
-    /// outright. Read once per render callback, not per sample — a
-    /// UserDefaults lookup per sample would be wasteful, not per-callback.
+    /// (from volumeProvider) scales down from there — at 0 it's silent.
+    /// Read once per render callback, not per sample — a UserDefaults
+    /// lookup per sample would be wasteful, not per-callback.
     ///
     /// `volume` is squared rather than applied linearly: loudness
     /// perception is roughly logarithmic, so a linear 0...1 scale packs
@@ -28,10 +28,10 @@ final class AudioOutput {
     /// across the slider.
     init(
         toneProvider: @escaping () -> (on: Bool, freq: Float),
-        settingsProvider: @escaping () -> (muted: Bool, volume: Float)
+        volumeProvider: @escaping () -> Float
     ) {
         self.toneProvider = toneProvider
-        self.settingsProvider = settingsProvider
+        self.volumeProvider = volumeProvider
         let format = engine.mainMixerNode.outputFormat(forBus: 0)
         let sampleRate = format.sampleRate
         let baseAmplitude: Float = 0.2
@@ -39,8 +39,8 @@ final class AudioOutput {
         let sourceNode = AVAudioSourceNode(format: format) { [weak self] _, _, frameCount, audioBufferList in
             guard let self else { return noErr }
             let (on, freq) = self.toneProvider()
-            let (muted, volume) = self.settingsProvider()
-            let amplitude = muted ? 0 : baseAmplitude * volume * volume
+            let volume = self.volumeProvider()
+            let amplitude = baseAmplitude * volume * volume
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
             var localPhase = self.phase
             for frame in 0..<Int(frameCount) {
