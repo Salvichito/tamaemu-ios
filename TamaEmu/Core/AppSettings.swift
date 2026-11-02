@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import TamaCore
 
 /// User-adjustable preferences that affect playback, independent of any one
@@ -18,8 +19,7 @@ enum AppSettings {
         static let volume = "settings.volume"
         static let hapticsEnabled = "settings.hapticsEnabled"
         static let catchUpCapHours = "settings.catchUpCapHours"
-        static let buttonColorIndex = "settings.buttonColorIndex"
-        static let accentColorIndex = "settings.accentColorIndex"
+        static let appearanceMode = "settings.appearanceMode"
         static let sharpPixels = "settings.sharpPixels"
         static let ignoreSilentSwitch = "settings.ignoreSilentSwitch"
         static let ambientBackgroundEnabled = "settings.ambientBackgroundEnabled"
@@ -35,6 +35,30 @@ enum AppSettings {
         }
         static func stayAwake(for device: TamaDevice) -> String {
             "settings.stayAwake.\(device.id)"
+        }
+    }
+
+    /// `.system` leaves `.preferredColorScheme` unset so the app follows
+    /// the OS's own light/dark switch.
+    enum AppearanceMode: String, CaseIterable, Identifiable {
+        case system, light, dark
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .system: "Automatic"
+            case .light: "Light"
+            case .dark: "Dark"
+            }
+        }
+
+        var colorScheme: ColorScheme? {
+            switch self {
+            case .system: nil
+            case .light: .light
+            case .dark: .dark
+            }
         }
     }
 
@@ -98,21 +122,16 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: Keys.catchUpCapHours) }
     }
 
-    static let buttonColorCount = 6
-    static var buttonColorIndex: Int {
-        get { (UserDefaults.standard.object(forKey: Keys.buttonColorIndex) as? Int ?? 0) % buttonColorCount }
-        set { UserDefaults.standard.set(newValue % buttonColorCount, forKey: Keys.buttonColorIndex) }
-    }
-
-    static let accentColorCount = 6
-    static var accentColorIndex: Int {
-        get { (UserDefaults.standard.object(forKey: Keys.accentColorIndex) as? Int ?? 0) % accentColorCount }
-        set { UserDefaults.standard.set(newValue % accentColorCount, forKey: Keys.accentColorIndex) }
-    }
-
     static var sharpPixels: Bool {
         get { UserDefaults.standard.object(forKey: Keys.sharpPixels) as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: Keys.sharpPixels) }
+    }
+
+    static var appearanceMode: AppearanceMode {
+        get {
+            (UserDefaults.standard.string(forKey: Keys.appearanceMode)).flatMap(AppearanceMode.init) ?? .system
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: Keys.appearanceMode) }
     }
 
     /// On by default: the full-bleed blurred backdrop and screen glow

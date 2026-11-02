@@ -5,7 +5,7 @@ struct TamaGalleryView: View {
     @State private var gallery = GalleryViewModel()
     @Environment(\.scenePhase) private var scenePhase
 
-    @AppStorage(AppSettings.Keys.accentColorIndex) private var accentColorIndex = 0
+    @AppStorage(AppSettings.Keys.appearanceMode) private var appearanceModeRaw = AppSettings.AppearanceMode.system.rawValue
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
 
     @State private var showingSettings = false
@@ -39,7 +39,7 @@ struct TamaGalleryView: View {
                 galleryStack
             }
         }
-        .tint(TamaPalette.accentColor(at: accentColorIndex))
+        .preferredColorScheme((AppSettings.AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
         .onChange(of: gallery.selectedPage) { old, new in
             if let old, old != new, let oldDevice = gallery.device(withID: old) {
                 gallery.pageDidDisappear(oldDevice)
@@ -85,7 +85,7 @@ struct TamaGalleryView: View {
                 }
             }
             .tabViewStyle(.page)
-            .indexViewStyle(.page(backgroundDisplayMode: ambientBackgroundEnabled ? .interactive : .always))
+            .indexViewStyle(.page(backgroundDisplayMode: .never))
             .scrollContentBackground(ambientBackgroundEnabled ? .hidden : .visible)
             .background {
                 if ambientBackgroundEnabled {

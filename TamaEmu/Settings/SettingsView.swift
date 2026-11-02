@@ -19,8 +19,7 @@ struct SettingsView: View {
     @AppStorage private var speedMultiplier: Int
     @AppStorage private var stayAwake: Bool
     @AppStorage(AppSettings.Keys.catchUpCapHours) private var catchUpCapHours = 24.0
-    @AppStorage(AppSettings.Keys.buttonColorIndex) private var buttonColorIndex = 0
-    @AppStorage(AppSettings.Keys.accentColorIndex) private var accentColorIndex = 0
+    @AppStorage(AppSettings.Keys.appearanceMode) private var appearanceModeRaw = AppSettings.AppearanceMode.system.rawValue
     @AppStorage(AppSettings.Keys.sharpPixels) private var sharpPixels = true
     @AppStorage(WidgetSharedState.lcdEffectEnabledKey, store: WidgetSharedState.sharedDefaultsOrStandard)
     private var lcdEffectEnabled = true
@@ -269,14 +268,9 @@ struct SettingsView: View {
 
     private var displaySection: some View {
         Section {
-            Picker("Button color", selection: $buttonColorIndex) {
-                ForEach(0..<TamaPalette.buttonColors.count, id: \.self) { i in
-                    Text(TamaPalette.buttonColors[i].name).tag(i)
-                }
-            }
-            Picker("Accent color", selection: $accentColorIndex) {
-                ForEach(0..<TamaPalette.accentColors.count, id: \.self) { i in
-                    Text(TamaPalette.accentColors[i].name).tag(i)
+            Picker("Appearance", selection: $appearanceModeRaw) {
+                ForEach(AppSettings.AppearanceMode.allCases) { mode in
+                    Text(mode.label).tag(mode.rawValue)
                 }
             }
             Toggle("Sharp pixels", isOn: $sharpPixels)

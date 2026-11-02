@@ -22,7 +22,6 @@ private struct ButtonView: View {
     let onPress: (InputController.Button) -> Void
     let onRelease: (InputController.Button) -> Void
 
-    @AppStorage(AppSettings.Keys.buttonColorIndex) private var buttonColorIndex = 0
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
 
     // DragGesture's onChanged fires repeatedly for one physical touch (even
@@ -58,15 +57,20 @@ private struct ButtonView: View {
     // stopped responding) — invisible in Simulator, which doesn't render
     // true Liquid Glass. The press scale/haptic in `body` above already
     // gives the button its own reactive feel without it.
+    //
+    // No tint on either branch, by design: this should look exactly like
+    // the overflow ("...") toolbar button — untinted system glass on
+    // iOS 26+, so it already follows the OS's own light/dark/accent
+    // styling instead of a separate color the player would have to pick.
     @ViewBuilder
     private var shape: some View {
         if #available(iOS 26.0, *) {
             Circle()
                 .fill(.clear)
-                .glassEffect(.regular.tint(TamaPalette.buttonColor(at: buttonColorIndex)), in: Circle())
+                .glassEffect(.regular, in: Circle())
         } else {
             Circle()
-                .fill(TamaPalette.buttonColor(at: buttonColorIndex))
+                .fill(Color(.secondarySystemBackground).opacity(0.25))
         }
     }
 }
