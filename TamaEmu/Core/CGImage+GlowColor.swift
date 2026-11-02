@@ -3,6 +3,11 @@ import SwiftUI
 import UIKit
 
 extension CGImage {
+    /// Reused across every call — a `CIContext` sets up its own Metal
+    /// pipeline, which Apple's own guidance says to create once and share
+    /// rather than rebuild per render.
+    private static let glowContext = CIContext(options: [.workingColorSpace: NSNull()])
+
     /// A single representative color for this frame, boosted toward its own
     /// most saturated hue rather than a flat average — a plain average over
     /// a multi-color LCD scene tends toward a muddy grey/brown that reads as
@@ -17,8 +22,7 @@ extension CGImage {
         guard let output = filter.outputImage else { return nil }
 
         var pixel = [UInt8](repeating: 0, count: 4)
-        let context = CIContext(options: [.workingColorSpace: NSNull()])
-        context.render(
+        Self.glowContext.render(
             output,
             toBitmap: &pixel,
             rowBytes: 4,

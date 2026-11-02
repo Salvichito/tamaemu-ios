@@ -23,7 +23,7 @@ struct TamaPageView: View {
             ZStack {
                 LCDView(image: viewModel.lcdImage)
                     .frame(maxWidth: 280)
-                    .screenGlow(image: viewModel.lcdImage)
+                    .screenGlow(color: viewModel.lcdGlowColor)
 
                 if viewModel.isPaused {
                     VStack(spacing: 6) {

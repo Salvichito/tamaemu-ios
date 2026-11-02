@@ -34,9 +34,13 @@ private struct ScreenGlow: ViewModifier {
 }
 
 extension View {
-    /// `image` is the Tama's current live frame — `nil` or a low-saturation
-    /// frame both fall back to a plain white glow.
-    func screenGlow(image: CGImage?) -> some View {
-        modifier(ScreenGlow(color: image?.vividGlowColor() ?? .white))
+    /// `color` is the Tama's current live frame's ambient color (see
+    /// `CGImage.vividGlowColor()`), computed once per frame change by
+    /// whoever owns the image rather than here — recomputing it inline in
+    /// this view's body ran it again on every unrelated re-render (e.g.
+    /// `isPaused` toggling), each of which built its own Core Image
+    /// pipeline from scratch.
+    func screenGlow(color: Color) -> some View {
+        modifier(ScreenGlow(color: color))
     }
 }

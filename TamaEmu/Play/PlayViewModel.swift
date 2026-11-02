@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import Observation
+import SwiftUI
 import TamaCore
 
 /// Owns exactly one Tama's engine lifecycle. One instance per owned device,
@@ -13,6 +14,13 @@ import TamaCore
 final class PlayViewModel {
     let selectedDevice: TamaDevice
     private(set) var lcdImage: CGImage?
+    /// The screen's ambient glow color, recomputed only when `lcdImage`
+    /// itself changes rather than on every SwiftUI re-render — this used to
+    /// live inline in ScreenGlow's view body, which re-ran (and rebuilt a
+    /// whole Core Image pipeline) on every unrelated state change, such as
+    /// `isPaused` or `isLoading` toggling, even while the frame was
+    /// unchanged.
+    private(set) var lcdGlowColor: Color = .white
     private(set) var errorMessage: String?
     /// True while an engine load (catch-up included) is in flight off the
     /// main thread — the screen already shows the last known frame during
@@ -44,7 +52,15 @@ final class PlayViewModel {
         // once this page becomes visible, stale by however long it's been
         // since this Tama was last live, but immediately tells the user
         // their Tama is there rather than leaving them guessing.
-        lcdImage = WidgetSharedState.loadLastFrameImage(for: device)
+        setLCDImage(WidgetSharedState.loadLastFrameImage(for: device))
+    }
+
+    /// The one place `lcdImage` is ever assigned — keeps `lcdGlowColor` in
+    /// lockstep with it, computed exactly as often as the frame actually
+    /// changes instead of on every view re-render.
+    private func setLCDImage(_ image: CGImage?) {
+        lcdImage = image
+        lcdGlowColor = image?.vividGlowColor() ?? .white
     }
 
     /// Deletes one device's ROM/save data and any pause flag outright — the
@@ -199,7 +215,7 @@ final class PlayViewModel {
             // this assumption is safe, not just convenient.
             MainActor.assumeIsolated {
                 guard let self, let frame = self.engine?.latestFrame() else { return }
-                self.lcdImage = LCDImageBuilder.makeImage(from: frame, width: 128, height: 128)
+                self.setLCDImage(LCDImageBuilder.makeImage(from: frame, width: 128, height: 128))
             }
         }
     }
@@ -267,7 +283,7 @@ final class PlayViewModel {
                         // loading ends, rather than leaving the stale
                         // cached snapshot on screen until the display timer
                         // happens to notice a pixel change.
-                        self.lcdImage = image
+                        self.setLCDImage(image)
                     }
                     newEngine.start()
                     self.engine = newEngine
