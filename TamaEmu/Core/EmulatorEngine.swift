@@ -223,7 +223,14 @@ final class EmulatorEngine {
         stopLock.lock(); shouldStop = false; stopLock.unlock()
         let t = Thread { [weak self] in self?.runLoop() }
         t.name = "EmulatorEngine"
-        t.qualityOfService = .userInteractive
+        // .userInteractive tells the OS this thread can never be
+        // deprioritized, keeping performance cores spun up for as long as
+        // the app is open — but runLoop() already paces itself with its
+        // own sleep-to-deadline timing, not scheduling priority, so it
+        // doesn't need that. .userInitiated still keeps it ahead of
+        // ordinary background work without pinning the CPU in a higher
+        // power state for the whole session.
+        t.qualityOfService = .userInitiated
         thread = t
         t.start()
         audioOutput.start()
