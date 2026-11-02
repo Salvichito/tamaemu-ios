@@ -3,7 +3,8 @@ import TamaCore
 
 /// Always scoped to one device — there's no more global "selected device"
 /// to switch between in here; switching is just swiping the gallery.
-/// Opened per-page from TamaPageView's overflow menu.
+/// Opened from TamaGalleryView's overflow menu, for whichever device is
+/// currently on screen.
 struct SettingsView: View {
     let device: TamaDevice
     let viewModel: PlayViewModel

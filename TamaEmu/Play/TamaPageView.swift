@@ -1,77 +1,21 @@
 import SwiftUI
 import TamaCore
 
-/// One gallery page: a single Tama's LCD + buttons, with its own overflow
-/// menu (pause, settings, delete). Tapping the LCD toggles pause — this can
-/// only ever be called on the page currently on screen, so PlayViewModel's
-/// togglePause() is safe to act on its own engine directly.
+/// One gallery page: a single Tama's LCD + buttons. The overflow menu
+/// (pause, settings, delete) lives on the enclosing NavigationStack in
+/// TamaGalleryView, not here — a `.toolbar` defined per page would attach to
+/// every page the page-style TabView keeps alive for swiping, and right
+/// after launch (before the TabView settles on its initial selection) that
+/// could show two pages' toolbars — and so two overflow buttons — at once.
+/// Tapping the LCD toggles pause — this can only ever be called on the page
+/// currently on screen, so PlayViewModel's togglePause() is safe to act on
+/// its own engine directly.
 struct TamaPageView: View {
     let viewModel: PlayViewModel
     let ambientBackgroundEnabled: Bool
-    var onDelete: () -> Void
-    var onDeviceImported: (TamaDevice) -> Void
-    var onAddTama: () -> Void
-    var onRearrange: () -> Void
-
-    @State private var showingSettings = false
-    @State private var showingDeleteConfirm = false
 
     var body: some View {
         pageContent
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            viewModel.togglePause()
-                        } label: {
-                            Label(
-                                viewModel.isPaused ? "Resume" : "Pause",
-                                systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
-                            )
-                        }
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Label("Settings for \(viewModel.selectedDevice.title)", systemImage: "gearshape")
-                        }
-                        Button {
-                            onAddTama()
-                        } label: {
-                            Label("Add a Tama", systemImage: "plus")
-                        }
-                        Button {
-                            onRearrange()
-                        } label: {
-                            Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
-                        }
-                        Button(role: .destructive) {
-                            showingDeleteConfirm = true
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView(
-                    device: viewModel.selectedDevice,
-                    viewModel: viewModel,
-                    onDelete: onDelete,
-                    onDeviceImported: onDeviceImported
-                )
-            }
-            .confirmationDialog(
-                "Delete \(viewModel.selectedDevice.title)?",
-                isPresented: $showingDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) { onDelete() }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
-            }
     }
 
     private var pageContent: some View {
