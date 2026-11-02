@@ -4,6 +4,7 @@ import SwiftUI
 struct TamaEmuApp: App {
     init() {
         NotificationScheduler.configure()
+        BackgroundRefresh.observeAppState()
     }
 
     var body: some Scene {

@@ -1,6 +1,7 @@
 import BackgroundTasks
 import Foundation
 import TamaCore
+import UIKit
 
 /// Runs on whatever schedule iOS grants a BGAppRefreshTask — no guarantee
 /// of cadence, just "sometime, probably minutes to longer from now". Does
@@ -9,6 +10,31 @@ import TamaCore
 /// thread and no audio engine spun up — just init()'s one-shot catch-up.
 enum BackgroundRefresh {
     static let taskID = "com.fluorescente.TamaEmu.refresh"
+
+    private static let activeLock = NSLock()
+    private static var appIsActive = false
+
+    /// Call once at app startup. `UIApplication.shared.applicationState`
+    /// needs the main actor, but `run()`'s catch-up loop — and the
+    /// `onCallDetected` closure it hands to EmulatorEngine, called from
+    /// inside that loop — can't hop there without blocking a tight CPU
+    /// loop, so foreground/background is tracked here instead, kept
+    /// current by these two notifications and read with a plain lock from
+    /// any thread.
+    static func observeAppState() {
+        let center = NotificationCenter.default
+        center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
+            activeLock.lock(); appIsActive = true; activeLock.unlock()
+        }
+        center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
+            activeLock.lock(); appIsActive = false; activeLock.unlock()
+        }
+    }
+
+    private static var isAppActive: Bool {
+        activeLock.lock(); defer { activeLock.unlock() }
+        return appIsActive
+    }
 
     /// iOS only ever has one pending request per identifier — call this
     /// whenever backgrounding, and again after the task runs, so there's
@@ -35,12 +61,20 @@ enum BackgroundRefresh {
         let perDeviceBudget = totalBudget / Double(ordered.count)
 
         for device in ordered {
+            // The player may have opened the app while this task was
+            // queued or mid-run. If so, the foreground launch path's own
+            // catch-up is the one that should run — it knows to stay
+            // silent since the player is already looking at the screen,
+            // unlike this headless pass, which exists specifically to
+            // warn them *before* they do.
+            guard !isAppActive else { return }
             let paths = SavePaths(device: device)
             guard let engine = try? EmulatorEngine(
                 device: device,
                 savePaths: paths,
                 catchUpWallClockBudget: perDeviceBudget,
                 onCallDetected: {
+                    guard !isAppActive else { return }
                     NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
                     // A real heads-up just went out — no need for the dumb
                     // "it's been a while" reminder on top of it.
