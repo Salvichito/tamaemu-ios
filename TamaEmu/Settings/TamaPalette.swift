@@ -6,7 +6,7 @@ import SwiftUI
 /// arrays) rather than a free-form picker.
 enum TamaPalette {
     static let buttonColors: [(name: String, color: Color)] = [
-        ("Gray", Color(.secondarySystemBackground)),
+        ("Gray", Color(.secondarySystemBackground).opacity(0.25)),
         ("Blue", .blue.opacity(0.25)),
         ("Green", .green.opacity(0.25)),
         ("Orange", .orange.opacity(0.25)),
