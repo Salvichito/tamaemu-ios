@@ -56,7 +56,7 @@ struct TamaPageView: View {
             if ambientBackgroundEnabled {
                 Text(viewModel.selectedDevice.title)
                     .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.black.opacity(0.4))
+                    .foregroundStyle(.black.opacity(0.25))
             } else {
                 Text(viewModel.selectedDevice.title)
                     .font(.footnote)
