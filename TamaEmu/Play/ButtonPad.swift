@@ -9,16 +9,6 @@ struct ButtonPad: View {
     let onRelease: (InputController.Button) -> Void
 
     var body: some View {
-        if #available(iOS 26.0, *) {
-            GlassEffectContainer(spacing: 28) {
-                buttons
-            }
-        } else {
-            buttons
-        }
-    }
-
-    private var buttons: some View {
         HStack(spacing: 28) {
             ButtonView(button: .a, onPress: onPress, onRelease: onRelease)
             ButtonView(button: .b, onPress: onPress, onRelease: onRelease)
@@ -62,15 +52,18 @@ private struct ButtonView: View {
             )
     }
 
+    // Deliberately not .interactive(): that variant's own live touch
+    // tracking, next to this view's 60Hz-updating LCD sibling, froze the
+    // whole screen solid on real iOS 26/27 hardware (buttons AND the LCD
+    // stopped responding) — invisible in Simulator, which doesn't render
+    // true Liquid Glass. The press scale/haptic in `body` above already
+    // gives the button its own reactive feel without it.
     @ViewBuilder
     private var shape: some View {
         if #available(iOS 26.0, *) {
             Circle()
                 .fill(.clear)
-                .glassEffect(
-                    .regular.tint(TamaPalette.buttonColor(at: buttonColorIndex)).interactive(),
-                    in: Circle()
-                )
+                .glassEffect(.regular.tint(TamaPalette.buttonColor(at: buttonColorIndex)), in: Circle())
         } else {
             Circle()
                 .fill(TamaPalette.buttonColor(at: buttonColorIndex))
