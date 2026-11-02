@@ -11,8 +11,16 @@
       "localizedDescription": "An iOS emulator for Tamagotchi-family devices. Does not include any firmware/ROM — bring your own.",
       "iconURL": "https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps-icon.png",
       "tintColor": "FF6FA5",
-      "size": 6279831,
+      "size": 6282222,
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-11-01T00:00:00Z",
+          "localizedDescription": "Opt-in reminder notification, an Appearance setting replacing the separate color pickers, Mute toggle removed in favor of the volume slider, button tray polish, and a bolder ambient-mode device label.",
+          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.2/TamaEmu.ipa",
+          "size": 6282222,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "1.1",
           "date": "2026-11-01T00:00:00Z",
