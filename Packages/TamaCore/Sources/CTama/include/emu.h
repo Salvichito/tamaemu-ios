@@ -498,6 +498,14 @@ void mem_write32(Emu *e, uint32_t a, uint32_t v);
 /* cpu.c */
 void cpu_reset(Emu *e);
 void cpu_step(Emu *e);         /* one instruction (ext prefixes folded in) */
+/* Same as cpu_step, but while halted/asleep advances by halt_cycles instead
+ * of the normal fixed 16 — for an unpaced catch-up pass over a long idle
+ * stretch, where fine-grained wake timing doesn't matter the way it does
+ * during live play, so skipping ahead through sleep in bigger strides is
+ * safe. Keep halt_cycles well under periph_tick's own 65536-cycle t16
+ * overflow clamp. Doesn't touch Emu's layout, so save-file compatibility
+ * (state.c checks sizeof(Emu)) is unaffected. */
+void cpu_step_catchup(Emu *e, uint32_t halt_cycles);
 
 static inline bool state_session_eligible(bool interactive, bool linkrom,
                                           bool net_host, bool net_join,

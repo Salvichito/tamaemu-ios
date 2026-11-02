@@ -325,9 +325,18 @@ final class EmulatorEngine {
         let targetSecs = startSecs + cappedSeconds
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(wallClockBudget * 1_000_000_000)
         var stepsSinceDeadlineCheck = 0
+        // Most of a long gap is spent halted (device asleep, nothing to
+        // do), where cpu_step would otherwise pace itself at a fixed 16
+        // cycles per call — fine for live play, but during an unpaced
+        // catch-up that per-call overhead (not actual work) dominates,
+        // and scales with the device's own clock speed: a faster osc3_hz
+        // needs proportionally more 16-cycle steps to cover the same
+        // wall-clock gap. cpu_step_catchup strides through halted time in
+        // bigger jumps instead — runLoop() keeps calling plain cpu_step(),
+        // so live play is untouched.
         while emu.pointee.emu_secs < targetSecs && !emu.pointee.stopped {
             let before = emu.pointee.cycles
-            cpu_step(emu)
+            cpu_step_catchup(emu, 4096)
             let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
             periph_tick(emu, delta)
             checkCallDetection(duringCatchUp: true)

@@ -621,7 +621,7 @@ void cpu_reset(Emu *e)
     e->pc = mem_read32(e, e->ttbr);   /* reset vector */
 }
 
-void cpu_step(Emu *e)
+static void cpu_step_impl(Emu *e, uint32_t halt_cycles)
 {
     if (e->stopped) return;
     /* Hold the NFC field for the complete touch routine. */
@@ -681,7 +681,7 @@ void cpu_step(Emu *e)
         }
     }
     if (e->halted) {
-        e->cycles += 16;
+        e->cycles += halt_cycles;
         if (e->pending_irq || e->wake_req || (!e->halt_hard && e->cycles >= e->wake_at)) {
             e->halted = false;
             e->halt_wakes++;
@@ -700,4 +700,15 @@ void cpu_step(Emu *e)
         e->pending_irq = 0;
     }
     step_one(e, 0);
+}
+
+void cpu_step(Emu *e)
+{
+    cpu_step_impl(e, 16);
+}
+
+/* See emu.h for why this exists instead of a flag on Emu. */
+void cpu_step_catchup(Emu *e, uint32_t halt_cycles)
+{
+    cpu_step_impl(e, halt_cycles ? halt_cycles : 16);
 }
