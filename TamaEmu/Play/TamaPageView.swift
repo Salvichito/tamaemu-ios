@@ -38,10 +38,11 @@ struct TamaPageView: View {
                 } else if viewModel.isLoading {
                     VStack(spacing: 6) {
                         ProgressView()
+                            .tint(.white)
                         Text("Catching up…")
                             .font(.caption2)
-                            .foregroundStyle(.white)
                     }
+                    .foregroundStyle(.white)
                     .padding(10)
                     .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
