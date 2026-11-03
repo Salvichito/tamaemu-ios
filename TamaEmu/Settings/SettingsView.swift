@@ -131,7 +131,10 @@ struct SettingsView: View {
                 isPresented: $showingSetClockConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Set clock", role: .destructive) { setClockToNow() }
+                Button("Set clock", role: .destructive) {
+                    dismiss()
+                    setClockToNow()
+                }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This jumps straight to the current time, unlike normal catch-up which ages through every second in between.")
