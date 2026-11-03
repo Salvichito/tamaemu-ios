@@ -1,5 +1,7 @@
+import Photos
 import SwiftUI
 import TamaCore
+import UIKit
 
 struct TamaGalleryView: View {
     @State private var gallery = GalleryViewModel()
@@ -10,6 +12,7 @@ struct TamaGalleryView: View {
 
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
+    @State private var toast: String?
 
     /// The device behind the page currently on screen — i.e. the one the
     /// overflow menu (toolbar), its Settings sheet, and its delete
@@ -73,6 +76,34 @@ struct TamaGalleryView: View {
         )
     }
 
+    /// Renders the LCD exactly as it looks on screen — same sharp-pixels/
+    /// scanline settings LCDView itself reads from AppStorage — then asks
+    /// for add-only Photos access (never full-library) and saves it.
+    private func saveScreenshot(of viewModel: PlayViewModel) {
+        let side: CGFloat = 512
+        let renderer = ImageRenderer(content: LCDView(image: viewModel.lcdImage).frame(width: side, height: side))
+        renderer.scale = 3
+        guard let uiImage = renderer.uiImage else {
+            toast = "Couldn't capture the screen."
+            return
+        }
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    toast = "TamaEmu needs permission to add photos. Enable it in Settings."
+                }
+                return
+            }
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAsset(from: uiImage)
+            }) { success, error in
+                DispatchQueue.main.async {
+                    toast = success ? "Saved to Photos." : (error?.localizedDescription ?? "Couldn't save the screenshot.")
+                }
+            }
+        }
+    }
+
     private var galleryStack: some View {
         NavigationStack {
             TabView(selection: Binding(
@@ -99,6 +130,15 @@ struct TamaGalleryView: View {
             // rather than per-page in TamaPageView — see that view's doc
             // comment for why a per-page toolbar could show up twice.
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if let viewModel = selectedViewModel {
+                        Button {
+                            saveScreenshot(of: viewModel)
+                        } label: {
+                            Image(systemName: "camera")
+                        }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     if let device = selectedDevice, let viewModel = selectedViewModel {
                         Menu {
@@ -160,6 +200,9 @@ struct TamaGalleryView: View {
             }
             .sheet(isPresented: $gallery.showingReorder) {
                 ReorderTamasView(gallery: gallery)
+            }
+            .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
+                Button("OK") { toast = nil }
             }
             .sheet(isPresented: $gallery.showingImport) {
                 NavigationStack {
