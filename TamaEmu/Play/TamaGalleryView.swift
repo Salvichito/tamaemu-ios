@@ -15,6 +15,7 @@ struct TamaGalleryView: View {
     @State private var toast: String?
     @State private var isRecording = false
     @State private var activeRecorder: ScreenRecorder?
+    @State private var recordingStartDate: Date?
 
     /// The device behind the page currently on screen — i.e. the one the
     /// overflow menu (toolbar), its Settings sheet, and its delete
@@ -124,6 +125,7 @@ struct TamaGalleryView: View {
             try recorder.start(viewModel: viewModel)
             activeRecorder = recorder
             isRecording = true
+            recordingStartDate = Date()
         } catch {
             toast = "Couldn't start recording."
         }
@@ -133,6 +135,7 @@ struct TamaGalleryView: View {
         guard let recorder = activeRecorder else { return }
         isRecording = false
         activeRecorder = nil
+        recordingStartDate = nil
         recorder.stop(discard: false) { url in
             guard let url else {
                 toast = "Couldn't save the recording."
@@ -179,73 +182,91 @@ struct TamaGalleryView: View {
                     BlurredLCDBackground(image: selectedViewModel?.lcdImage)
                 }
             }
+            // A thumb holding the record button down covers the one place
+            // its own red tint would otherwise be visible, so recording
+            // needs a second, unobstructed indicator — this sits up near
+            // the screen itself, clear of the toolbar corner the thumb is
+            // on.
+            .overlay(alignment: .top) {
+                if let recordingStartDate {
+                    RecordingBadge(startDate: recordingStartDate)
+                        .padding(.top, 8)
+                        .allowsHitTesting(false)
+                }
+            }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(ambientBackgroundEnabled ? .hidden : .automatic, for: .navigationBar)
             // Attached once here, to the gallery's single NavigationStack,
             // rather than per-page in TamaPageView — see that view's doc
             // comment for why a per-page toolbar could show up twice.
+            // Both controls live in ONE ToolbarItem, not two — SwiftUI
+            // doesn't reliably keep separate .topBarTrailing items in
+            // declaration order (it's visibly inconsistent across iOS
+            // versions), so an HStack is the only way to guarantee the
+            // record button stays put, immediately next to the ⋯ menu.
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    if let viewModel = selectedViewModel {
-                        // Tap vs. hold, like the system Camera app's
-                        // shutter: `perform` only fires after the hold
-                        // clears minimumDuration, so by the time
-                        // `onPressingChanged` sees the release, `isRecording`
-                        // reliably tells the two cases apart — a quick tap
-                        // (never fired `perform`) from a held recording.
-                        Image(systemName: isRecording ? "record.circle.fill" : "camera")
-                            .foregroundStyle(isRecording ? .red : .primary)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
-                            .onLongPressGesture(
-                                minimumDuration: 0.35,
-                                maximumDistance: 50,
-                                perform: { startRecording(for: viewModel) },
-                                onPressingChanged: { pressing in
-                                    guard !pressing else { return }
-                                    if isRecording {
-                                        stopRecording()
-                                    } else {
-                                        saveScreenshot(of: viewModel)
+                    HStack(spacing: 16) {
+                        if let viewModel = selectedViewModel {
+                            // Tap vs. hold, like the system Camera app's
+                            // shutter: `perform` only fires after the hold
+                            // clears minimumDuration, so by the time
+                            // `onPressingChanged` sees the release,
+                            // `isRecording` reliably tells the two cases
+                            // apart — a quick tap (never fired `perform`)
+                            // from a held recording.
+                            Image(systemName: isRecording ? "record.circle.fill" : "camera")
+                                .foregroundStyle(isRecording ? .red : .primary)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                                .onLongPressGesture(
+                                    minimumDuration: 0.35,
+                                    maximumDistance: 50,
+                                    perform: { startRecording(for: viewModel) },
+                                    onPressingChanged: { pressing in
+                                        guard !pressing else { return }
+                                        if isRecording {
+                                            stopRecording()
+                                        } else {
+                                            saveScreenshot(of: viewModel)
+                                        }
                                     }
-                                }
-                            )
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    if let device = selectedDevice, let viewModel = selectedViewModel {
-                        Menu {
-                            Button {
-                                viewModel.togglePause()
-                            } label: {
-                                Label(
-                                    viewModel.isPaused ? "Resume" : "Pause",
-                                    systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
                                 )
-                            }
-                            Button {
-                                showingSettings = true
+                        }
+                        if let device = selectedDevice, let viewModel = selectedViewModel {
+                            Menu {
+                                Button {
+                                    viewModel.togglePause()
+                                } label: {
+                                    Label(
+                                        viewModel.isPaused ? "Resume" : "Pause",
+                                        systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
+                                    )
+                                }
+                                Button {
+                                    showingSettings = true
+                                } label: {
+                                    Label("Settings for \(device.title)", systemImage: "gearshape")
+                                }
+                                Button {
+                                    gallery.showingImport = true
+                                } label: {
+                                    Label("Add a Tama", systemImage: "plus")
+                                }
+                                Button {
+                                    gallery.showingReorder = true
+                                } label: {
+                                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                                }
+                                Button(role: .destructive) {
+                                    showingDeleteConfirm = true
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             } label: {
-                                Label("Settings for \(device.title)", systemImage: "gearshape")
+                                Image(systemName: "ellipsis")
                             }
-                            Button {
-                                gallery.showingImport = true
-                            } label: {
-                                Label("Add a Tama", systemImage: "plus")
-                            }
-                            Button {
-                                gallery.showingReorder = true
-                            } label: {
-                                Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
-                            }
-                            Button(role: .destructive) {
-                                showingDeleteConfirm = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
                         }
                     }
                 }
@@ -293,6 +314,34 @@ struct TamaGalleryView: View {
                 }
             }
         }
+    }
+}
+
+/// A red blinking dot + live MM:SS, shown while recording. `Text(_:style:
+/// .timer)` ticks on its own — no Timer/@State needed to keep the count
+/// current.
+private struct RecordingBadge: View {
+    let startDate: Date
+    @State private var dotVisible = true
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(.red)
+                .frame(width: 8, height: 8)
+                .opacity(dotVisible ? 1 : 0.25)
+                .onAppear {
+                    withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                        dotVisible = false
+                    }
+                }
+            Text(startDate, style: .timer)
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(.black.opacity(0.55), in: Capsule())
     }
 }
 

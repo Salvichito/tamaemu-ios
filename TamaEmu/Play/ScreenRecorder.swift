@@ -24,7 +24,14 @@ func renderLCDSnapshot(image: CGImage?, side: CGFloat, scale: CGFloat = 3) -> CG
 /// real-time render thread via the tap installed in `start`, and touches
 /// only this recorder's own audio bookkeeping, never `viewModel` or
 /// anything else main-actor-isolated.
-final class ScreenRecorder {
+///
+/// `@unchecked Sendable` because the Timer and audio-tap closures above
+/// are themselves `@Sendable` (Foundation/AVFoundation's own doing, not a
+/// choice made here) and need to capture `self` to call back into this
+/// recorder — the actual cross-thread safety is the manual, per-property
+/// reasoning in each method's own doc comment, the same informal pattern
+/// AudioOutput uses for its render callback.
+final class ScreenRecorder: @unchecked Sendable {
     enum RecorderError: Error {
         case cannotStart
     }
@@ -204,13 +211,24 @@ final class ScreenRecorder {
         let url = writer.outputURL
         videoInput?.markAsFinished()
         audioInput?.markAsFinished()
-        writer.finishWriting {
+        // finishWriting's completion handler is itself `@Sendable`
+        // (AVFoundation's doing), so it can't capture the local `writer`
+        // constant directly — only `self` (capturing it here, `[self]`,
+        // rather than the usual `[weak self]`, is deliberate: this
+        // recorder has nothing left to do after this closure runs, so
+        // there's no reason to let it deallocate before finishWriting's
+        // callback fires). `self` is fine to cross that boundary because
+        // the class itself is declared `@unchecked Sendable` above.
+        writer.finishWriting { [self] in
+            // `status` (a plain enum, Sendable for free) is what actually
+            // crosses into the Task below — never `writer`/`self` itself.
+            let status = self.writer?.status
             // finishWriting's handler fires on an arbitrary queue, never
             // guaranteed to be the main thread — unlike captureFrame's
             // Timer, this genuinely needs a hop back, not just an
             // assumeIsolated assertion.
             Task { @MainActor in
-                completion(writer.status == .completed ? url : nil)
+                completion(status == .completed ? url : nil)
             }
         }
     }
