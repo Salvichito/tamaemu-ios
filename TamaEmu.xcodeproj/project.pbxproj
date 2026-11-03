@@ -15,6 +15,7 @@
 		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
 		2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
+		30CDFEAE6E7A176E6C9B974E /* TranslationCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7292CACACAC355A453B9767F /* TranslationCache.swift */; };
 		344D1C96652FA73744DB0B24 /* SelectTamaIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */; };
 		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
@@ -23,7 +24,6 @@
 		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
 		5AFDD78582EA89F72D65FEAB /* TamaGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */; };
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
-		7E2D4F8A1B3C4D5E6F708192 /* ReminderNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */; };
 		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
 		748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */; };
@@ -31,16 +31,20 @@
 		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
 		7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		7B47EAF562F6442CADDEC6BD /* ActiveDeviceLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */; };
+		7E2D4F8A1B3C4D5E6F708192 /* ReminderNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */; };
 		832BCB74B2DFD79FFC09EC39 /* ReorderTamasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */; };
 		8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */ = {isa = PBXBuildFile; fileRef = A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */; };
 		8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		8DCF8788183AD7BA77EAD00B /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291654CFB51D6F793B885E33 /* GalleryViewModel.swift */; };
+		8DECB3452C69EE0A6CB2893C /* TranslationOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841DFBF5B1D829CD139807FC /* TranslationOverlayController.swift */; };
 		9A728C37BBD35895FD2E3205 /* TamaPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */; };
+		AAF25E850003D2749C0C9B92 /* TranslationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BF5A532F7F59B671442342 /* TranslationOverlay.swift */; };
 		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
 		C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9228514E9DDD678D810B062 /* PlayViewModel.swift */; };
 		C919374E85E040D38477FC99 /* TamaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */; };
 		CFCC6A6FD42DD0017938FBD0 /* DevicePauseState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */; };
 		D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B094FAC77A244A49BB27D76A /* AudioOutput.swift */; };
+		D9115EAC767B490EB90DB299 /* ScreenRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */; };
 		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
 		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
 		E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7594ABE9067A97A1A2D888F3 /* TamaCore */; };
@@ -75,6 +79,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		03BF5A532F7F59B671442342 /* TranslationOverlay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranslationOverlay.swift; sourceTree = "<group>"; };
 		04981D1305DB4733ACBC657E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenGlow.swift; path = ScreenGlow.swift; sourceTree = "<group>"; };
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
@@ -94,12 +99,13 @@
 		56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshCursor.swift; sourceTree = "<group>"; };
 		5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePauseState.swift; sourceTree = "<group>"; };
 		6071AE0290284B2485601BEE /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
-		C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotificationScheduler.swift; sourceTree = "<group>"; };
 		66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
 		69860A54686643F895D85D5D /* TamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaProvider.swift; sourceTree = "<group>"; };
 		6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetView.swift; sourceTree = "<group>"; };
+		7292CACACAC355A453B9767F /* TranslationCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranslationCache.swift; sourceTree = "<group>"; };
 		736990A9EB7F43B291B3E53F /* InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputController.swift; sourceTree = "<group>"; };
 		7B76611C89874CD080A593F7 /* FirmwareImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareImportView.swift; sourceTree = "<group>"; };
+		841DFBF5B1D829CD139807FC /* TranslationOverlayController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranslationOverlayController.swift; sourceTree = "<group>"; };
 		94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorEngine.swift; sourceTree = "<group>"; };
 		9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BlurredLCDBackground.swift; path = BlurredLCDBackground.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDScreenEffect.swift; sourceTree = "<group>"; };
@@ -111,7 +117,9 @@
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
+		C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotificationScheduler.swift; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
+		84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRecorder.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
 		D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReorderTamasView.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
@@ -189,6 +197,7 @@
 				5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */,
 				56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */,
 				DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */,
+				7292CACACAC355A453B9767F /* TranslationCache.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -249,6 +258,7 @@
 			isa = PBXGroup;
 			children = (
 				CE2071482F1952F86F44813F /* LCDView.swift */,
+				84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */,
 				F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */,
 				A9228514E9DDD678D810B062 /* PlayViewModel.swift */,
 				2267519E09184C139C7BAC4C /* ButtonPad.swift */,
@@ -257,6 +267,8 @@
 				9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */,
 				04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */,
 				D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */,
+				841DFBF5B1D829CD139807FC /* TranslationOverlayController.swift */,
+				03BF5A532F7F59B671442342 /* TranslationOverlay.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -388,6 +400,7 @@
 				0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */,
 				03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */,
 				219462947CE54CAE77590FBB /* LCDView.swift in Sources */,
+				D9115EAC767B490EB90DB299 /* ScreenRecorder.swift in Sources */,
 				5AFDD78582EA89F72D65FEAB /* TamaGalleryView.swift in Sources */,
 				76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */,
 				C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */,
@@ -405,6 +418,9 @@
 				F3BF9890B6B4109C098E7B84 /* ScreenGlow.swift in Sources */,
 				4CF56E64D9B116A97407FC59 /* CGImage+GlowColor.swift in Sources */,
 				832BCB74B2DFD79FFC09EC39 /* ReorderTamasView.swift in Sources */,
+				30CDFEAE6E7A176E6C9B974E /* TranslationCache.swift in Sources */,
+				8DECB3452C69EE0A6CB2893C /* TranslationOverlayController.swift in Sources */,
+				AAF25E850003D2749C0C9B92 /* TranslationOverlay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -544,7 +560,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -604,7 +620,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -13,6 +13,8 @@ struct TamaGalleryView: View {
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
     @State private var toast: String?
+    @State private var isRecording = false
+    @State private var activeRecorder: ScreenRecorder?
 
     /// The device behind the page currently on screen — i.e. the one the
     /// overflow menu (toolbar), its Settings sheet, and its delete
@@ -76,22 +78,31 @@ struct TamaGalleryView: View {
         )
     }
 
+    /// Asks for add-only Photos access (never full-library) and runs
+    /// `save`, reporting the outcome via `toast`. Shared by the screenshot
+    /// and the video recording, which only differ in what they hand to
+    /// `save`.
+    private func requestPhotoAddAccess(_ completion: @escaping (Bool) -> Void) {
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            DispatchQueue.main.async {
+                completion(status == .authorized || status == .limited)
+            }
+        }
+    }
+
     /// Renders the LCD exactly as it looks on screen — same sharp-pixels/
-    /// scanline settings LCDView itself reads from AppStorage — then asks
-    /// for add-only Photos access (never full-library) and saves it.
+    /// scanline settings LCDView itself reads from AppStorage, via the
+    /// same renderLCDSnapshot ScreenRecorder samples once per video frame
+    /// — then saves it to Photos.
     private func saveScreenshot(of viewModel: PlayViewModel) {
-        let side: CGFloat = 512
-        let renderer = ImageRenderer(content: LCDView(image: viewModel.lcdImage).frame(width: side, height: side))
-        renderer.scale = 3
-        guard let uiImage = renderer.uiImage else {
+        guard let cgImage = renderLCDSnapshot(image: viewModel.lcdImage, side: 512) else {
             toast = "Couldn't capture the screen."
             return
         }
-        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-            guard status == .authorized || status == .limited else {
-                DispatchQueue.main.async {
-                    toast = "TamaEmu needs permission to add photos. Enable it in Settings."
-                }
+        let uiImage = UIImage(cgImage: cgImage)
+        requestPhotoAddAccess { granted in
+            guard granted else {
+                toast = "TamaEmu needs permission to add photos. Enable it in Settings."
                 return
             }
             PHPhotoLibrary.shared().performChanges({
@@ -100,6 +111,51 @@ struct TamaGalleryView: View {
                 DispatchQueue.main.async {
                     toast = success ? "Saved to Photos." : (error?.localizedDescription ?? "Couldn't save the screenshot.")
                 }
+            }
+        }
+    }
+
+    /// Hold-to-record: starts on the record button's long-press `perform`,
+    /// stopped by `stopRecording()` on release (see the toolbar below).
+    private func startRecording(for viewModel: PlayViewModel) {
+        guard !isRecording else { return }
+        let recorder = ScreenRecorder()
+        do {
+            try recorder.start(viewModel: viewModel)
+            activeRecorder = recorder
+            isRecording = true
+        } catch {
+            toast = "Couldn't start recording."
+        }
+    }
+
+    private func stopRecording() {
+        guard let recorder = activeRecorder else { return }
+        isRecording = false
+        activeRecorder = nil
+        recorder.stop(discard: false) { url in
+            guard let url else {
+                toast = "Couldn't save the recording."
+                return
+            }
+            saveVideo(at: url)
+        }
+    }
+
+    private func saveVideo(at url: URL) {
+        requestPhotoAddAccess { granted in
+            guard granted else {
+                toast = "TamaEmu needs permission to add photos. Enable it in Settings."
+                try? FileManager.default.removeItem(at: url)
+                return
+            }
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+            }) { success, error in
+                DispatchQueue.main.async {
+                    toast = success ? "Saved to Photos." : (error?.localizedDescription ?? "Couldn't save the recording.")
+                }
+                try? FileManager.default.removeItem(at: url)
             }
         }
     }
@@ -132,11 +188,29 @@ struct TamaGalleryView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if let viewModel = selectedViewModel {
-                        Button {
-                            saveScreenshot(of: viewModel)
-                        } label: {
-                            Image(systemName: "camera")
-                        }
+                        // Tap vs. hold, like the system Camera app's
+                        // shutter: `perform` only fires after the hold
+                        // clears minimumDuration, so by the time
+                        // `onPressingChanged` sees the release, `isRecording`
+                        // reliably tells the two cases apart — a quick tap
+                        // (never fired `perform`) from a held recording.
+                        Image(systemName: isRecording ? "record.circle.fill" : "camera")
+                            .foregroundStyle(isRecording ? .red : .primary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                            .onLongPressGesture(
+                                minimumDuration: 0.35,
+                                maximumDistance: 50,
+                                perform: { startRecording(for: viewModel) },
+                                onPressingChanged: { pressing in
+                                    guard !pressing else { return }
+                                    if isRecording {
+                                        stopRecording()
+                                    } else {
+                                        saveScreenshot(of: viewModel)
+                                    }
+                                }
+                            )
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {

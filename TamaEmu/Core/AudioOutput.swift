@@ -14,6 +14,17 @@ final class AudioOutput {
     private let volumeProvider: () -> Float
     private var started = false
 
+    /// iOS scales every app's output by the hardware volume on top of
+    /// whatever the app renders — there's no way to opt out of that. So
+    /// `TamaEmu`'s own slider is made to mean an absolute loudness, not one
+    /// relative to wherever the hardware volume happens to sit, by reading
+    /// the current system output level here and pre-amplifying inversely to
+    /// it in the render callback below. Updated via KVO on
+    /// `AVAudioSession.outputVolume`, which only fires while the session is
+    /// active — set up from `start()`, after `setActive(true)` succeeds.
+    private var systemVolume: Float = AVAudioSession.sharedInstance().outputVolume
+    private var systemVolumeObservation: NSKeyValueObservation?
+
     /// `baseAmplitude` is the loudest the square wave ever gets; `volume`
     /// (from volumeProvider) scales down from there — at 0 it's silent.
     /// Read once per render callback, not per sample — a UserDefaults
@@ -40,7 +51,13 @@ final class AudioOutput {
             guard let self else { return noErr }
             let (on, freq) = self.toneProvider()
             let volume = self.volumeProvider()
-            let amplitude = baseAmplitude * volume * volume
+            let target = baseAmplitude * volume * volume
+            // Counteract the hardware volume's own scaling by pre-amplifying
+            // inversely to it, clamped so the result never exceeds full
+            // digital scale (would clip) and never divides by a
+            // near-silent system volume (would spike the gain absurdly).
+            let compensation = 1 / max(self.systemVolume, 0.05)
+            let amplitude = min(target * compensation, 1.0)
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
             var localPhase = self.phase
             for frame in 0..<Int(frameCount) {
@@ -85,6 +102,12 @@ final class AudioOutput {
                 self.setCategoryNow()
                 try AVAudioSession.sharedInstance().setActive(true)
                 try self.engine.start()
+                if self.systemVolumeObservation == nil {
+                    self.systemVolumeObservation = AVAudioSession.sharedInstance()
+                        .observe(\.outputVolume, options: [.initial, .new]) { [weak self] session, _ in
+                            self?.systemVolume = session.outputVolume
+                        }
+                }
             } catch {
                 // Audio is secondary to emulation working at all for the
                 // MVP; a failure here shouldn't take anything else down.
@@ -119,5 +142,22 @@ final class AudioOutput {
         guard started else { return }
         started = false
         engine.stop()
+    }
+
+    /// The exact format the render callback above outputs on — ScreenRecorder
+    /// reads this to configure a matching AAC encoder before tapping this
+    /// node for a video's audio track.
+    var outputFormat: AVAudioFormat { engine.mainMixerNode.outputFormat(forBus: 0) }
+
+    /// Taps the mixer node non-destructively — sourceNode above keeps
+    /// rendering to the speaker exactly as before — so ScreenRecorder can
+    /// route the Tama's own sound into a video's audio track. Never the
+    /// microphone; no extra permission is needed for this.
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock) {
+        engine.mainMixerNode.installTap(onBus: 0, bufferSize: bufferSize, format: format, block: block)
+    }
+
+    func removeRecordingTap() {
+        engine.mainMixerNode.removeTap(onBus: 0)
     }
 }

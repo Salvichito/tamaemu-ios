@@ -1,3 +1,4 @@
+import AVFoundation
 import CTama
 import Foundation
 import TamaCore
@@ -247,6 +248,19 @@ final class EmulatorEngine {
         _ = stoppedSemaphore.wait(timeout: .now() + 1.0)
         thread = nil
         audioOutput.stop()
+    }
+
+    /// Pass-throughs for ScreenRecorder — see AudioOutput's own doc
+    /// comments for why tapping the mixer node is safe to do alongside
+    /// normal playback and never touches the microphone.
+    var audioFormat: AVAudioFormat { audioOutput.outputFormat }
+
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock) {
+        audioOutput.installRecordingTap(format: format, bufferSize: bufferSize, block: block)
+    }
+
+    func removeRecordingTap() {
+        audioOutput.removeRecordingTap()
     }
 
     /// Persists the full snapshot and, if the firmware has written to its
