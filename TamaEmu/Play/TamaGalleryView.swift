@@ -12,6 +12,7 @@ struct TamaGalleryView: View {
 
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
+    @State private var showingSetClockConfirm = false
     @State private var toast: String?
     @State private var isRecording = false
     @State private var activeRecorder: ScreenRecorder?
@@ -116,8 +117,17 @@ struct TamaGalleryView: View {
         }
     }
 
-    /// Hold-to-record: starts on the record button's long-press `perform`,
-    /// stopped by `stopRecording()` on release (see the toolbar below).
+    /// The video button is a toggle, not a hold: tap once to start, tap
+    /// again to stop — matched to it being its own dedicated button now,
+    /// rather than sharing the camera button via tap-vs-hold.
+    private func toggleRecording(for viewModel: PlayViewModel) {
+        if isRecording {
+            stopRecording()
+        } else {
+            startRecording(for: viewModel)
+        }
+    }
+
     private func startRecording(for viewModel: PlayViewModel) {
         guard !isRecording else { return }
         let recorder = ScreenRecorder()
@@ -163,6 +173,94 @@ struct TamaGalleryView: View {
         }
     }
 
+    /// Moved here from SettingsView — jumps straight to the current time,
+    /// unlike normal catch-up which ages through every second in between.
+    private func syncClockToNow(for viewModel: PlayViewModel) {
+        viewModel.restartTamaClock { engine in
+            let now = Calendar.current.dateComponents([.hour, .minute, .second], from: Date())
+            _ = engine.setClock(hour: now.hour ?? 0, minute: now.minute ?? 0, second: now.second ?? 0)
+        }
+    }
+
+    /// Split out from `galleryStack`'s `.toolbar` — a single closure
+    /// declaring all of this inline was too much for the type-checker to
+    /// resolve in reasonable time, not a design choice.
+    @ToolbarContentBuilder
+    private func topToolbarContent(viewModel: PlayViewModel) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                showingSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    viewModel.togglePause()
+                } label: {
+                    Label(
+                        viewModel.isPaused ? "Resume" : "Pause",
+                        systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
+                    )
+                }
+                Button {
+                    gallery.showingImport = true
+                } label: {
+                    Label("Add a Tama", systemImage: "plus")
+                }
+                Button {
+                    gallery.showingReorder = true
+                } label: {
+                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                }
+                Button(role: .destructive) {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+        }
+    }
+
+    /// Camera and the record toggle are adjacent .bottomBar items, which
+    /// iOS pairs into one capsule on its own — same mechanism as the top
+    /// bar's Settings/⋯ pair. The fixed `ToolbarSpacer` (iOS 26's own API
+    /// for this) is what keeps Time Sync in its own separate capsule
+    /// instead of all three fusing into one; below iOS 26 none of this
+    /// capsule-pairing exists in the first place, so there's nothing to
+    /// fall back to.
+    @ToolbarContentBuilder
+    private func bottomToolbarContent(viewModel: PlayViewModel) -> some ToolbarContent {
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                saveScreenshot(of: viewModel)
+            } label: {
+                Image(systemName: "camera")
+            }
+        }
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                toggleRecording(for: viewModel)
+            } label: {
+                Image(systemName: isRecording ? "stop.circle.fill" : "video")
+                    .foregroundStyle(isRecording ? .red : .primary)
+            }
+        }
+        if #available(iOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .bottomBar)
+        }
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                showingSetClockConfirm = true
+            } label: {
+                Image(systemName: "clock.arrow.2.circlepath")
+            }
+        }
+    }
+
     private var galleryStack: some View {
         NavigationStack {
             TabView(selection: Binding(
@@ -182,11 +280,9 @@ struct TamaGalleryView: View {
                     BlurredLCDBackground(image: selectedViewModel?.lcdImage)
                 }
             }
-            // A thumb holding the record button down covers the one place
-            // its own red tint would otherwise be visible, so recording
-            // needs a second, unobstructed indicator — this sits up near
-            // the screen itself, clear of the toolbar corner the thumb is
-            // on.
+            // Shows while recording regardless of which page is visible —
+            // the LCD it's floating over is whichever one is currently on
+            // screen, which is always the one being recorded.
             .overlay(alignment: .top) {
                 if let recordingStartDate {
                     RecordingBadge(startDate: recordingStartDate)
@@ -200,75 +296,22 @@ struct TamaGalleryView: View {
             // Attached once here, to the gallery's single NavigationStack,
             // rather than per-page in TamaPageView — see that view's doc
             // comment for why a per-page toolbar could show up twice.
-            // Both controls live in ONE ToolbarItem, not two — SwiftUI
-            // doesn't reliably keep separate .topBarTrailing items in
-            // declaration order (it's visibly inconsistent across iOS
-            // versions), so an HStack is the only way to guarantee the
-            // record button stays put, immediately next to the ⋯ menu.
+            //
+            // Plain ToolbarItems at standard placements, nothing hand-
+            // drawn — this is what actually matches the system apps
+            // (Calendar's own top/bottom bars collapse into the same kind
+            // of trailing sidebar on an iPhone Duo that this does). Settings
+            // and ⋯ are adjacent .topBarTrailing items, which iOS pairs
+            // into one capsule on its own. Camera and the record toggle
+            // are adjacent .bottomBar items for the same reason; a fixed
+            // ToolbarSpacer (iOS 26's own API for this — unavailable
+            // below that, where none of this capsule-pairing happens
+            // regardless) breaks Time Sync into its own, separate capsule
+            // rather than fusing all three together.
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        if let viewModel = selectedViewModel {
-                            // Tap vs. hold, like the system Camera app's
-                            // shutter: `perform` only fires after the hold
-                            // clears minimumDuration, so by the time
-                            // `onPressingChanged` sees the release,
-                            // `isRecording` reliably tells the two cases
-                            // apart — a quick tap (never fired `perform`)
-                            // from a held recording.
-                            Image(systemName: isRecording ? "record.circle.fill" : "camera")
-                                .foregroundStyle(isRecording ? .red : .primary)
-                                .frame(minWidth: 44, minHeight: 44)
-                                .contentShape(Rectangle())
-                                .onLongPressGesture(
-                                    minimumDuration: 0.35,
-                                    maximumDistance: 50,
-                                    perform: { startRecording(for: viewModel) },
-                                    onPressingChanged: { pressing in
-                                        guard !pressing else { return }
-                                        if isRecording {
-                                            stopRecording()
-                                        } else {
-                                            saveScreenshot(of: viewModel)
-                                        }
-                                    }
-                                )
-                        }
-                        if let device = selectedDevice, let viewModel = selectedViewModel {
-                            Menu {
-                                Button {
-                                    viewModel.togglePause()
-                                } label: {
-                                    Label(
-                                        viewModel.isPaused ? "Resume" : "Pause",
-                                        systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
-                                    )
-                                }
-                                Button {
-                                    showingSettings = true
-                                } label: {
-                                    Label("Settings for \(device.title)", systemImage: "gearshape")
-                                }
-                                Button {
-                                    gallery.showingImport = true
-                                } label: {
-                                    Label("Add a Tama", systemImage: "plus")
-                                }
-                                Button {
-                                    gallery.showingReorder = true
-                                } label: {
-                                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
-                                }
-                                Button(role: .destructive) {
-                                    showingDeleteConfirm = true
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis")
-                            }
-                        }
-                    }
+                if let viewModel = selectedViewModel {
+                    topToolbarContent(viewModel: viewModel)
+                    bottomToolbarContent(viewModel: viewModel)
                 }
             }
             .sheet(isPresented: $showingSettings) {
@@ -292,6 +335,18 @@ struct TamaGalleryView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
+            }
+            .confirmationDialog(
+                "Set the clock to the current time?",
+                isPresented: $showingSetClockConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Set clock", role: .destructive) {
+                    if let viewModel = selectedViewModel { syncClockToNow(for: viewModel) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This jumps straight to the current time, unlike normal catch-up which ages through every second in between.")
             }
             .sheet(isPresented: $gallery.showingReorder) {
                 ReorderTamasView(gallery: gallery)

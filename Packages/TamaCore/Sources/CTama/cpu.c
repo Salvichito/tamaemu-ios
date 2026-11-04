@@ -704,7 +704,19 @@ static void cpu_step_impl(Emu *e, uint32_t halt_cycles)
 
 void cpu_step(Emu *e)
 {
-    cpu_step_impl(e, 16);
+    /* iOS port: live play used to advance halted (sleeping) time 16
+     * cycles per call, meaning a single ~20000-cycle sleep interval took
+     * roughly 1250 calls through this function -- at a ~18-36MHz emulated
+     * clock, the device sits halted almost all the time, so that was on
+     * the order of a million pure-overhead calls per second just to
+     * re-check "is it time to wake up yet?", for no change in behavior.
+     * cpu_step_catchup already strides through halted time in much
+     * bigger jumps (see its own default below) and that's been relied on
+     * for correctness (e.g. call/melody detection during catch-up), so
+     * live play can safely use the same granularity instead of its own
+     * much finer one -- still far smaller than one 60Hz frame, just no
+     * longer smaller than it needs to be. */
+    cpu_step_impl(e, 4096);
 }
 
 /* See emu.h for why this exists instead of a flag on Emu. */

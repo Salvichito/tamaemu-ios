@@ -35,10 +35,6 @@ final class PlayViewModel {
 
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
-    /// Drives the live Japanese→English overlay. Not `private`: TamaPageView
-    /// reads `overlayLabels`/`translationConfiguration`/`pendingBatches`
-    /// directly, the same way it already reads `lcdImage`/`isPaused`.
-    let translationController = TranslationOverlayController()
     /// Bumped by stopEngine() and every startEngine() call — a load that
     /// finishes after being superseded (stopped, paused, restarted again)
     /// checks this before applying its result, so it discards itself
@@ -66,7 +62,6 @@ final class PlayViewModel {
     private func setLCDImage(_ image: CGImage?) {
         lcdImage = image
         lcdGlowColor = image?.vividGlowColor() ?? .white
-        if let image { translationController.handleNewFrame(image) }
     }
 
     /// Deletes one device's ROM/save data and any pause flag outright — the
@@ -105,7 +100,6 @@ final class PlayViewModel {
         startGeneration += 1  // invalidates any startEngine() load still in flight
         displayTimer?.invalidate()
         displayTimer = nil
-        translationController.pause()
         // stop() must come first: it blocks until the emulator thread has
         // actually exited, which save() and renderCurrentFrame() both
         // depend on to safely read the Emu struct without a concurrent
@@ -298,13 +292,6 @@ final class PlayViewModel {
                         newEngine.save()
                         return
                     }
-                    // Must come before setLCDImage below — otherwise the
-                    // very first post-catch-up frame (the one most likely
-                    // to actually be new on screen) reaches
-                    // handleNewFrame() while the controller still thinks
-                    // this page isn't active yet, and gets silently
-                    // dropped instead of queued for OCR.
-                    self.translationController.resume()
                     if let image {
                         WidgetSharedState.publish(image: image, device: device)
                         // Shows the real post-catch-up frame the instant

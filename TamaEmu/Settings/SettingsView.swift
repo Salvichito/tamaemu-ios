@@ -32,7 +32,6 @@ struct SettingsView: View {
     @State private var exportURL: URL?
     @State private var showingRemoveConfirm = false
     @State private var showingRestartConfirm = false
-    @State private var showingSetClockConfirm = false
     @State private var toast: String?
 
     init(
@@ -126,19 +125,6 @@ struct SettingsView: View {
             } message: {
                 Text("Same save data, but the CPU and clock reset — like taking the battery out and back in.")
             }
-            .confirmationDialog(
-                "Set the clock to the current time?",
-                isPresented: $showingSetClockConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Set clock", role: .destructive) {
-                    dismiss()
-                    setClockToNow()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This jumps straight to the current time, unlike normal catch-up which ages through every second in between.")
-            }
             .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
                 Button("OK") { toast = nil }
             }
@@ -156,7 +142,6 @@ struct SettingsView: View {
             }
             .disabled(viewModel.exportableSaveURL == nil)
             Button("Import save file…") { showingSaveImporter = true }
-            Button("Set clock to current time…") { showingSetClockConfirm = true }
             Button("Restart (soft reset)…") { showingRestartConfirm = true }
             Button("Remove this device's data…", role: .destructive) {
                 showingRemoveConfirm = true
@@ -171,13 +156,6 @@ struct SettingsView: View {
             Button("Import additional firmware…") { showingImportSheet = true }
         } header: {
             Text("Firmware")
-        }
-    }
-
-    private func setClockToNow() {
-        viewModel.restartTamaClock { engine in
-            let now = Calendar.current.dateComponents([.hour, .minute, .second], from: Date())
-            _ = engine.setClock(hour: now.hour ?? 0, minute: now.minute ?? 0, second: now.second ?? 0)
         }
     }
 
