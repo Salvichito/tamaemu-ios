@@ -11,8 +11,16 @@
       "localizedDescription": "An iOS emulator for Tamagotchi-family devices. Does not include any firmware/ROM — bring your own.",
       "iconURL": "https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps-icon.png",
       "tintColor": "FF6FA5",
-      "size": 6282222,
+      "size": 6351518,
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-11-04T00:00:00Z",
+          "localizedDescription": "Live translation (reads the LCD's Japanese UI text and shows an English translation, on-device or via your own Gemini/OpenAI/Anthropic API key), plus reduced GPU/CPU work around the live screen for noticeably less heat during normal play.",
+          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.3/TamaEmu.ipa",
+          "size": 6351518,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "1.2",
           "date": "2026-11-01T00:00:00Z",
