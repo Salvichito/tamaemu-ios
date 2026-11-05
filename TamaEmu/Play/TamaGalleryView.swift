@@ -64,6 +64,11 @@ struct TamaGalleryView: View {
                 gallery.pageDidDisappear(current)
                 BackgroundRefresh.scheduleNext()
                 ReminderNotificationScheduler.scheduleIfEnabled()
+                // Scoped to this one onChange — not GalleryViewModel's
+                // pageDidDisappear, which also fires on an ordinary swipe
+                // between owned Tamas while the app stays open. The lock
+                // screen widget's timer is about leaving the app entirely.
+                WidgetSharedState.recordAppClosed()
             case .active:
                 gallery.pageDidAppear(current)
                 ReminderNotificationScheduler.cancel()

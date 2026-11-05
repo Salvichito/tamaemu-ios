@@ -5,5 +5,6 @@ import WidgetKit
 struct TamaWidgetBundle: WidgetBundle {
     var body: some Widget {
         TamaWidget()
+        TamaNeglectWidget()
     }
 }

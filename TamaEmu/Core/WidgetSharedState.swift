@@ -16,6 +16,11 @@ enum WidgetSharedState {
     /// silently no-op reloads forever.
     static let widgetKind = "TamaLCDWidget"
 
+    /// Kind string for the lock screen "left alone for" widget — a
+    /// separate, non-configurable widget (no per-Tama picker), so it needs
+    /// its own kind distinct from the home screen widget's.
+    static let neglectWidgetKind = "TamaNeglectWidget"
+
     static var containerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
     }
@@ -51,6 +56,26 @@ enum WidgetSharedState {
 
     static func lastUpdated(for device: TamaDevice) -> Date? {
         sharedDefaults?.object(forKey: "lastUpdated.\(device.id)") as? Date
+    }
+
+    private static let appClosedAtKey = "appClosedAt"
+
+    /// When the app as a whole was last backgrounded — global, not
+    /// per-device, since the lock screen "left alone for" timer is about
+    /// the player leaving the app entirely, not which pet's page they last
+    /// had open. Stamped by the app's own scenePhase handler, not by
+    /// per-page swiping between owned Tamas.
+    static var appClosedAt: Date? {
+        sharedDefaults?.object(forKey: appClosedAtKey) as? Date
+    }
+
+    /// Stamps now as the app-closed time and nudges the lock screen widget
+    /// to pick it up — needed because the relative-time text itself ticks
+    /// on its own once displayed, but WidgetKit still needs a new timeline
+    /// entry to learn the start date changed at all.
+    static func recordAppClosed() {
+        sharedDefaults?.set(Date(), forKey: appClosedAtKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: neglectWidgetKind)
     }
 
     private static let ownedDeviceIDsKey = "ownedDeviceIDs"

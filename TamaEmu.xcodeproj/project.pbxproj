@@ -27,6 +27,7 @@
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
 		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
+		435413A9EAF49D46B2449EC1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
 		748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */; };
 		76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */; };
 		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
@@ -53,6 +54,7 @@
 		EF5191F516084C0781B33906 /* InputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736990A9EB7F43B291B3E53F /* InputController.swift */; };
 		F3BF9890B6B4109C098E7B84 /* ScreenGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */; };
 		F847517F815D45A390B05D05 /* TamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69860A54686643F895D85D5D /* TamaProvider.swift */; };
+		EFC5C2D0EEC7269360784458 /* TamaNeglectWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0E0DD6673484D7CEF5EB7A /* TamaNeglectWidget.swift */; };
 		FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */; };
 /* End PBXBuildFile section */
 
@@ -102,6 +104,7 @@
 		6071AE0290284B2485601BEE /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
 		66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuffer.swift; sourceTree = "<group>"; };
 		69860A54686643F895D85D5D /* TamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaProvider.swift; sourceTree = "<group>"; };
+		4C0E0DD6673484D7CEF5EB7A /* TamaNeglectWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaNeglectWidget.swift; sourceTree = "<group>"; };
 		6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetView.swift; sourceTree = "<group>"; };
 		736990A9EB7F43B291B3E53F /* InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputController.swift; sourceTree = "<group>"; };
 		7B76611C89874CD080A593F7 /* FirmwareImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareImportView.swift; sourceTree = "<group>"; };
@@ -159,6 +162,7 @@
 				D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */,
 				69860A54686643F895D85D5D /* TamaProvider.swift */,
 				6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */,
+				4C0E0DD6673484D7CEF5EB7A /* TamaNeglectWidget.swift */,
 				42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */,
 				04981D1305DB4733ACBC657E /* Info.plist */,
 				2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */,
@@ -361,6 +365,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				435413A9EAF49D46B2449EC1 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,6 +389,7 @@
 				C919374E85E040D38477FC99 /* TamaWidget.swift in Sources */,
 				F847517F815D45A390B05D05 /* TamaProvider.swift in Sources */,
 				B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */,
+				EFC5C2D0EEC7269360784458 /* TamaNeglectWidget.swift in Sources */,
 				5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */,
 				7A1C2E3D4B5F6071829304A5 /* LCDScreenEffect.swift in Sources */,
 				344D1C96652FA73744DB0B24 /* SelectTamaIntent.swift in Sources */,
