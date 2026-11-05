@@ -31,11 +31,26 @@ bool ios_hal_get_icon(uint8_t icon);
  * i). */
 void ios_hal_get_frame(uint8_t *out_bits_64, uint8_t *out_icons);
 
+/* Skips real-time pacing: the clock the core sees jumps straight to each
+ * requested wake time instead of actually sleeping for it, so a long boot
+ * sequence or background catch-up runs at full CPU speed instead of real
+ * chip speed. Off by default (live play wants real pacing). Safe to
+ * toggle on/off at any time; timestamps stay continuous across the
+ * switch. */
+void ios_hal_set_fast_forward(bool enabled);
+
+/* btn: 0=A (left), 1=B (middle), 2=C (right) -- matches hw.h's button_t
+ * ordinals (BTN_LEFT/BTN_MIDDLE/BTN_RIGHT), which the real P1 wires to its
+ * physical left-to-right A/B/C layout. BTN_TAP (3) is the touch sensor on
+ * later E0C6S48 devices, unused on a plain P1. */
+void ios_hal_set_button(int btn, bool pressed);
+
 bool ios_hal_tone_on(void);
 uint32_t ios_hal_tone_freq_dhz(void); /* deci-hertz, matches set_frequency()'s unit */
 
 /* Diagnostics, reset by ios_hal_start(); for the smoke test, not play. */
 uint64_t ios_hal_step_count(void);
+uint32_t ios_hal_elapsed_us(void); /* the core's own clock, real or fast-forwarded */
 uint64_t ios_hal_screen_update_count(void);
 uint64_t ios_hal_error_count(void);
 

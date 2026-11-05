@@ -11,6 +11,7 @@
 #include "ios_hal.h"
 #include "tamalib.h"
 #include "hal.h"
+#include "hw.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -30,8 +31,23 @@ static uint64_t s_error_count;
 
 static struct timespec s_start_ts;
 
+/* iOS port: TamaLib has no unpaced "catch up" mode of its own -- every
+ * tamalib_step() call paces itself to the real chip's actual speed via
+ * sleep_until(), which is right for live play but means fast-forwarding
+ * (background catch-up, or just testing past a long boot sequence) would
+ * otherwise cost real wall-clock minutes per simulated minute. Faking the
+ * clock here instead of actually sleeping gives the same effect as the
+ * other core's cpu_step_catchup(), without touching TamaLib itself: the
+ * firmware still sees a correctly-advancing clock, just one that jumps
+ * straight to each requested wake time instead of waiting for it. */
+static bool s_fast_forward;
+static timestamp_t s_ff_now;
+
 static timestamp_t s_get_timestamp(void)
 {
+	if (s_fast_forward) {
+		return s_ff_now;
+	}
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	uint64_t us = (uint64_t)(now.tv_sec - s_start_ts.tv_sec) * 1000000ULL
@@ -41,6 +57,10 @@ static timestamp_t s_get_timestamp(void)
 
 static void s_sleep_until(timestamp_t ts)
 {
+	if (s_fast_forward) {
+		s_ff_now = ts;
+		return;
+	}
 	/* Signed delta so an already-past deadline (ts behind now) comes out
 	 * negative rather than wrapping to a huge unsigned gap. */
 	int64_t delta_us = (int64_t)ts - (int64_t)s_get_timestamp();
@@ -50,6 +70,32 @@ static void s_sleep_until(timestamp_t ts)
 		req.tv_nsec = (delta_us % 1000000) * 1000;
 		nanosleep(&req, NULL);
 	}
+}
+
+void ios_hal_set_fast_forward(bool enabled)
+{
+	if (enabled == s_fast_forward) {
+		return;
+	}
+	if (enabled) {
+		/* Enter fast-forward from whatever real time it is now. */
+		s_ff_now = s_get_timestamp();
+	} else {
+		/* Leaving fast-forward: rebase the real clock so it continues
+		 * from s_ff_now instead of jumping back to true elapsed time. */
+		struct timespec now;
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		uint64_t back_us = s_ff_now;
+		s_start_ts = now;
+		s_start_ts.tv_sec -= back_us / 1000000;
+		int64_t rem_ns = (int64_t)(back_us % 1000000) * 1000;
+		if (rem_ns > s_start_ts.tv_nsec) {
+			s_start_ts.tv_sec -= 1;
+			s_start_ts.tv_nsec += 1000000000;
+		}
+		s_start_ts.tv_nsec -= rem_ns;
+	}
+	s_fast_forward = enabled;
 }
 
 static void *s_malloc(u32_t size)
@@ -159,6 +205,8 @@ int ios_hal_start(const uint16_t *program, uint32_t program_words)
 	s_step_count = 0;
 	s_screen_update_count = 0;
 	s_error_count = 0;
+	s_fast_forward = false;
+	s_ff_now = 0;
 	clock_gettime(CLOCK_MONOTONIC, &s_start_ts);
 
 	tamalib_register_hal(&s_hal);
@@ -214,6 +262,14 @@ bool ios_hal_get_icon(uint8_t icon)
 	return s_icons[icon];
 }
 
+void ios_hal_set_button(int btn, bool pressed)
+{
+	if (btn < 0 || btn > 3) {
+		return;
+	}
+	tamalib_set_button((button_t)btn, pressed ? BTN_STATE_PRESSED : BTN_STATE_RELEASED);
+}
+
 bool ios_hal_tone_on(void)
 {
 	return s_tone_on;
@@ -227,6 +283,11 @@ uint32_t ios_hal_tone_freq_dhz(void)
 uint64_t ios_hal_step_count(void)
 {
 	return s_step_count;
+}
+
+uint32_t ios_hal_elapsed_us(void)
+{
+	return s_get_timestamp();
 }
 
 uint64_t ios_hal_screen_update_count(void)
