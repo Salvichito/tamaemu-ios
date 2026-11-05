@@ -69,14 +69,21 @@ static void s_halt(void)
 
 static bool_t s_is_log_enabled(log_level_t level)
 {
-	(void)level;
-	return 0;
+	return level == LOG_ERROR;
 }
 
 static void s_log(log_level_t level, char *buff, ...)
 {
+	/* iOS port: cpu.c calls log() unconditionally on every memory access
+	 * (LOG_MEMORY/LOG_CPU/LOG_INT) -- it never checks is_log_enabled()
+	 * itself for those, only for the one disassembly-trace call site.
+	 * Filtering here, not just counting, is what actually keeps a live
+	 * run from formatting and writing a line per RAM/display access. */
 	if (level == LOG_ERROR) {
 		s_error_count++;
+	}
+	if (!s_is_log_enabled(level)) {
+		return;
 	}
 	va_list args;
 	va_start(args, buff);
