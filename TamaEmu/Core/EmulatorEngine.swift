@@ -231,6 +231,19 @@ final class EmulatorEngine {
         // doesn't need that. .userInitiated still keeps it ahead of
         // ordinary background work without pinning the CPU in a higher
         // power state for the whole session.
+        //
+        // .utility was tried here on real-device profiler data: it moved
+        // ~86% of this thread's CPU time off performance cores and onto
+        // efficiency cores (a real, measured power win on paper). But
+        // on-device it visibly broke real-time pacing — the OS schedules
+        // .utility threads loosely enough that this thread, which needs
+        // to run on a precise 60Hz cadence (every emulated frame of game
+        // logic depends on it), started missing its own deadlines and the
+        // whole Tama visibly ran in slow motion. Confirmed by playing on
+        // a real device, not simulator — reverted back to .userInitiated
+        // for that reason. Don't retry .utility (or anything lower) here
+        // without re-confirming smooth, real-time playback on-device, not
+        // just checking the profiler's core-time numbers look better.
         t.qualityOfService = .userInitiated
         thread = t
         t.start()

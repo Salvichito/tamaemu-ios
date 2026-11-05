@@ -1,40 +1,47 @@
-import CoreImage
+import CoreGraphics
 import SwiftUI
 import UIKit
 
 extension CGImage {
-    /// Reused across every call — a `CIContext` sets up its own Metal
-    /// pipeline, which Apple's own guidance says to create once and share
-    /// rather than rebuild per render.
-    private static let glowContext = CIContext(options: [.workingColorSpace: NSNull()])
-
     /// A single representative color for this frame, boosted toward its own
     /// most saturated hue rather than a flat average — a plain average over
     /// a multi-color LCD scene tends toward a muddy grey/brown that reads as
     /// "no color" rather than "this screen's color". Used for the play
     /// screen's ambient glow; `nil` when the frame is too flat/dark to read
     /// as a real color, so callers can fall back to a plain white glow.
+    ///
+    /// This runs once per genuine pixel change on the live LCD — which,
+    /// between idle animation and normal play, is often — so it's a plain
+    /// CPU downsample (one `CGContext.draw` into a 1×1 bitmap, letting
+    /// Core Graphics' own interpolation average the image) rather than a
+    /// Core Image filter graph. The previous version built a `CIImage`
+    /// and ran a `CIAreaAverage` filter through a `CIContext`, which spins
+    /// up a Metal render pass for every call — measurable GPU work for a
+    /// single averaged pixel, happening continuously just from the Tama
+    /// sitting there idling. A `CGContext` this tiny never touches the
+    /// GPU at all.
     func vividGlowColor() -> Color? {
-        let ciImage = CIImage(cgImage: self)
-        guard let filter = CIFilter(name: "CIAreaAverage") else { return nil }
-        filter.setValue(ciImage, forKey: kCIInputImageKey)
-        filter.setValue(CIVector(cgRect: ciImage.extent), forKey: kCIInputExtentKey)
-        guard let output = filter.outputImage else { return nil }
+        guard let context = CGContext(
+            data: nil,
+            width: 1,
+            height: 1,
+            bitsPerComponent: 8,
+            bytesPerRow: 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else { return nil }
+        context.interpolationQuality = .high
+        context.draw(self, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        guard let data = context.data else { return nil }
+        let pixel = data.assumingMemoryBound(to: UInt8.self)
 
-        var pixel = [UInt8](repeating: 0, count: 4)
-        Self.glowContext.render(
-            output,
-            toBitmap: &pixel,
-            rowBytes: 4,
-            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-            format: .RGBA8,
-            colorSpace: CGColorSpaceCreateDeviceRGB()
-        )
-
+        // byteOrder32Little + noneSkipFirst lays the word out in memory as
+        // B, G, R, (skipped alpha byte) — same convention LCDImageBuilder
+        // itself uses to build these frames.
         let uiColor = UIColor(
-            red: CGFloat(pixel[0]) / 255,
+            red: CGFloat(pixel[2]) / 255,
             green: CGFloat(pixel[1]) / 255,
-            blue: CGFloat(pixel[2]) / 255,
+            blue: CGFloat(pixel[0]) / 255,
             alpha: 1
         )
         var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0

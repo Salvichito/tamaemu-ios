@@ -1,3 +1,4 @@
+import CoreGraphics
 import SwiftUI
 
 /// Scanlines + a glass-reflection sweep, shared verbatim between the
@@ -16,18 +17,24 @@ struct LCDScreenEffect: ViewModifier {
             if enabled {
                 GeometryReader { geo in
                     ZStack {
-                        Canvas { context, size in
-                            let spacing = size.height / rows
-                            var y: CGFloat = 0
-                            while y < size.height {
-                                context.fill(
-                                    Path(CGRect(x: 0, y: y, width: size.width, height: max(0.5, spacing * 0.35))),
-                                    with: .color(.black.opacity(0.22))
-                                )
-                                y += spacing
-                            }
+                        // The stripe pattern itself never changes — same
+                        // rows, same look, every time — but it used to be
+                        // redrawn through Canvas (128 Path fills) on every
+                        // single call, which in practice meant every time
+                        // the LCD's own image changed underneath it: this
+                        // view sits in the same overlay chain as the live
+                        // 128×128 framebuffer, so a static decoration was
+                        // paying a real, continuous redraw cost for
+                        // content that's identical call to call. Rendered
+                        // once into a bitmap and reused as a plain Image
+                        // instead — a GPU texture blit, not 128 path
+                        // fills recomputed from scratch.
+                        if let scanlines = Self.scanlineImage(rows: rows) {
+                            Image(decorative: scanlines, scale: 1)
+                                .resizable()
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .blendMode(.multiply)
                         }
-                        .blendMode(.multiply)
 
                         LinearGradient(
                             stops: [
@@ -44,6 +51,38 @@ struct LCDScreenEffect: ViewModifier {
                 .allowsHitTesting(false)
             }
         }
+    }
+
+    /// Square and resolution-independent — SwiftUI stretches it to fit
+    /// via `.resizable()`, so one render at a fixed reference size covers
+    /// every screen size and both call sites (LCDView, the widget), and
+    /// the stripe spacing stays proportional to `rows` exactly like the
+    /// original per-frame Canvas draw did.
+    private static let referenceSize = 512
+    private static var cache: [CGFloat: CGImage] = [:]
+
+    private static func scanlineImage(rows: CGFloat) -> CGImage? {
+        if let cached = cache[rows] { return cached }
+        guard let context = CGContext(
+            data: nil,
+            width: referenceSize,
+            height: referenceSize,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        let size = CGFloat(referenceSize)
+        let spacing = size / rows
+        context.setFillColor(red: 0, green: 0, blue: 0, alpha: 0.22)
+        var y: CGFloat = 0
+        while y < size {
+            context.fill(CGRect(x: 0, y: y, width: size, height: max(0.5, spacing * 0.35)))
+            y += spacing
+        }
+        let image = context.makeImage()
+        if let image { cache[rows] = image }
+        return image
     }
 }
 

@@ -19,9 +19,22 @@ struct BlurredLCDBackground: View {
     /// higher reads as pure abstract color, lower keeps hints of shapes.
     private let zoom: CGFloat = 1.7
 
+    /// Render the fill+zoom+blur at a fraction of the screen's own
+    /// resolution, then scale that already-blurred result back up —
+    /// rather than blurring a full-screen-sized layer on every frame
+    /// change. A Gaussian-style blur's cost scales with the pixel count
+    /// it runs over, and this view has no sharp edges to lose by
+    /// computing it small and stretching it up: it's an abstract color
+    /// wash to begin with. `downscale` divides both dimensions, so the
+    /// blur runs over roughly 1/16th the pixels for no visible
+    /// difference.
+    private let downscale: CGFloat = 4
+
     var body: some View {
         GeometryReader { geo in
-            let side = max(geo.size.width, geo.size.height)
+            let smallWidth = geo.size.width / downscale
+            let smallHeight = geo.size.height / downscale
+            let smallSide = max(smallWidth, smallHeight)
 
             ZStack {
                 if let image {
@@ -29,10 +42,12 @@ struct BlurredLCDBackground: View {
                         .resizable()
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: geo.size.width, height: geo.size.height)
+                        .frame(width: smallWidth, height: smallHeight)
                         .scaleEffect(zoom)
                         .clipped()
-                        .blur(radius: side * 0.1)
+                        .blur(radius: smallSide * 0.1)
+                        .frame(width: smallWidth, height: smallHeight)
+                        .scaleEffect(x: downscale, y: downscale)
                 } else {
                     Color(.systemBackground)
                 }
