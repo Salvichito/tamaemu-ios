@@ -1,3 +1,4 @@
+import AVFoundation
 import CTamaLib
 import Foundation
 
@@ -15,19 +16,31 @@ struct P1ScreenState {
     func pixel(_ x: Int, _ y: Int) -> Bool { bits[y * 32 + x] }
 }
 
-/// First-pass driver for the TamaLib core -- enough to prove the real
-/// screen view against a real ROM. No buttons, sound, save, or pause yet;
-/// those are later steps (see the integration-research memory). TamaLib's
-/// own `tamalib_step()` already paces itself to the real chip's speed via
-/// its HAL's `sleep_until`, so this just needs to call it continuously on
-/// a background thread -- no 60Hz frame loop of its own like the existing
+/// Driver for the TamaLib core: steps it continuously, forwards button
+/// input, and plays its buzzer tone. Save/pause are still separate later
+/// steps (see the integration-research memory). TamaLib's own
+/// `tamalib_step()` already paces itself to the real chip's speed via its
+/// HAL's `sleep_until`, so this just needs to call it continuously on a
+/// background thread -- no 60Hz frame loop of its own like the existing
 /// S1C33 engine needs.
 final class V1EmulatorEngine {
+    let input = InputController()
+
     private var thread: Thread?
     private let stopLock = NSLock()
     private var shouldStop = false
+    private var lastButtonMask: UInt8 = 0
 
     private(set) var onFrame: ((P1ScreenState) -> Void)?
+
+    private lazy var audioOutput = AudioOutput(
+        toneProvider: {
+            (ios_hal_tone_on(), Float(ios_hal_tone_freq_dhz()) / 10)
+        },
+        volumeProvider: {
+            Float(AppSettings.volume)
+        }
+    )
 
     init(onFrame: @escaping (P1ScreenState) -> Void) {
         self.onFrame = onFrame
@@ -53,12 +66,14 @@ final class V1EmulatorEngine {
         }
         guard started == 0 else { return false }
 
+        lastButtonMask = 0
         stopLock.lock(); shouldStop = false; stopLock.unlock()
         let t = Thread { [weak self] in self?.runLoop() }
         t.name = "V1EmulatorEngine"
         t.qualityOfService = .userInitiated
         thread = t
         t.start()
+        audioOutput.start()
         return true
     }
 
@@ -66,6 +81,7 @@ final class V1EmulatorEngine {
         guard thread != nil else { return }
         stopLock.lock(); shouldStop = true; stopLock.unlock()
         thread = nil
+        audioOutput.stop()
         ios_hal_stop()
     }
 
@@ -82,6 +98,18 @@ final class V1EmulatorEngine {
             let now = Date()
             guard now.timeIntervalSince(lastPublish) >= 1.0 / 30.0 else { continue }
             lastPublish = now
+
+            let mask = input.currentMask()
+            let changed = mask ^ lastButtonMask
+            if changed != 0 {
+                // InputController's bit order (A=0, B=1, C=2) already
+                // matches ios_hal_set_button's own (0=A/left, 1=B/middle,
+                // 2=C/right) -- no remapping needed.
+                for bit in 0..<3 where (changed & (1 << bit)) != 0 {
+                    ios_hal_set_button(Int32(bit), (mask & (1 << bit)) != 0)
+                }
+                lastButtonMask = mask
+            }
 
             var iconsByte: UInt8 = 0
             bitsBuf.withUnsafeMutableBufferPointer { buf in
