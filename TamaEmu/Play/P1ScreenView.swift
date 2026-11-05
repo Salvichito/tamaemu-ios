@@ -12,27 +12,51 @@ struct P1ScreenView: View {
     private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
     private let bezelColor = Color(red: 0.169, green: 0.165, blue: 0.157)
 
+    /// TamaLib's own icon index order (confirmed against jcrona/tamatool's
+    /// reference art and the user's own real P1 -- see the
+    /// integration-research memory). Index 7 (attention) lights up on its
+    /// own; it's not a selectable menu item, but still just an icon here.
+    private static let iconSymbols = [
+        "fork.knife",                  // 0 food
+        "lightbulb.fill",              // 1 light
+        "gamecontroller.fill",         // 2 game
+        "syringe.fill",                // 3 medicine
+        "toilet",                      // 4 poop cleaning
+        "gauge",                       // 5 stats
+        "exclamationmark.bubble.fill", // 6 scolding
+        "face.smiling.fill"            // 7 attention
+    ]
+
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
+            iconRow(0..<4)
             pixelGrid
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
-                .padding(6)
-                .background(lcdTint)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-
-            HStack {
-                ForEach(0..<8, id: \.self) { i in
-                    Circle()
-                        .fill(state.icons[i] ? bezelColor : bezelColor.opacity(0.4))
-                        .frame(width: 5, height: 5)
-                    if i < 7 { Spacer() }
-                }
-            }
-            .padding(.horizontal, 4)
+            iconRow(4..<8)
         }
+        .padding(8)
+        .background(lcdTint)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
         .padding(EdgeInsets(top: 14, leading: 12, bottom: 10, trailing: 12))
         .background(bezelColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// Selected state shows as full opacity vs. faint, not outline vs.
+    /// filled -- matches both the user's own photo of a real P1 and how
+    /// TamaTool itself renders this (alpha-blended, not swapped artwork).
+    private func iconRow(_ range: Range<Int>) -> some View {
+        HStack {
+            ForEach(range, id: \.self) { i in
+                Image(systemName: Self.iconSymbols[i])
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 14, height: 14)
+                    .foregroundStyle(bezelColor)
+                    .opacity(state.icons[i] ? 1.0 : 0.35)
+                if i != range.upperBound - 1 { Spacer() }
+            }
+        }
     }
 
     private var pixelGrid: some View {
