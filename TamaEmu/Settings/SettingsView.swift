@@ -25,6 +25,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
     @AppStorage(AppSettings.Keys.reminderNotificationsEnabled) private var reminderNotificationsEnabled = false
     @AppStorage(AppSettings.Keys.reminderIntervalHours) private var reminderIntervalHours = 8.0
+    @AppStorage(AppSettings.Keys.liveTranslationUsesCloud) private var liveTranslationUsesCloud = false
 
     @State private var showingImportSheet = false
     @State private var showingSaveImporter = false
@@ -33,6 +34,8 @@ struct SettingsView: View {
     @State private var showingRemoveConfirm = false
     @State private var showingRestartConfirm = false
     @State private var toast: String?
+    @State private var showingAPIKeyPrompt = false
+    @State private var apiKeyDraft = ""
 
     init(
         device: TamaDevice,
@@ -59,6 +62,9 @@ struct SettingsView: View {
                 soundAndGameplaySection
                 remindersSection
                 displaySection
+                if #available(iOS 27.0, *) {
+                    liveTranslationSection
+                }
             }
             .navigationTitle("Settings for \(device.title)")
             .toolbar {
@@ -127,6 +133,15 @@ struct SettingsView: View {
             }
             .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
                 Button("OK") { toast = nil }
+            }
+            .alert("Gemini API Key", isPresented: $showingAPIKeyPrompt) {
+                TextField("Paste your Gemini API key", text: $apiKeyDraft)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Save") { saveAPIKey() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Get a free key at aistudio.google.com — no credit card needed.")
             }
         }
     }
@@ -261,5 +276,88 @@ struct SettingsView: View {
         } footer: {
             Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it. These apply app-wide, not just to this Tama.")
         }
+    }
+
+    // MARK: - Live Translation
+
+    /// A techy-user feature, deliberately minimal: one choice (on-device
+    /// vs. cloud) and one key field, not a provider picker or an
+    /// onboarding wizard. The toggle button in the gallery toolbar (the
+    /// speech-bubble icon) is what actually turns live translation on or
+    /// off per Tama; this just decides which model it uses when it's on.
+    ///
+    /// Two Sections, not one flat list — the mode picker is the one real
+    /// top-level choice; the key rows only exist to configure the "Cloud
+    /// AI" branch of it, so they read as that choice's own sub-section
+    /// (the standard Settings.app pattern for "a choice with its own
+    /// follow-up configuration") rather than three more options sitting
+    /// as peers of "on-device" and "Cloud AI" themselves.
+    @available(iOS 27.0, *)
+    @ViewBuilder
+    private var liveTranslationSection: some View {
+        Section {
+            // Empty label on purpose — with .inline style, a non-empty
+            // label renders as its own row above the two options, reading
+            // like a third, unselectable choice. The footer below already
+            // explains what this picker is.
+            Picker("", selection: $liveTranslationUsesCloud) {
+                Text("On-device (offline)").tag(false)
+                Text("Gemini").tag(true)
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } header: {
+            // "(beta)" — this is genuinely rough right now (small on-device
+            // model, tiny LCD font); players should go in expecting that.
+            Text("Live Translation (beta)")
+        } footer: {
+            if liveTranslationUsesCloud {
+                Text("On-device translation is free, fully offline, and private, but the tiny LCD font pushes its accuracy. Gemini reads the screen instead, for much better results, using the free API key you provide below.")
+            } else {
+                Text("Reads the screen with Apple's on-device model — free, fully offline, and private, but the tiny LCD font pushes its accuracy. Switch to Gemini for much better results — it's the one AI service here with a genuinely free tier, no billing required (OpenAI and Anthropic both need a paid account).")
+            }
+        }
+
+        if liveTranslationUsesCloud {
+            Section {
+                if storedKeyProvider != nil {
+                    LabeledContent("API Key") {
+                        Text("Key set")
+                            .foregroundStyle(.secondary)
+                    }
+                    Button("Change Gemini API Key…") { presentAPIKeyPrompt() }
+                    Button("Remove key", role: .destructive) { KeychainStore.delete() }
+                } else {
+                    Button("Add Gemini API Key…") { presentAPIKeyPrompt() }
+                }
+            } footer: {
+                Text("Get a free key at aistudio.google.com — no credit card needed. It only ever leaves this device to reach Google's own API.")
+            }
+        }
+    }
+
+    /// Recomputed from Keychain each time rather than cached in @State —
+    /// this is the one place that can go stale (add/change/remove all
+    /// happen right here), and a Keychain read is cheap enough that there's
+    /// no real cost to just always reflecting the truth.
+    private var storedKeyProvider: CloudProvider? {
+        KeychainStore.read().flatMap(CloudProvider.detect(fromKey:))
+    }
+
+    private func presentAPIKeyPrompt() {
+        apiKeyDraft = ""
+        showingAPIKeyPrompt = true
+    }
+
+    private func saveAPIKey() {
+        // No format validation here on purpose — CloudProvider.detect is
+        // for *routing*, not gatekeeping. It already defaults to Gemini
+        // for anything it doesn't recognize, so there's nothing left for
+        // this to meaningfully reject; it previously did, and rejected a
+        // real, working key purely because the detection pattern was
+        // guessed and out of date.
+        let trimmed = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        KeychainStore.write(trimmed)
     }
 }

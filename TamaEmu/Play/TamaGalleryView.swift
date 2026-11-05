@@ -249,6 +249,46 @@ struct TamaGalleryView: View {
                     .foregroundStyle(isRecording ? .red : .primary)
             }
         }
+        if #available(iOS 27.0, *) {
+            // Its own capsule, not fused with camera/video — the spacer
+            // below splits it off, same way Time Sync is split off from
+            // this pair.
+            ToolbarSpacer(.fixed, placement: .bottomBar)
+            ToolbarItem(placement: .bottomBar) {
+                // A toggle, not a one-shot "translate now" button: tap
+                // turns live translation on or off for this Tama. The blue
+                // dot means it's ON (watching for screen changes), not
+                // that a key is configured — which engine it uses (and
+                // whether a key is set at all) is a Settings question now.
+                Button {
+                    viewModel.toggleLiveTranslation()
+                } label: {
+                    // Both the icon and the spinner stay mounted the whole
+                    // time — only their opacity toggles. An if/else here
+                    // swaps between two different view identities, and
+                    // iOS 26's bottom-bar capsules visibly animate an
+                    // item's insertion/removal (that's the "jumps to the
+                    // bottom center" — a system transition playing, not an
+                    // actual layout bug). Never removing either view in
+                    // the first place sidesteps that entirely.
+                    ZStack {
+                        Image(systemName: "character.bubble")
+                            .opacity(viewModel.isTranslating ? 0 : 1)
+                        ProgressView()
+                            .opacity(viewModel.isTranslating ? 1 : 0)
+                    }
+                    .frame(width: 20, height: 20)
+                    .overlay(alignment: .topTrailing) {
+                        if viewModel.isLiveTranslating {
+                            Circle()
+                                .fill(.blue)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 2, y: -2)
+                        }
+                    }
+                }
+            }
+        }
         if #available(iOS 26.0, *) {
             ToolbarSpacer(.fixed, placement: .bottomBar)
         }

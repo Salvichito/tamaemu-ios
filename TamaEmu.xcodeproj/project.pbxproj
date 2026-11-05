@@ -17,6 +17,8 @@
 		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
 		344D1C96652FA73744DB0B24 /* SelectTamaIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */; };
 		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
+		11FF116C1CABA951E7704A81 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB4C3E1034DD2DB0A41D7C6 /* KeychainStore.swift */; };
+		C67CCAE93C1A0FF7D205485C /* ScreenImagePrep.swift in Sources */ = {isa = PBXBuildFile; fileRef = B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		4CF56E64D9B116A97407FC59 /* CGImage+GlowColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */; };
 		5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1122334455667788990AABBC /* DeviceDetector.swift */; };
@@ -42,6 +44,9 @@
 		CFCC6A6FD42DD0017938FBD0 /* DevicePauseState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */; };
 		D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B094FAC77A244A49BB27D76A /* AudioOutput.swift */; };
 		D9115EAC767B490EB90DB299 /* ScreenRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */; };
+		694922B0124194E5CAB93EE0 /* ScreenTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3DE16C24D18BB2F54C7241D /* ScreenTranslator.swift */; };
+		AE6186A0722B2D81648CEF71 /* CloudTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */; };
+		34FFC4BF7D11F08E57C2F917 /* TranslationBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C882B35EC13DBF00890164 /* TranslationBubble.swift */; };
 		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
 		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
 		E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7594ABE9067A97A1A2D888F3 /* TamaCore */; };
@@ -106,6 +111,8 @@
 		A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = TamaEmu.icon; sourceTree = "<group>"; };
 		A9228514E9DDD678D810B062 /* PlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayViewModel.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		6CB4C3E1034DD2DB0A41D7C6 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenImagePrep.swift; sourceTree = "<group>"; };
 		ABE647F4A560420EAE69A61E /* SavePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavePaths.swift; sourceTree = "<group>"; };
 		AE4595FCF428E95973D802C6 /* TamaCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TamaCore; path = Packages/TamaCore; sourceTree = SOURCE_ROOT; };
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
@@ -114,6 +121,9 @@
 		C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotificationScheduler.swift; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
 		84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRecorder.swift; sourceTree = "<group>"; };
+		D3DE16C24D18BB2F54C7241D /* ScreenTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTranslator.swift; sourceTree = "<group>"; };
+		34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudTranslator.swift; sourceTree = "<group>"; };
+		51C882B35EC13DBF00890164 /* TranslationBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationBubble.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
 		D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReorderTamasView.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
@@ -188,6 +198,7 @@
 				40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */,
 				36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */,
 				AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */,
+				6CB4C3E1034DD2DB0A41D7C6 /* KeychainStore.swift */,
 				5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */,
 				56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */,
 				DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */,
@@ -252,6 +263,10 @@
 			children = (
 				CE2071482F1952F86F44813F /* LCDView.swift */,
 				84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */,
+				D3DE16C24D18BB2F54C7241D /* ScreenTranslator.swift */,
+				34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */,
+				B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */,
+				51C882B35EC13DBF00890164 /* TranslationBubble.swift */,
 				F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */,
 				A9228514E9DDD678D810B062 /* PlayViewModel.swift */,
 				2267519E09184C139C7BAC4C /* ButtonPad.swift */,
@@ -392,6 +407,10 @@
 				03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */,
 				219462947CE54CAE77590FBB /* LCDView.swift in Sources */,
 				D9115EAC767B490EB90DB299 /* ScreenRecorder.swift in Sources */,
+				694922B0124194E5CAB93EE0 /* ScreenTranslator.swift in Sources */,
+				AE6186A0722B2D81648CEF71 /* CloudTranslator.swift in Sources */,
+				C67CCAE93C1A0FF7D205485C /* ScreenImagePrep.swift in Sources */,
+				34FFC4BF7D11F08E57C2F917 /* TranslationBubble.swift in Sources */,
 				5AFDD78582EA89F72D65FEAB /* TamaGalleryView.swift in Sources */,
 				76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */,
 				C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */,
@@ -399,6 +418,7 @@
 				EF5191F516084C0781B33906 /* InputController.swift in Sources */,
 				FA9013A56AAA7B42574665AC /* TamaEmuApp.swift in Sources */,
 				4455667788990011AABBCCDD /* AppSettings.swift in Sources */,
+				11FF116C1CABA951E7704A81 /* KeychainStore.swift in Sources */,
 				5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */,
 				7788990011223344AABBCC11 /* SettingsView.swift in Sources */,
 				CFCC6A6FD42DD0017938FBD0 /* DevicePauseState.swift in Sources */,

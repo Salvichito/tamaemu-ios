@@ -32,9 +32,31 @@ final class PlayViewModel {
     /// visible page right now, its engine is stopped immediately so the
     /// screen visibly freezes.
     private(set) var isPaused: Bool
+    /// The last translation of the LCD, shown as a floating bubble above
+    /// the screen (TamaPageView) until it's dismissed — tapped away,
+    /// auto-timed-out, or replaced by a new one.
+    private(set) var translatedText: String?
+    private(set) var isTranslating = false
+    /// True while live translation is watching for screen changes and
+    /// re-translating automatically — set only by toggleLiveTranslation(),
+    /// which is why the gallery's translate button is a toggle (on/off),
+    /// not a one-shot "translate now" action.
+    private(set) var isLiveTranslating = false
 
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
+    private var liveTranslationTimer: Timer?
+    /// Bumped by setLCDImage — which itself only runs on a genuine pixel
+    /// change (see FrameStore) — so this is free change-detection, not a
+    /// new per-frame cost. Live translation waits for this to go quiet for
+    /// `liveTranslationSettleDelay` before considering the screen "settled"
+    /// and worth reading.
+    private var lastFrameChangeAt: Date?
+    /// The cropped text area's bytes (ScreenImagePrep.textAreaFingerprint)
+    /// from the last screen actually sent for translation — lets a settled
+    /// frame be skipped when only the decorative icon strips changed
+    /// (idle animation), not the readable text itself.
+    private var lastTranslatedFingerprint: Data?
     /// Bumped by stopEngine() and every startEngine() call — a load that
     /// finishes after being superseded (stopped, paused, restarted again)
     /// checks this before applying its result, so it discards itself
@@ -62,6 +84,7 @@ final class PlayViewModel {
     private func setLCDImage(_ image: CGImage?) {
         lcdImage = image
         lcdGlowColor = image?.vividGlowColor() ?? .white
+        if isLiveTranslating { lastFrameChangeAt = Date() }
     }
 
     /// Deletes one device's ROM/save data and any pause flag outright — the
@@ -100,6 +123,10 @@ final class PlayViewModel {
         startGeneration += 1  // invalidates any startEngine() load still in flight
         displayTimer?.invalidate()
         displayTimer = nil
+        // A Tama off-screen (page swiped away, app backgrounded) has
+        // nothing worth reading — stop polling and spending API calls on
+        // it rather than leaving live translation running unattended.
+        if isLiveTranslating { stopLiveTranslation() }
         // stop() must come first: it blocks until the emulator thread has
         // actually exited, which save() and renderCurrentFrame() both
         // depend on to safely read the Emu struct without a concurrent
@@ -314,5 +341,110 @@ final class PlayViewModel {
                 }
             }
         }
+    }
+
+    // MARK: - Live translation
+
+    private static let liveTranslationPollInterval: TimeInterval = 0.25
+    /// How long the screen has to sit unchanged before it's considered
+    /// "settled" and worth reading — just enough to not catch a menu
+    /// mid-transition (half old text, half new, while a item-to-item
+    /// slide animation is still playing). Originally 1.5s, which was
+    /// tuned for the wrong failure mode: menus cycled with the A button
+    /// often don't stay on screen that long, so by the time a translation
+    /// would fire the menu had already moved on. A continuously-animating
+    /// idle screen (the main pet view, not a menu) isn't actually affected
+    /// by this value either way — lastFrameChangeAt keeps resetting for as
+    /// long as *anything* on screen keeps moving, settled or not, so this
+    /// only ever needs to outlast a single transition, not an animation
+    /// loop.
+    private static let liveTranslationSettleDelay: TimeInterval = 0.4
+
+    @available(iOS 27.0, *)
+    func toggleLiveTranslation() {
+        if isLiveTranslating {
+            stopLiveTranslation()
+        } else {
+            startLiveTranslation()
+        }
+    }
+
+    @available(iOS 27.0, *)
+    private func startLiveTranslation() {
+        isLiveTranslating = true
+        lastFrameChangeAt = lcdImage != nil ? Date() : nil
+        lastTranslatedFingerprint = nil
+        liveTranslationTimer?.invalidate()
+        liveTranslationTimer = Timer.scheduledTimer(withTimeInterval: Self.liveTranslationPollInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkForStableFrame()
+            }
+        }
+    }
+
+    private func stopLiveTranslation() {
+        isLiveTranslating = false
+        liveTranslationTimer?.invalidate()
+        liveTranslationTimer = nil
+        lastTranslatedFingerprint = nil
+        translatedText = nil
+    }
+
+    /// Runs at most once per settled screen, not once per poll tick —
+    /// `lastFrameChangeAt` only resets on a genuine pixel change
+    /// (setLCDImage), and even once the screen goes quiet for
+    /// `liveTranslationSettleDelay`, this still skips firing unless the
+    /// cropped text area's own bytes differ from the last thing actually
+    /// translated. That second check is what stops an idle animation in
+    /// the icon strips — which never truly "settles" — from retranslating
+    /// an unchanged stat readout over and over.
+    @available(iOS 27.0, *)
+    private func checkForStableFrame() {
+        guard isLiveTranslating, !isTranslating, let lcdImage, let lastFrameChangeAt else { return }
+        guard Date().timeIntervalSince(lastFrameChangeAt) >= Self.liveTranslationSettleDelay else { return }
+        Task.detached { [weak self] in
+            guard let fingerprint = ScreenImagePrep.textAreaFingerprint(lcdImage) else { return }
+            guard let self else { return }
+            await MainActor.run {
+                guard self.isLiveTranslating, !self.isTranslating else { return }
+                guard fingerprint != self.lastTranslatedFingerprint else { return }
+                self.lastTranslatedFingerprint = fingerprint
+                self.runTranslation(on: lcdImage)
+            }
+        }
+    }
+
+    /// .detached, not a plain Task — a plain Task created from this
+    /// MainActor-isolated method would inherit MainActor, and a
+    /// translator's actual network/model call runs synchronously on
+    /// whatever thread calls it, which would freeze the whole app's UI for
+    /// the duration (confirmed on-device while prototyping this).
+    /// Detaching keeps that work off the main thread; only the property
+    /// writes below hop back.
+    @available(iOS 27.0, *)
+    private func runTranslation(on image: CGImage) {
+        isTranslating = true
+        let cloudAPIKey = AppSettings.liveTranslationUsesCloud ? KeychainStore.read() : nil
+        Task.detached { [weak self] in
+            let text: String?
+            if let cloudAPIKey, !cloudAPIKey.isEmpty {
+                text = await CloudTranslator.translate(image, apiKey: cloudAPIKey)
+            } else {
+                text = await ScreenTranslator.translate(image)
+            }
+            guard let self else { return }
+            await MainActor.run {
+                self.isTranslating = false
+                // Only applied if still live — otherwise a response that
+                // arrives just after the user turned translation off would
+                // briefly flash the bubble back on.
+                guard self.isLiveTranslating else { return }
+                self.translatedText = text
+            }
+        }
+    }
+
+    func dismissTranslation() {
+        translatedText = nil
     }
 }

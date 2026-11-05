@@ -24,6 +24,11 @@ enum AppSettings {
         static let ambientBackgroundEnabled = "settings.ambientBackgroundEnabled"
         static let reminderNotificationsEnabled = "settings.reminderNotificationsEnabled"
         static let reminderIntervalHours = "settings.reminderIntervalHours"
+        /// Whether live translation uses a cloud AI (KeychainStore) instead
+        /// of the on-device model. The key itself is never stored here —
+        /// UserDefaults is not a safe place for a secret — only this
+        /// boolean choice.
+        static let liveTranslationUsesCloud = "settings.liveTranslationUsesCloud"
 
         /// Per-device keys — speed and stay-awake are the two settings that
         /// already have a per-instance home on the C Emu struct (rtc_mult,
@@ -67,6 +72,14 @@ enum AppSettings {
     static let speedLadder = [1, 2, 5, 10, 30, 60, 120, 300, 600]
     static let catchUpCapOptions: [Double] = [0, 1, 6, 24]
     static let reminderIntervalOptions: [Double] = [4, 8, 12, 24]
+
+    /// Read from PlayViewModel (not SwiftUI) when deciding which
+    /// translator to call, so it needs a plain accessor alongside the
+    /// @AppStorage binding SettingsView itself uses.
+    static var liveTranslationUsesCloud: Bool {
+        get { UserDefaults.standard.bool(forKey: Keys.liveTranslationUsesCloud) }
+        set { UserDefaults.standard.set(newValue, forKey: Keys.liveTranslationUsesCloud) }
+    }
 
     /// Double, not Float — @AppStorage only binds to Double directly, and
     /// the Settings UI needs a live binding to this same key.

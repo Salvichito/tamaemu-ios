@@ -53,6 +53,23 @@ struct TamaPageView: View {
             // own opaque background instead of reaching the gesture below it.
             .contentShape(Rectangle())
             .onTapGesture { viewModel.togglePause() }
+            // Floats above the LCD's own frame (overlay, not layout) so it
+            // never shifts the title/ButtonPad position while visible.
+            .overlay(alignment: .top) {
+                if let translatedText = viewModel.translatedText {
+                    TranslationBubble(text: translatedText) {
+                        viewModel.dismissTranslation()
+                    }
+                    .offset(y: -64)
+                    .task(id: translatedText) {
+                        try? await Task.sleep(for: .seconds(6))
+                        viewModel.dismissTranslation()
+                    }
+                    .transition(.scale(scale: 0.85, anchor: .bottom).combined(with: .opacity))
+                    .zIndex(1)
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.translatedText)
 
             if ambientBackgroundEnabled {
                 Text(viewModel.selectedDevice.title)
