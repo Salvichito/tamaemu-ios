@@ -186,6 +186,26 @@ bool ios_hal_get_pixel(uint8_t x, uint8_t y)
 	return s_lcd[y][x];
 }
 
+void ios_hal_get_frame(uint8_t *out_bits_64, uint8_t *out_icons)
+{
+	memset(out_bits_64, 0, 64);
+	for (uint8_t y = 0; y < IOS_HAL_LCD_HEIGHT; y++) {
+		for (uint8_t x = 0; x < IOS_HAL_LCD_WIDTH; x++) {
+			if (s_lcd[y][x]) {
+				uint32_t bit = (uint32_t)y * IOS_HAL_LCD_WIDTH + x;
+				out_bits_64[bit / 8] |= (uint8_t)(0x80 >> (bit % 8));
+			}
+		}
+	}
+	uint8_t icons = 0;
+	for (uint8_t i = 0; i < IOS_HAL_ICON_COUNT; i++) {
+		if (s_icons[i]) {
+			icons |= (uint8_t)(1 << i);
+		}
+	}
+	*out_icons = icons;
+}
+
 bool ios_hal_get_icon(uint8_t icon)
 {
 	if (icon >= IOS_HAL_ICON_COUNT) {

@@ -24,6 +24,13 @@ void ios_hal_stop(void);
 bool ios_hal_get_pixel(uint8_t x, uint8_t y);
 bool ios_hal_get_icon(uint8_t icon);
 
+/* Bulk snapshot for a live view: one call instead of 512 (IOS_HAL_LCD_WIDTH
+ * x IOS_HAL_LCD_HEIGHT) pixel calls per drawn frame. out_bits must hold at
+ * least 64 bytes (512 pixels, row-major, bit 0 of byte 0 = x=0,y=0, MSB-
+ * first within each byte). out_icons gets one bit per icon (bit i = icon
+ * i). */
+void ios_hal_get_frame(uint8_t *out_bits_64, uint8_t *out_icons);
+
 bool ios_hal_tone_on(void);
 uint32_t ios_hal_tone_freq_dhz(void); /* deci-hertz, matches set_frequency()'s unit */
 

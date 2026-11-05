@@ -20,6 +20,16 @@
 #ifndef _CPU_H_
 #define _CPU_H_
 
+/* iOS port: this app's other emulator core (CTama, a different, unrelated
+ * CPU for later-generation devices) also exports C functions named
+ * cpu_step()/cpu_reset() -- both get statically linked into the same app,
+ * so the plain names collide at link time. Renaming only here, before
+ * either is declared, retargets every use within TamaLib (its own call
+ * sites, plus tamalib.h's tamalib_reset() macro) without touching a
+ * single call site. See CREDITS.md. */
+#define cpu_step tlib_cpu_step
+#define cpu_reset tlib_cpu_reset
+
 #include "hal.h"
 
 #define MEMORY_SIZE				4096 // 4096 x 4 bits
