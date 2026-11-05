@@ -13,6 +13,7 @@
 #include "hal.h"
 #include "hw.h"
 
+#include <os/lock.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -43,24 +44,57 @@ static struct timespec s_start_ts;
 static bool s_fast_forward;
 static timestamp_t s_ff_now;
 
+/* iOS port: s_start_ts/s_ff_now/s_fast_forward are read on the emulator's
+ * own stepping thread (every single step, via s_get_timestamp/
+ * s_sleep_until) and written from whatever thread calls
+ * ios_hal_set_fast_forward -- a UI button, typically. Without a lock that's
+ * a data race on a multi-field struct (s_start_ts): a step reading it
+ * mid-write can see a torn, inconsistent combination of its two fields,
+ * which the signed/unsigned arithmetic below turns into a wildly wrong
+ * "now" -- in practice, a sleep_until() deadline so far in the future that
+ * the engine looks permanently frozen, surviving even toggling fast-forward
+ * back on, since the thread is already blocked inside that one nanosleep()
+ * and won't re-check anything until it returns on its own. Found exactly
+ * this way: toggling the button while live. */
+static os_unfair_lock s_clock_lock = OS_UNFAIR_LOCK_INIT;
+
 static timestamp_t s_get_timestamp(void)
 {
-	if (s_fast_forward) {
-		return s_ff_now;
+	os_unfair_lock_lock(&s_clock_lock);
+	bool ff = s_fast_forward;
+	timestamp_t ff_now = s_ff_now;
+	struct timespec start = s_start_ts;
+	os_unfair_lock_unlock(&s_clock_lock);
+
+	if (ff) {
+		return ff_now;
 	}
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	uint64_t us = (uint64_t)(now.tv_sec - s_start_ts.tv_sec) * 1000000ULL
-		+ (uint64_t)(now.tv_nsec - s_start_ts.tv_nsec) / 1000ULL;
+	/* Signed throughout, clamped to 0 -- a torn read elsewhere should be
+	 * impossible now that every access is lock-guarded, but a negative
+	 * "elapsed" is cheap to make harmless anyway rather than relying on
+	 * that alone. */
+	int64_t us = (int64_t)(now.tv_sec - start.tv_sec) * 1000000LL
+		+ (int64_t)(now.tv_nsec - start.tv_nsec) / 1000LL;
+	if (us < 0) {
+		us = 0;
+	}
 	return (timestamp_t)us;
 }
 
 static void s_sleep_until(timestamp_t ts)
 {
-	if (s_fast_forward) {
+	os_unfair_lock_lock(&s_clock_lock);
+	bool ff = s_fast_forward;
+	if (ff) {
 		s_ff_now = ts;
+	}
+	os_unfair_lock_unlock(&s_clock_lock);
+	if (ff) {
 		return;
 	}
+
 	/* Signed delta so an already-past deadline (ts behind now) comes out
 	 * negative rather than wrapping to a huge unsigned gap. */
 	int64_t delta_us = (int64_t)ts - (int64_t)s_get_timestamp();
@@ -74,12 +108,20 @@ static void s_sleep_until(timestamp_t ts)
 
 void ios_hal_set_fast_forward(bool enabled)
 {
+	os_unfair_lock_lock(&s_clock_lock);
 	if (enabled == s_fast_forward) {
+		os_unfair_lock_unlock(&s_clock_lock);
 		return;
 	}
 	if (enabled) {
-		/* Enter fast-forward from whatever real time it is now. */
-		s_ff_now = s_get_timestamp();
+		/* Enter fast-forward from whatever real time it is now (inlined
+		 * rather than calling s_get_timestamp(), which would re-enter
+		 * this same non-recursive lock). */
+		struct timespec now;
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		int64_t us = (int64_t)(now.tv_sec - s_start_ts.tv_sec) * 1000000LL
+			+ (int64_t)(now.tv_nsec - s_start_ts.tv_nsec) / 1000LL;
+		s_ff_now = (timestamp_t)(us < 0 ? 0 : us);
 	} else {
 		/* Leaving fast-forward: rebase the real clock so it continues
 		 * from s_ff_now instead of jumping back to true elapsed time. */
@@ -96,6 +138,7 @@ void ios_hal_set_fast_forward(bool enabled)
 		s_start_ts.tv_nsec -= rem_ns;
 	}
 	s_fast_forward = enabled;
+	os_unfair_lock_unlock(&s_clock_lock);
 }
 
 static void *s_malloc(u32_t size)
