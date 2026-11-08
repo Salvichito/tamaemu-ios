@@ -76,7 +76,7 @@ struct P1ScreenView: View {
 
             pixelGrid
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
-                .frame(width: side * 0.62)
+                .frame(width: side * 0.88)
 
             ForEach(0..<8, id: \.self) { i in
                 Image(Self.iconAssetNames[i])
