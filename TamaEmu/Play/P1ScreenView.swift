@@ -1,26 +1,20 @@
 import SwiftUI
 
-/// The P1-era screen, styled to match the real 1997 hardware, inside a
-/// square overall footprint -- same size and proportions as every other
-/// Tamagotchi in the gallery (LCDView forces the same `.aspectRatio(1,
-/// contentMode: .fit)`). A real P1's square face has the 8 status icons
-/// printed directly on it (silkscreened onto the same paper behind the
-/// glass that carries its decorative pattern -- still deferred, see the
-/// ambient-background memory, `faceColor` stands in for it with a flat
-/// grey for now), with the actual pixel screen as a separate, narrower
-/// rectangle in the middle, in its own thin frame -- not one shared
-/// tinted box containing icons and screen together, which is what this
-/// looked like before a direct comparison against a real device's photo
-/// caught it.
+/// The P1-era screen: one flat square, a single sage-green surface with
+/// the 8 status icons and the pixel matrix all sitting directly on it --
+/// no bezel ring, no separate inset panel for the screen. Simplified
+/// to this after two rounds that each added structure the user's own
+/// reference mockup didn't have (a nested bezel/face/screen-panel
+/// stack); this is deliberately the plainest version, matching that
+/// reference exactly. Square overall footprint -- same size and
+/// proportions as every other Tamagotchi in the gallery (LCDView forces
+/// the same `.aspectRatio(1, contentMode: .fit)`).
 struct P1ScreenView: View {
     let state: P1ScreenState
 
     private let lcdTint = Color(red: 0.624, green: 0.682, blue: 0.510)
-    private let bezelColor = Color(red: 0.169, green: 0.165, blue: 0.157)
-    private let faceColor = Color(white: 0.68)
-    private static let bezelCornerRadius: CGFloat = 16
-    private static let faceCornerRadius: CGFloat = 10
-    private static let screenCornerRadius: CGFloat = 4
+    private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
+    private static let cornerRadius: CGFloat = 16
 
     /// TamaLib's own icon index order (confirmed against jcrona/tamatool's
     /// reference art and the user's own real P1 -- see the
@@ -48,32 +42,17 @@ struct P1ScreenView: View {
     }
 
     private var screenContent: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Self.bezelCornerRadius, style: .continuous)
-                .fill(bezelColor)
-
-            RoundedRectangle(cornerRadius: Self.faceCornerRadius, style: .continuous)
-                .fill(faceColor)
-                .padding(10)
-
-            VStack(spacing: 0) {
-                iconRow(0..<4)
-                Spacer(minLength: 10)
-                pixelGrid
-                    .aspectRatio(32.0 / 16.0, contentMode: .fit)
-                    .padding(6)
-                    .background(lcdTint)
-                    .clipShape(RoundedRectangle(cornerRadius: Self.screenCornerRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Self.screenCornerRadius, style: .continuous)
-                            .stroke(bezelColor, lineWidth: 3)
-                    )
-                Spacer(minLength: 10)
-                iconRow(4..<8)
-            }
-            .padding(EdgeInsets(top: 20, leading: 18, bottom: 20, trailing: 18))
+        VStack(spacing: 0) {
+            iconRow(0..<4)
+            Spacer(minLength: 16)
+            pixelGrid
+                .aspectRatio(32.0 / 16.0, contentMode: .fit)
+            Spacer(minLength: 16)
+            iconRow(4..<8)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Self.bezelCornerRadius, style: .continuous))
+        .padding(20)
+        .background(lcdTint)
+        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
     }
 
     /// Selected state shows as full opacity vs. faint, not outline vs.
@@ -86,7 +65,7 @@ struct P1ScreenView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 14, height: 14)
-                    .foregroundStyle(bezelColor)
+                    .foregroundStyle(onColor)
                     .opacity(state.icons[i] ? 1.0 : 0.35)
                 if i != range.upperBound - 1 { Spacer() }
             }
