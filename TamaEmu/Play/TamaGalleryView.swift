@@ -262,6 +262,20 @@ struct TamaGalleryView: View {
                 } label: {
                     Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
                 }
+                Button {
+                    showingSetClockConfirm = true
+                } label: {
+                    Label("Sync Clock to Now", systemImage: "clock.arrow.2.circlepath")
+                }
+                if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
+                    Button {
+                        viewModel.restartTamaClock { engine in
+                            _ = engine.addPoints(1000)
+                        }
+                    } label: {
+                        Label("Add 1000 Points", systemImage: "plus.circle")
+                    }
+                }
                 Button(role: .destructive) {
                     showingDeleteConfirm = true
                 } label: {
@@ -276,8 +290,8 @@ struct TamaGalleryView: View {
     /// Camera and the record toggle are adjacent .bottomBar items, which
     /// iOS pairs into one capsule on its own — same mechanism as the top
     /// bar's Settings/⋯ pair. The fixed `ToolbarSpacer` (iOS 26's own API
-    /// for this) is what keeps Time Sync in its own separate capsule
-    /// instead of all three fusing into one; below iOS 26 none of this
+    /// for this) is what keeps the translate button in its own separate
+    /// capsule instead of fusing with that pair; below iOS 26 none of this
     /// capsule-pairing exists in the first place, so there's nothing to
     /// fall back to.
     @ToolbarContentBuilder
@@ -299,8 +313,7 @@ struct TamaGalleryView: View {
         }
         if #available(iOS 27.0, *) {
             // Its own capsule, not fused with camera/video — the spacer
-            // below splits it off, same way Time Sync is split off from
-            // this pair.
+            // above splits it off.
             ToolbarSpacer(.fixed, placement: .bottomBar)
             ToolbarItem(placement: .bottomBar) {
                 // One-shot: tap grabs whatever's on the LCD right now and
@@ -327,16 +340,6 @@ struct TamaGalleryView: View {
                     .frame(width: 20, height: 20)
                 }
                 .disabled(viewModel.isTranslating)
-            }
-        }
-        if #available(iOS 26.0, *) {
-            ToolbarSpacer(.fixed, placement: .bottomBar)
-        }
-        ToolbarItem(placement: .bottomBar) {
-            Button {
-                showingSetClockConfirm = true
-            } label: {
-                Image(systemName: "clock.arrow.2.circlepath")
             }
         }
     }
