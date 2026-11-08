@@ -8,6 +8,12 @@ import SwiftUI
 /// panel for either. Square overall footprint -- same size and
 /// proportions as every other Tamagotchi in the gallery (LCDView forces
 /// the same `.aspectRatio(1, contentMode: .fit)`).
+///
+/// The dot matrix itself (see PixelGhost/makeBitmapImage) models three
+/// things a real passive-matrix LCD does that a flat on/off render
+/// doesn't: a visible grid between cells, every cell staying faintly
+/// visible even "off," and an asymmetric fade (fast on, slow off) that
+/// produces the real hardware's trailing ghost on fast-changing content.
 struct P1ScreenView: View {
     let state: P1ScreenState
 
@@ -57,24 +63,38 @@ struct P1ScreenView: View {
         (0.837, 0.859)  // 7 attention
     ]
 
+    /// Per-cell fade state for the dot matrix, keyed the same as
+    /// P1ScreenState.bits (row-major, 32 wide). Persists across redraws
+    /// via @State -- each cell only resets its transition when its own
+    /// bit actually flips, not on every frame.
+    @State private var ghosts = [PixelGhost](repeating: PixelGhost(), count: 32 * 16)
+
     var body: some View {
-        GeometryReader { geo in
-            let side = min(geo.size.width, geo.size.height)
-            screenContent(side: side)
-                .frame(width: side, height: side)
-                .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { timeline in
+            GeometryReader { geo in
+                let side = min(geo.size.width, geo.size.height)
+                screenContent(side: side, now: timeline.date)
+                    .frame(width: side, height: side)
+                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
+            }
         }
         .aspectRatio(1, contentMode: .fit)
+        .onChange(of: state.bits) { _, newBits in
+            let now = Date()
+            for i in newBits.indices {
+                ghosts[i].update(isOn: newBits[i], at: now)
+            }
+        }
     }
 
-    private func screenContent(side: CGFloat) -> some View {
+    private func screenContent(side: CGFloat, now: Date) -> some View {
         ZStack {
             Image(Self.backgroundAssetName)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: side, height: side)
 
-            pixelGrid
+            pixelGrid(now: now)
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
                 .frame(width: side * 0.62)
 
@@ -92,9 +112,9 @@ struct P1ScreenView: View {
         .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
     }
 
-    private var pixelGrid: some View {
+    private func pixelGrid(now: Date) -> some View {
         GeometryReader { geo in
-            if let image = makeBitmapImage() {
+            if let image = makeBitmapImage(now: now) {
                 Image(decorative: image, scale: 1, orientation: .up)
                     .resizable()
                     .interpolation(.none)
@@ -103,23 +123,45 @@ struct P1ScreenView: View {
         }
     }
 
-    /// "Off" pixels are fully transparent, not a solid LCD tint -- the
-    /// background pattern shows straight through them, same as the icons
-    /// sitting directly on it. Only "on" pixels are opaque.
-    private func makeBitmapImage() -> CGImage? {
-        let w = 32, h = 16
+    /// Supersamples each logical cell into an 8x8 block so there's room
+    /// to draw a 1px grid line around it -- at native 32x16 there's
+    /// nothing to inset a border into. `.interpolation(.none)` upstream
+    /// keeps every block crisp and blocky when this gets scaled up,
+    /// exactly like the real dot matrix's own hard cell edges.
+    private static let subpixelsPerCell = 8
+
+    private func makeBitmapImage(now: Date) -> CGImage? {
+        let cols = 32, rows = 16
+        let sub = Self.subpixelsPerCell
+        let w = cols * sub, h = rows * sub
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
-        for y in 0..<h {
-            for x in 0..<w {
-                let i = (y * w + x) * 4
-                if state.pixel(x, y) {
-                    pixels[i] = 43
-                    pixels[i + 1] = 42
-                    pixels[i + 2] = 40
-                    pixels[i + 3] = 255
+
+        for cy in 0..<rows {
+            for cx in 0..<cols {
+                let value = ghosts[cy * cols + cx].value(at: now)
+                let fillAlpha = UInt8(clamping: Int(value * 255))
+                // The grid line is always at least faintly visible, even
+                // between two fully-off cells -- never dimmer than the
+                // cell's own fill, so a lit pixel's border doesn't look
+                // like a lighter ring around it.
+                let gridAlpha = UInt8(clamping: max(Int(PixelGhost.gridLineFloor * 255), Int(fillAlpha)))
+
+                for sy in 0..<sub {
+                    for sx in 0..<sub {
+                        let isBorder = sx == 0 || sy == 0
+                        let alpha = isBorder ? gridAlpha : fillAlpha
+                        let px = cx * sub + sx
+                        let py = cy * sub + sy
+                        let i = (py * w + px) * 4
+                        pixels[i] = 43
+                        pixels[i + 1] = 42
+                        pixels[i + 2] = 40
+                        pixels[i + 3] = alpha
+                    }
                 }
             }
         }
+
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
             data: &pixels,
@@ -131,6 +173,50 @@ struct P1ScreenView: View {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
         return context.makeImage()
+    }
+}
+
+/// Models one dot-matrix cell's brightness as an eased transition between
+/// an always-faintly-visible floor and fully lit, asymmetric in duration
+/// -- a real passive-matrix LCD's liquid crystal snaps into alignment
+/// quickly when a field is applied (turning on), but only returns to
+/// rest through slower elastic relaxation once the field is removed
+/// (turning off), which is what produces the classic trailing ghost on
+/// fast-changing old LCD screens. Computed purely from (isOn,
+/// transitionStart, startValue) rather than stepped by a running timer,
+/// so it doesn't need updating except when its own bit actually flips --
+/// whatever redraws this (a TimelineView tick) just asks for the value
+/// at a given moment.
+private struct PixelGhost {
+    var isOn = false
+    var transitionStart = Date.distantPast
+    var startValue = PixelGhost.offFloor
+
+    /// "Off" cells are never fully invisible -- the whole grid reads as a
+    /// faint, always-present texture, same idea as an unselected icon's
+    /// own opacity.
+    static let offFloor: Double = 0.14
+    /// The grid line between cells stays at least this visible even where
+    /// both neighboring cells are off.
+    static let gridLineFloor: Double = 0.24
+    static let riseDuration: TimeInterval = 0.05
+    static let fallDuration: TimeInterval = 0.22
+
+    mutating func update(isOn newIsOn: Bool, at now: Date) {
+        guard newIsOn != isOn else { return }
+        startValue = value(at: now)
+        isOn = newIsOn
+        transitionStart = now
+    }
+
+    func value(at now: Date) -> Double {
+        let target = isOn ? 1.0 : Self.offFloor
+        let duration = isOn ? Self.riseDuration : Self.fallDuration
+        guard duration > 0 else { return target }
+        let elapsed = now.timeIntervalSince(transitionStart)
+        let t = min(1, max(0, elapsed / duration))
+        let eased = 1 - pow(1 - t, 2) // ease-out: matches a relaxation curve better than linear
+        return startValue + (target - startValue) * eased
     }
 }
 
