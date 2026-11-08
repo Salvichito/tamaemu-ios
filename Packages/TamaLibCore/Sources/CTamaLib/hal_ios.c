@@ -559,5 +559,22 @@ bool ios_hal_load_state(const uint8_t *data, uint32_t len)
 	}
 	os_unfair_lock_unlock(&s_clock_lock);
 
+	/* cpu.c's own pacing baseline (ref_ts, static to cpu.c, not part of
+	 * state_t) was just synced to ~0 by ios_hal_start()'s cpu_init() --
+	 * correct for a fresh boot, but now stale against the elapsed value
+	 * this just rebased s_start_ts to. Left unsynced, the first step
+	 * after a load computes a deadline near ref_ts (~0) and hands it to
+	 * sleep_until(): harmless under real-time pacing (a negative delta
+	 * just skips sleeping and ref_ts organically catches up over
+	 * subsequent steps), but under fast-forward, sleep_until()
+	 * unconditionally overwrites the HAL's clock with that near-0
+	 * deadline -- snapping ios_hal_elapsed_us() straight back down and
+	 * making a catch-up pass's own elapsed-time bookkeeping think it's
+	 * already past its target after a single step. Found exactly this
+	 * way: a synthetic backlog produced a resumed Tama barely advanced
+	 * at all. cpu_sync_ref_timestamp() is TamaLib's own public function
+	 * for this resync, called from cpu_reset() for the same reason. */
+	cpu_sync_ref_timestamp();
+
 	return true;
 }

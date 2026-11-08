@@ -62,13 +62,7 @@ final class V1EmulatorEngine {
     func start(romData: Data, savedState: Data? = nil) -> Bool {
         guard thread == nil else { return true }
 
-        var words = [UInt16]()
-        words.reserveCapacity(romData.count / 2)
-        var iterator = romData.makeIterator()
-        while let hi = iterator.next(), let lo = iterator.next() {
-            words.append((UInt16(hi) << 8) | UInt16(lo))
-        }
-
+        let words = Self.parseROM(romData)
         let started = words.withUnsafeBufferPointer { buf in
             ios_hal_start(buf.baseAddress, UInt32(buf.count))
         }
@@ -164,5 +158,83 @@ final class V1EmulatorEngine {
                 callback?(state)
             }
         }
+    }
+}
+
+extension V1EmulatorEngine {
+    /// Advances a saved state by up to `backlogSeconds` of emulated time
+    /// (time the app was closed), within `wallClockBudget` real seconds
+    /// -- same shape as the CTama engine's own catch-up-on-resume, just
+    /// built on fast-forward instead of an unpaced step loop. Returns the
+    /// state to actually resume from: unchanged if there was nothing to
+    /// catch up, or as far as it got if the budget ran out first (same
+    /// "catches up as much as it can, not guaranteed to finish" contract
+    /// the CTama family already has).
+    ///
+    /// Static, and runs its own start/stop cycles directly against the
+    /// HAL rather than through an instance -- there's no live runLoop at
+    /// this point to race with, and a single fast-forward pass can't
+    /// cover more than ~71 minutes of emulated time regardless of budget
+    /// (ios_hal_elapsed_us's own 32-bit microsecond range), so this
+    /// chunks the backlog into repeated, fresh-epoch hops, saving and
+    /// reloading state between them -- the overnight-gap case this
+    /// exists for needs exactly that, not a single pass.
+    static func catchUp(romWords: [UInt16], from state: Data, backlogSeconds: TimeInterval, wallClockBudget: TimeInterval) -> Data {
+        guard backlogSeconds > 1 else { return state }
+
+        let hopSeconds: TimeInterval = 50
+        let deadline = Date().addingTimeInterval(wallClockBudget)
+        var remaining = backlogSeconds
+        var currentState = state
+
+        while remaining > 1, Date() < deadline {
+            let hop = min(remaining, hopSeconds)
+
+            let started = romWords.withUnsafeBufferPointer { buf in
+                ios_hal_start(buf.baseAddress, UInt32(buf.count))
+            }
+            guard started == 0 else { break }
+
+            let loaded = currentState.withUnsafeBytes { raw in
+                ios_hal_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(currentState.count))
+            }
+            guard loaded else {
+                ios_hal_stop()
+                break
+            }
+
+            let startUs = ios_hal_elapsed_us()
+            let targetDeltaUs = UInt32(hop * 1_000_000)
+            ios_hal_set_fast_forward(true)
+            while (ios_hal_elapsed_us() &- startUs) < targetDeltaUs, Date() < deadline {
+                ios_hal_step()
+            }
+            ios_hal_set_fast_forward(false)
+
+            let size = Int(ios_hal_state_size())
+            var buffer = [UInt8](repeating: 0, count: size)
+            let written = buffer.withUnsafeMutableBufferPointer { buf in
+                ios_hal_save_state(buf.baseAddress, UInt32(buf.count))
+            }
+            ios_hal_stop()
+            guard written > 0 else { break }
+
+            currentState = Data(buffer[0..<Int(written)])
+            remaining -= hop
+        }
+
+        return currentState
+    }
+
+    /// romData parsing, factored out of start(romData:) so catchUp(_:)
+    /// (a static function with no instance to call that on) can reuse it.
+    static func parseROM(_ romData: Data) -> [UInt16] {
+        var words = [UInt16]()
+        words.reserveCapacity(romData.count / 2)
+        var iterator = romData.makeIterator()
+        while let hi = iterator.next(), let lo = iterator.next() {
+            words.append((UInt16(hi) << 8) | UInt16(lo))
+        }
+        return words
     }
 }
