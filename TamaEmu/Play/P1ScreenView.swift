@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// The P1-era screen: one flat square, a single sage-green surface with
-/// the 8 status icons and the pixel matrix all sitting directly on it --
-/// no bezel ring, no separate inset panel for the screen. Simplified
-/// to this after two rounds that each added structure the user's own
-/// reference mockup didn't have (a nested bezel/face/screen-panel
-/// stack); this is deliberately the plainest version, matching that
-/// reference exactly. Square overall footprint -- same size and
+/// The P1-era screen: real icon artwork and a real decorative background
+/// pattern (both traced/sourced from references of the actual 1997
+/// hardware -- personal use only, never distributed, see the
+/// integration-research memory), with the pixel matrix in its own small
+/// solid-tinted window so it stays legible against a busy pattern --
+/// matching how the real glass sits as its own distinct piece within the
+/// printed-paper face. Square overall footprint -- same size and
 /// proportions as every other Tamagotchi in the gallery (LCDView forces
 /// the same `.aspectRatio(1, contentMode: .fit)`).
 struct P1ScreenView: View {
@@ -15,20 +15,29 @@ struct P1ScreenView: View {
     private let lcdTint = Color(red: 0.624, green: 0.682, blue: 0.510)
     private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
     private static let cornerRadius: CGFloat = 16
+    private static let screenCornerRadius: CGFloat = 4
+    /// The real device's background is a printed paper sheet physically
+    /// behind the glass, not emulated data -- "P1BackgroundHearts" is the
+    /// other pattern supplied alongside this one, swap freely.
+    private static let backgroundAssetName = "P1BackgroundStars"
 
     /// TamaLib's own icon index order (confirmed against jcrona/tamatool's
     /// reference art and the user's own real P1 -- see the
     /// integration-research memory). Index 7 (attention) lights up on its
     /// own; it's not a selectable menu item, but still just an icon here.
-    private static let iconSymbols = [
-        "fork.knife",                  // 0 food
-        "lightbulb.fill",              // 1 light
-        "gamecontroller.fill",         // 2 game
-        "syringe.fill",                // 3 medicine
-        "toilet",                      // 4 poop cleaning
-        "gauge",                       // 5 stats
-        "exclamationmark.bubble.fill", // 6 scolding
-        "face.smiling.fill"            // 7 attention
+    /// Traced from real P1 reference icons (Tamagotchi Fandom wiki), not
+    /// SF Symbols -- the real "game" icon is a ball and bat, not a
+    /// controller; the real "scolding" icon is a biting mouth, not a
+    /// speech bubble.
+    private static let iconAssetNames = [
+        "P1IconFood",      // 0 food
+        "P1IconLight",     // 1 light
+        "P1IconGame",      // 2 game
+        "P1IconMedicine",  // 3 medicine
+        "P1IconBathroom",  // 4 poop cleaning
+        "P1IconStatus",    // 5 stats
+        "P1IconTraining",  // 6 scolding
+        "P1IconAttention"  // 7 attention
     ]
 
     var body: some View {
@@ -44,14 +53,21 @@ struct P1ScreenView: View {
     private var screenContent: some View {
         VStack(spacing: 0) {
             iconRow(0..<4)
-            Spacer(minLength: 16)
+            Spacer(minLength: 14)
             pixelGrid
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
-            Spacer(minLength: 16)
+                .padding(8)
+                .background(lcdTint)
+                .clipShape(RoundedRectangle(cornerRadius: Self.screenCornerRadius, style: .continuous))
+            Spacer(minLength: 14)
             iconRow(4..<8)
         }
-        .padding(20)
-        .background(lcdTint)
+        .padding(18)
+        .background(
+            Image(Self.backgroundAssetName)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        )
         .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
     }
 
@@ -61,10 +77,10 @@ struct P1ScreenView: View {
     private func iconRow(_ range: Range<Int>) -> some View {
         HStack {
             ForEach(range, id: \.self) { i in
-                Image(systemName: Self.iconSymbols[i])
+                Image(Self.iconAssetNames[i])
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 14, height: 14)
+                    .frame(width: 22, height: 22)
                     .foregroundStyle(onColor)
                     .opacity(state.icons[i] ? 1.0 : 0.35)
                 if i != range.upperBound - 1 { Spacer() }
