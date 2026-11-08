@@ -27,8 +27,11 @@ struct TamaGalleryView: View {
 
     /// The page currently on screen — the one whose colors the full-bleed
     /// background should show, since that's the only page actually visible.
+    /// `nil` for a V1 page: that family has no PlayViewModel at all, which
+    /// is also what keeps the CTama-specific toolbar (screenshot,
+    /// recording, translation, set clock) from showing for it below.
     private var selectedViewModel: PlayViewModel? {
-        guard let device = selectedDevice else { return nil }
+        guard let device = selectedDevice, device.family == .ctama else { return nil }
         return gallery.viewModel(for: device)
     }
 
@@ -78,11 +81,20 @@ struct TamaGalleryView: View {
         }
     }
 
+    @ViewBuilder
     private func pageView(for device: TamaDevice) -> some View {
-        TamaPageView(
-            viewModel: gallery.viewModel(for: device),
-            ambientBackgroundEnabled: ambientBackgroundEnabled
-        )
+        switch device.family {
+        case .ctama:
+            TamaPageView(
+                viewModel: gallery.viewModel(for: device),
+                ambientBackgroundEnabled: ambientBackgroundEnabled
+            )
+        case .v1:
+            V1PageView(
+                viewModel: gallery.v1ViewModel(for: device),
+                ambientBackgroundEnabled: ambientBackgroundEnabled
+            )
+        }
     }
 
     /// Asks for add-only Photos access (never full-library) and runs
@@ -187,6 +199,37 @@ struct TamaGalleryView: View {
         }
     }
 
+    /// A V1 page's whole toolbar: just enough to add/rearrange/delete
+    /// Tamas without being stranded on this page, since it has no
+    /// PlayViewModel for the pause/settings/screenshot/recording/
+    /// translation/set-clock items below to hook into — those are all
+    /// still CTama-only, undecided whether (or how) they'd apply to this
+    /// family at all.
+    @ToolbarContentBuilder
+    private func minimalToolbarContent() -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    gallery.showingImport = true
+                } label: {
+                    Label("Add a Tama", systemImage: "plus")
+                }
+                Button {
+                    gallery.showingReorder = true
+                } label: {
+                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                }
+                Button(role: .destructive) {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+        }
+    }
+
     /// Split out from `galleryStack`'s `.toolbar` — a single closure
     /// declaring all of this inline was too much for the type-checker to
     /// resolve in reasonable time, not a design choice.
@@ -260,13 +303,12 @@ struct TamaGalleryView: View {
             // this pair.
             ToolbarSpacer(.fixed, placement: .bottomBar)
             ToolbarItem(placement: .bottomBar) {
-                // A toggle, not a one-shot "translate now" button: tap
-                // turns live translation on or off for this Tama. The blue
-                // dot means it's ON (watching for screen changes), not
-                // that a key is configured — which engine it uses (and
-                // whether a key is set at all) is a Settings question now.
+                // One-shot: tap grabs whatever's on the LCD right now and
+                // translates it once — not a toggle, nothing keeps
+                // watching the screen afterward. Which engine it uses (and
+                // whether a key is set at all) is a Settings question.
                 Button {
-                    viewModel.toggleLiveTranslation()
+                    viewModel.translateNow()
                 } label: {
                     // Both the icon and the spinner stay mounted the whole
                     // time — only their opacity toggles. An if/else here
@@ -283,15 +325,8 @@ struct TamaGalleryView: View {
                             .opacity(viewModel.isTranslating ? 1 : 0)
                     }
                     .frame(width: 20, height: 20)
-                    .overlay(alignment: .topTrailing) {
-                        if viewModel.isLiveTranslating {
-                            Circle()
-                                .fill(.blue)
-                                .frame(width: 6, height: 6)
-                                .offset(x: 2, y: -2)
-                        }
-                    }
                 }
+                .disabled(viewModel.isTranslating)
             }
         }
         if #available(iOS 26.0, *) {
@@ -357,6 +392,8 @@ struct TamaGalleryView: View {
                 if let viewModel = selectedViewModel {
                     topToolbarContent(viewModel: viewModel)
                     bottomToolbarContent(viewModel: viewModel)
+                } else if selectedDevice != nil {
+                    minimalToolbarContent()
                 }
             }
             .sheet(isPresented: $showingSettings) {

@@ -61,8 +61,8 @@ struct TamaPageView: View {
                         viewModel.dismissTranslation()
                     }
                     .offset(y: -64)
-                    .task(id: translatedText) {
-                        try? await Task.sleep(for: .seconds(6))
+                    .task(id: viewModel.translationID) {
+                        try? await Task.sleep(for: .seconds(5))
                         viewModel.dismissTranslation()
                     }
                     .transition(.scale(scale: 0.85, anchor: .bottom).combined(with: .opacity))

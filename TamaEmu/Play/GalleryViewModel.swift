@@ -2,9 +2,23 @@ import Foundation
 import Observation
 import TamaCore
 
-/// Owns the set of owned Tamas and one cached PlayViewModel per device.
-/// Construction of a PlayViewModel is cheap and side-effect free (see its
-/// own doc comment) — only this class's appear/disappear hooks actually
+/// The handful of lifecycle calls GalleryViewModel needs to make without
+/// caring which core backs a given device — everything else about
+/// PlayViewModel/V1PlayViewModel stays concretely typed for their own
+/// views to use.
+@MainActor
+private protocol EngineLifecycle: AnyObject {
+    func resumeIfNeeded()
+    func stopEngine()
+}
+
+extension PlayViewModel: EngineLifecycle {}
+extension V1PlayViewModel: EngineLifecycle {}
+
+/// Owns the set of owned Tamas and one cached view-model per device —
+/// PlayViewModel for CTama devices, V1PlayViewModel for TamaLib ones.
+/// Construction of either is cheap and side-effect free (see their own
+/// doc comments) — only this class's appear/disappear hooks actually
 /// start or stop a device's engine, so exactly one is ever live at a time
 /// no matter how many are owned.
 @MainActor
@@ -16,6 +30,7 @@ final class GalleryViewModel {
     var showingReorder = false
 
     private var viewModels: [TamaDevice.ID: PlayViewModel] = [:]
+    private var v1ViewModels: [TamaDevice.ID: V1PlayViewModel] = [:]
 
     init() {
         ownedDevices = Self.restoreOrder(of: ActiveDeviceLookup.allImported())
@@ -46,6 +61,21 @@ final class GalleryViewModel {
         return vm
     }
 
+    func v1ViewModel(for device: TamaDevice) -> V1PlayViewModel {
+        if let existing = v1ViewModels[device.id] { return existing }
+        let vm = V1PlayViewModel(device: device)
+        v1ViewModels[device.id] = vm
+        return vm
+    }
+
+    /// Already-cached view-model for a device, regardless of family — for
+    /// the lifecycle calls below, which don't need to know which kind it
+    /// is, and shouldn't create one on demand the way the typed accessors
+    /// above do.
+    private func cachedEngine(for id: TamaDevice.ID) -> EngineLifecycle? {
+        (viewModels[id] as EngineLifecycle?) ?? (v1ViewModels[id] as EngineLifecycle?)
+    }
+
     func device(withID id: TamaDevice.ID) -> TamaDevice? {
         ownedDevices.first { $0.id == id }
     }
@@ -54,24 +84,28 @@ final class GalleryViewModel {
     /// already (a no-op if it's already running, e.g. right after its own
     /// construction already started it).
     func pageDidAppear(_ device: TamaDevice) {
-        viewModel(for: device).resumeIfNeeded()
+        switch device.family {
+        case .ctama: viewModel(for: device).resumeIfNeeded()
+        case .v1: v1ViewModel(for: device).resumeIfNeeded()
+        }
     }
 
     /// A page stopped being the one on screen — stop its engine, saving
     /// and publishing its last frame, same as backgrounding today.
     func pageDidDisappear(_ device: TamaDevice) {
-        viewModels[device.id]?.stopEngine()
+        cachedEngine(for: device.id)?.stopEngine()
     }
 
     /// A device was just imported — either brand new, or an existing
     /// owned device whose ROM/save was just replaced via the overwrite
     /// confirmation in FirmwareImportView. Either way the files on disk
-    /// just changed, so any cached PlayViewModel for it must be discarded
+    /// just changed, so any cached view-model for it must be discarded
     /// (after stopping its engine, in case it was live) rather than kept
     /// around holding stale in-memory state.
     func deviceImported(_ device: TamaDevice) {
-        viewModels[device.id]?.stopEngine()
+        cachedEngine(for: device.id)?.stopEngine()
         viewModels[device.id] = nil
+        v1ViewModels[device.id] = nil
         if !ownedDevices.contains(where: { $0.id == device.id }) {
             ownedDevices.append(device)
         }
@@ -89,9 +123,13 @@ final class GalleryViewModel {
     /// Removes a Tama entirely: stop its engine, delete its save data, and
     /// drop it from the gallery.
     func removeDevice(_ device: TamaDevice) {
-        viewModels[device.id]?.stopEngine()
-        PlayViewModel.removeDeviceData(device)
+        cachedEngine(for: device.id)?.stopEngine()
+        switch device.family {
+        case .ctama: PlayViewModel.removeDeviceData(device)
+        case .v1: V1PlayViewModel.removeDeviceData(device)
+        }
         viewModels[device.id] = nil
+        v1ViewModels[device.id] = nil
         ownedDevices.removeAll { $0.id == device.id }
         WidgetSharedState.publishOwnedDevices(ownedDevices)
         if selectedPage == device.id {

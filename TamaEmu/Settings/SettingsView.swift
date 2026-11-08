@@ -282,9 +282,9 @@ struct SettingsView: View {
 
     /// A techy-user feature, deliberately minimal: one choice (on-device
     /// vs. cloud) and one key field, not a provider picker or an
-    /// onboarding wizard. The toggle button in the gallery toolbar (the
-    /// speech-bubble icon) is what actually turns live translation on or
-    /// off per Tama; this just decides which model it uses when it's on.
+    /// onboarding wizard. The speech-bubble button in the gallery toolbar
+    /// is what actually fires a one-shot translation of the current
+    /// screen; this just decides which model it uses when it does.
     ///
     /// Two Sections, not one flat list — the mode picker is the one real
     /// top-level choice; the key rows only exist to configure the "Cloud

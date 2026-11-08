@@ -27,6 +27,12 @@ struct SavePaths {
     /// `state_save` append ".state"/".lock" themselves.
     var stateBasePath: URL { savesDir.appendingPathComponent(device.id) }
 
+    /// The V1 (TamaLib) family's own CPU/RAM/display snapshot -- a
+    /// different, unrelated format from CTama's `.state`/`.lock` pair
+    /// above (see ios_hal_save_state's own doc comment), so it gets its
+    /// own extension rather than reusing stateBasePath.
+    var v1StatePath: URL { savesDir.appendingPathComponent(device.id).appendingPathExtension("v1state") }
+
     func ensureDirectoriesExist() throws {
         try FileManager.default.createDirectory(at: romsDir, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: savesDir, withIntermediateDirectories: true)
@@ -53,7 +59,7 @@ struct SavePaths {
     /// wrong device was picked at import time and the data underneath it is
     /// simply wrong, not something worth keeping.
     func deleteAll() {
-        for url in [importedROMPath, liveFlashPath, stateFilePath, stateLockPath] {
+        for url in [importedROMPath, liveFlashPath, stateFilePath, stateLockPath, v1StatePath] {
             try? FileManager.default.removeItem(at: url)
         }
         UserDefaults.standard.removeObject(forKey: lastSavedAtKey)
