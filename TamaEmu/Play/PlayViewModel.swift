@@ -291,6 +291,18 @@ final class PlayViewModel {
             guard let self else { return }
             switch result {
             case .success(let newEngine):
+                // A single pass only gets catchUpWallClockBudget's worth of
+                // compute, so a gap bigger than that leaves a backlog (see
+                // EmulatorEngine.hasCatchUpBacklog) — keep running further
+                // passes, still off the main thread, for as long as this
+                // page is the one actually on screen. Without this, a big
+                // backlog used to only get chipped away at one visit at a
+                // time, needing several swipes away and back to finish.
+                while newEngine.hasCatchUpBacklog {
+                    let stillCurrent = await MainActor.run { self.startGeneration == generation }
+                    guard stillCurrent else { break }
+                    newEngine.continueCatchUp(wallClockBudget: Self.catchUpWallClockBudget)
+                }
                 let image = LCDImageBuilder.makeImage(
                     from: newEngine.renderCurrentFrame(), width: 128, height: 128
                 )
