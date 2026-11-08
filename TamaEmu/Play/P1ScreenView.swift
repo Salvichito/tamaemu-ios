@@ -1,16 +1,22 @@
 import SwiftUI
 
-/// The P1-era screen, styled to match the real 1997 hardware: a chunky
-/// monochrome 32x16 matrix on a yellow-green LCD, in a dark bezel, with
-/// the 8 fixed status icons below it. Chosen over a modern-chrome
-/// treatment after reviewing mockups of both -- see the
-/// integration-research memory.
+/// The P1-era screen, styled to match the real 1997 hardware (chunky
+/// monochrome 32x16 matrix on a yellow-green LCD, dark bezel, 8 fixed
+/// status icons), inside a square overall footprint -- same size and
+/// proportions as every other Tamagotchi in the gallery (LCDView forces
+/// the same `.aspectRatio(1, contentMode: .fit)`), even though the real
+/// P1's own screen is landscape, 32x16. A real P1's shell has far more
+/// plastic bezel around its small glass than a modern color device's
+/// does, so this isn't a stretch to make it fit -- the LCD block just
+/// sits centered in a taller bezel instead of being wrapped tightly
+/// around it, closer to the genuine proportions of the real toy's body.
 struct P1ScreenView: View {
     let state: P1ScreenState
 
     private let lcdTint = Color(red: 0.624, green: 0.682, blue: 0.510)
     private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
     private let bezelColor = Color(red: 0.169, green: 0.165, blue: 0.157)
+    private static let bezelCornerRadius: CGFloat = 16
 
     /// TamaLib's own icon index order (confirmed against jcrona/tamatool's
     /// reference art and the user's own real P1 -- see the
@@ -28,18 +34,36 @@ struct P1ScreenView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 4) {
-            iconRow(0..<4)
-            pixelGrid
-                .aspectRatio(32.0 / 16.0, contentMode: .fit)
-            iconRow(4..<8)
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            screenContent
+                .frame(width: side, height: side)
+                .position(x: geo.size.width / 2, y: geo.size.height / 2)
         }
-        .padding(8)
-        .background(lcdTint)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .padding(EdgeInsets(top: 14, leading: 12, bottom: 10, trailing: 12))
-        .background(bezelColor)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .aspectRatio(1, contentMode: .fit)
+    }
+
+    /// The bezel fills the whole square on its own (a plain shape, not
+    /// wrapped around its content) so the LCD block -- still its own
+    /// natural, landscape size -- centers inside it with real bezel
+    /// above and below, not just to the sides.
+    private var screenContent: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Self.bezelCornerRadius, style: .continuous)
+                .fill(bezelColor)
+
+            VStack(spacing: 4) {
+                iconRow(0..<4)
+                pixelGrid
+                    .aspectRatio(32.0 / 16.0, contentMode: .fit)
+                iconRow(4..<8)
+            }
+            .padding(8)
+            .background(lcdTint)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .padding(EdgeInsets(top: 14, leading: 12, bottom: 10, trailing: 12))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Self.bezelCornerRadius, style: .continuous))
     }
 
     /// Selected state shows as full opacity vs. faint, not outline vs.
