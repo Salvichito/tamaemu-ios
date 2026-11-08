@@ -6,6 +6,14 @@ import SwiftUI
 struct LCDView: View {
     let image: CGImage?
 
+    /// False for the screenshot/video export render path (ScreenRecorder's
+    /// `renderLCDSnapshot`): that output stands alone with no surrounding
+    /// bezel chrome, so the clipped-away corners would otherwise end up
+    /// transparent — and since neither a saved JPEG nor an H.264 video
+    /// carries alpha, they'd flatten to solid black triangles. The live
+    /// on-screen view keeps the rounding.
+    var rounded: Bool = true
+
     /// Subtle rounding, closer to a standard rounded rect than an icon's
     /// squircle — shared with ScreenGlow so its halo's corners match this
     /// view's own clip shape exactly.
@@ -31,10 +39,10 @@ struct LCDView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .lcdScreenEffect(enabled: lcdEffectEnabled)
-            .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: rounded ? corner : 0, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .stroke(Color(.separator), lineWidth: 1)
+                RoundedRectangle(cornerRadius: rounded ? corner : 0, style: .continuous)
+                    .stroke(rounded ? Color(.separator) : .clear, lineWidth: 1)
             )
         }
         .aspectRatio(1, contentMode: .fit)
