@@ -54,4 +54,15 @@ uint32_t ios_hal_elapsed_us(void); /* the core's own clock, real or fast-forward
 uint64_t ios_hal_screen_update_count(void);
 uint64_t ios_hal_error_count(void);
 
+/* Save/restore. Fixed size, own private format (TamaLib's own cpu_get_state()
+ * plus this HAL's display/tone state and its own elapsed clock) -- not
+ * upstream, not meant to be read by anything but this same build. Call
+ * only after ios_hal_start(); ios_hal_load_state() restores CPU, RAM and
+ * display/tone state and rebases the HAL's clock so ios_hal_elapsed_us()
+ * continues from the saved value instead of resetting to 0, so TamaLib's
+ * own timers stay internally consistent across a save/restore. */
+uint32_t ios_hal_state_size(void);
+uint32_t ios_hal_save_state(uint8_t *out_buffer, uint32_t out_capacity); /* bytes written, 0 on failure */
+bool ios_hal_load_state(const uint8_t *data, uint32_t len);
+
 #endif /* _IOS_HAL_H_ */

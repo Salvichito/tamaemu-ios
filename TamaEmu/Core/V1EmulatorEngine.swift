@@ -30,6 +30,11 @@ final class V1EmulatorEngine {
     private let stopLock = NSLock()
     private var shouldStop = false
     private var lastButtonMask: UInt8 = 0
+    /// Signaled right as runLoop() returns -- stop() waits on this so a
+    /// save() called right after it is guaranteed the stepping thread is
+    /// no longer touching the core's state (ios_hal_save_state() has no
+    /// locking of its own against it).
+    private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
     private(set) var onFrame: ((P1ScreenState) -> Void)?
 
@@ -48,10 +53,13 @@ final class V1EmulatorEngine {
 
     /// romData is a raw P1 ROM dump: 12-bit words stored as big-endian
     /// byte pairs (confirmed against a real TamagotchiP1.bin -- see the
-    /// integration-research memory). Returns false if the core failed to
-    /// start.
+    /// integration-research memory). savedState, if given, is applied
+    /// right after the core boots fresh from romData, before any
+    /// stepping -- see ios_hal_load_state's own doc comment for what it
+    /// restores and why that's safe to do between those two points.
+    /// Returns false if the core failed to start.
     @discardableResult
-    func start(romData: Data) -> Bool {
+    func start(romData: Data, savedState: Data? = nil) -> Bool {
         guard thread == nil else { return true }
 
         var words = [UInt16]()
@@ -66,9 +74,18 @@ final class V1EmulatorEngine {
         }
         guard started == 0 else { return false }
 
+        if let savedState {
+            _ = savedState.withUnsafeBytes { raw in
+                ios_hal_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(savedState.count))
+            }
+        }
+
         lastButtonMask = 0
         stopLock.lock(); shouldStop = false; stopLock.unlock()
-        let t = Thread { [weak self] in self?.runLoop() }
+        let t = Thread { [weak self] in
+            self?.runLoop()
+            self?.stoppedSemaphore.signal()
+        }
         t.name = "V1EmulatorEngine"
         t.qualityOfService = .userInitiated
         thread = t
@@ -77,10 +94,26 @@ final class V1EmulatorEngine {
         return true
     }
 
+    /// A snapshot of the live core's full state -- CPU, RAM, display,
+    /// buzzer, and its own elapsed clock -- for resuming later via
+    /// start(romData:savedState:). Only safe to call after stop(), which
+    /// blocks until the stepping thread has actually exited -- see
+    /// stoppedSemaphore's own doc comment.
+    func saveState() -> Data? {
+        let size = Int(ios_hal_state_size())
+        var buffer = [UInt8](repeating: 0, count: size)
+        let written = buffer.withUnsafeMutableBufferPointer { buf in
+            ios_hal_save_state(buf.baseAddress, UInt32(buf.count))
+        }
+        guard written > 0 else { return nil }
+        return Data(buffer[0..<Int(written)])
+    }
+
     func stop() {
         guard thread != nil else { return }
         stopLock.lock(); shouldStop = true; stopLock.unlock()
         thread = nil
+        stoppedSemaphore.wait()
         audioOutput.stop()
         ios_hal_stop()
     }

@@ -342,3 +342,222 @@ uint64_t ios_hal_error_count(void)
 {
 	return s_error_count;
 }
+
+/* iOS port: save/restore, on top of TamaLib's own cpu_get_state() -- see
+ * that function's own doc comment in cpu.h for why its fields (not
+ * next_pc, not the input pins, not the speed/ref-timestamp bookkeeping)
+ * are exactly what's needed to resume correctly: cpu_step() always
+ * recomputes next_pc fresh from pc at the start of each step, button pins
+ * are correctly reset to "released" by hw_init() on the next
+ * ios_hal_start(), and the speed/ref-timestamp fields are re-derived from
+ * the freq passed to that same call. Fixed, manually-laid-out format
+ * (not a struct dump) so there's no compiler-dependent padding to worry
+ * about matching between a save and a later load. */
+
+#define IOS_HAL_STATE_VERSION 1
+
+static uint32_t s_cursor_put_u8(uint8_t *buf, uint32_t pos, uint32_t cap, uint8_t v)
+{
+	if (pos < cap) {
+		buf[pos] = v;
+	}
+	return pos + 1;
+}
+
+static uint32_t s_cursor_put_u16(uint8_t *buf, uint32_t pos, uint32_t cap, uint16_t v)
+{
+	pos = s_cursor_put_u8(buf, pos, cap, (uint8_t)(v & 0xFF));
+	pos = s_cursor_put_u8(buf, pos, cap, (uint8_t)((v >> 8) & 0xFF));
+	return pos;
+}
+
+static uint32_t s_cursor_put_u32(uint8_t *buf, uint32_t pos, uint32_t cap, uint32_t v)
+{
+	pos = s_cursor_put_u16(buf, pos, cap, (uint16_t)(v & 0xFFFF));
+	pos = s_cursor_put_u16(buf, pos, cap, (uint16_t)((v >> 16) & 0xFFFF));
+	return pos;
+}
+
+static uint32_t s_cursor_get_u8(const uint8_t *buf, uint32_t pos, uint32_t len, uint8_t *out)
+{
+	*out = (pos < len) ? buf[pos] : 0;
+	return pos + 1;
+}
+
+static uint32_t s_cursor_get_u16(const uint8_t *buf, uint32_t pos, uint32_t len, uint16_t *out)
+{
+	uint8_t lo, hi;
+	pos = s_cursor_get_u8(buf, pos, len, &lo);
+	pos = s_cursor_get_u8(buf, pos, len, &hi);
+	*out = (uint16_t)(lo | (hi << 8));
+	return pos;
+}
+
+static uint32_t s_cursor_get_u32(const uint8_t *buf, uint32_t pos, uint32_t len, uint32_t *out)
+{
+	uint16_t lo, hi;
+	pos = s_cursor_get_u16(buf, pos, len, &lo);
+	pos = s_cursor_get_u16(buf, pos, len, &hi);
+	*out = (uint32_t)lo | ((uint32_t)hi << 16);
+	return pos;
+}
+
+uint32_t ios_hal_state_size(void)
+{
+	/* version(4) + pc,x,y(2 each=6) + a,b,np,sp,flags(1 each=5) +
+	 * tick_counter + 8 clk timers + prog_timer_timestamp (4 each=40) +
+	 * prog_timer_enabled,data,rld(1 each=3) + call_depth(4) +
+	 * INT_SLOT_NUM interrupts x 4 bytes each + cpu_halted(1) +
+	 * MEM_BUFFER_SIZE memory + LCD bits + icons + tone_on(1) +
+	 * tone_freq_dhz(4) + saved elapsed_us(4) */
+	return 4 + 6 + 5 + 40 + 3 + 4 + (INT_SLOT_NUM * 4) + 1 + MEM_BUFFER_SIZE
+		+ (IOS_HAL_LCD_WIDTH * IOS_HAL_LCD_HEIGHT) + IOS_HAL_ICON_COUNT + 1 + 4 + 4;
+}
+
+uint32_t ios_hal_save_state(uint8_t *out_buffer, uint32_t out_capacity)
+{
+	state_t *state = cpu_get_state();
+	uint32_t pos = 0;
+	uint32_t needed = ios_hal_state_size();
+
+	if (out_capacity < needed) {
+		return 0;
+	}
+
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, IOS_HAL_STATE_VERSION);
+	pos = s_cursor_put_u16(out_buffer, pos, out_capacity, *state->pc);
+	pos = s_cursor_put_u16(out_buffer, pos, out_capacity, *state->x);
+	pos = s_cursor_put_u16(out_buffer, pos, out_capacity, *state->y);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->a);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->b);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->np);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->sp);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->flags);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->tick_counter);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_2hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_4hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_8hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_16hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_32hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_64hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_128hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->clk_timer_256hz_timestamp);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->prog_timer_timestamp);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->prog_timer_enabled);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->prog_timer_data);
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->prog_timer_rld);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, *state->call_depth);
+	for (int i = 0; i < INT_SLOT_NUM; i++) {
+		pos = s_cursor_put_u8(out_buffer, pos, out_capacity, state->interrupts[i].factor_flag_reg);
+		pos = s_cursor_put_u8(out_buffer, pos, out_capacity, state->interrupts[i].mask_reg);
+		pos = s_cursor_put_u8(out_buffer, pos, out_capacity, state->interrupts[i].triggered);
+		pos = s_cursor_put_u8(out_buffer, pos, out_capacity, state->interrupts[i].vector);
+	}
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, *state->cpu_halted);
+	for (uint32_t i = 0; i < MEM_BUFFER_SIZE; i++) {
+		pos = s_cursor_put_u8(out_buffer, pos, out_capacity, state->memory[i]);
+	}
+	for (uint8_t y = 0; y < IOS_HAL_LCD_HEIGHT; y++) {
+		for (uint8_t x = 0; x < IOS_HAL_LCD_WIDTH; x++) {
+			pos = s_cursor_put_u8(out_buffer, pos, out_capacity, s_lcd[y][x] ? 1 : 0);
+		}
+	}
+	for (int i = 0; i < IOS_HAL_ICON_COUNT; i++) {
+		pos = s_cursor_put_u8(out_buffer, pos, out_capacity, s_icons[i] ? 1 : 0);
+	}
+	pos = s_cursor_put_u8(out_buffer, pos, out_capacity, s_tone_on ? 1 : 0);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, s_tone_freq_dhz);
+	pos = s_cursor_put_u32(out_buffer, pos, out_capacity, s_get_timestamp());
+
+	return pos;
+}
+
+bool ios_hal_load_state(const uint8_t *data, uint32_t len)
+{
+	state_t *state = cpu_get_state();
+	uint32_t pos = 0;
+	uint32_t version;
+	uint16_t u16;
+	uint8_t u8;
+	uint32_t saved_elapsed_us;
+
+	if (len < ios_hal_state_size()) {
+		return false;
+	}
+
+	pos = s_cursor_get_u32(data, pos, len, &version);
+	if (version != IOS_HAL_STATE_VERSION) {
+		return false;
+	}
+
+	pos = s_cursor_get_u16(data, pos, len, &u16); *state->pc = u16;
+	pos = s_cursor_get_u16(data, pos, len, &u16); *state->x = u16;
+	pos = s_cursor_get_u16(data, pos, len, &u16); *state->y = u16;
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->a = u8;
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->b = u8;
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->np = u8;
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->sp = u8;
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->flags = u8;
+	pos = s_cursor_get_u32(data, pos, len, state->tick_counter);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_2hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_4hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_8hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_16hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_32hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_64hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_128hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->clk_timer_256hz_timestamp);
+	pos = s_cursor_get_u32(data, pos, len, state->prog_timer_timestamp);
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->prog_timer_enabled = u8;
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->prog_timer_data = u8;
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->prog_timer_rld = u8;
+	pos = s_cursor_get_u32(data, pos, len, state->call_depth);
+	for (int i = 0; i < INT_SLOT_NUM; i++) {
+		pos = s_cursor_get_u8(data, pos, len, &u8); state->interrupts[i].factor_flag_reg = u8;
+		pos = s_cursor_get_u8(data, pos, len, &u8); state->interrupts[i].mask_reg = u8;
+		pos = s_cursor_get_u8(data, pos, len, &u8); state->interrupts[i].triggered = u8;
+		pos = s_cursor_get_u8(data, pos, len, &u8); state->interrupts[i].vector = u8;
+	}
+	pos = s_cursor_get_u8(data, pos, len, &u8); *state->cpu_halted = u8;
+	for (uint32_t i = 0; i < MEM_BUFFER_SIZE; i++) {
+		pos = s_cursor_get_u8(data, pos, len, &u8);
+		state->memory[i] = u8;
+	}
+	for (uint8_t y = 0; y < IOS_HAL_LCD_HEIGHT; y++) {
+		for (uint8_t x = 0; x < IOS_HAL_LCD_WIDTH; x++) {
+			pos = s_cursor_get_u8(data, pos, len, &u8);
+			s_lcd[y][x] = u8 ? true : false;
+		}
+	}
+	for (int i = 0; i < IOS_HAL_ICON_COUNT; i++) {
+		pos = s_cursor_get_u8(data, pos, len, &u8);
+		s_icons[i] = u8 ? true : false;
+	}
+	pos = s_cursor_get_u8(data, pos, len, &u8); s_tone_on = u8 ? true : false;
+	pos = s_cursor_get_u32(data, pos, len, &s_tone_freq_dhz);
+	pos = s_cursor_get_u32(data, pos, len, &saved_elapsed_us);
+
+	/* Rebase the HAL's clock so ios_hal_elapsed_us() continues from
+	 * saved_elapsed_us instead of the near-0 value ios_hal_start() just
+	 * set it to -- same rebasing math ios_hal_set_fast_forward() already
+	 * uses when leaving fast-forward, applied here to s_start_ts
+	 * directly since there's no real/fast-forward split to go through
+	 * yet (this runs right after ios_hal_start(), before any stepping). */
+	os_unfair_lock_lock(&s_clock_lock);
+	{
+		struct timespec now;
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		uint64_t back_us = saved_elapsed_us;
+		s_start_ts = now;
+		s_start_ts.tv_sec -= (time_t)(back_us / 1000000);
+		int64_t rem_ns = (int64_t)(back_us % 1000000) * 1000;
+		if (rem_ns > s_start_ts.tv_nsec) {
+			s_start_ts.tv_sec -= 1;
+			s_start_ts.tv_nsec += 1000000000;
+		}
+		s_start_ts.tv_nsec -= rem_ns;
+	}
+	os_unfair_lock_unlock(&s_clock_lock);
+
+	return true;
+}
