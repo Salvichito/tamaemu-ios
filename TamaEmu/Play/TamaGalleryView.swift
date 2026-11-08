@@ -255,13 +255,12 @@ struct TamaGalleryView: View {
             // this pair.
             ToolbarSpacer(.fixed, placement: .bottomBar)
             ToolbarItem(placement: .bottomBar) {
-                // A toggle, not a one-shot "translate now" button: tap
-                // turns live translation on or off for this Tama. The blue
-                // dot means it's ON (watching for screen changes), not
-                // that a key is configured — which engine it uses (and
-                // whether a key is set at all) is a Settings question now.
+                // One-shot: tap grabs whatever's on the LCD right now and
+                // translates it once — not a toggle, nothing keeps
+                // watching the screen afterward. Which engine it uses (and
+                // whether a key is set at all) is a Settings question.
                 Button {
-                    viewModel.toggleLiveTranslation()
+                    viewModel.translateNow()
                 } label: {
                     // Both the icon and the spinner stay mounted the whole
                     // time — only their opacity toggles. An if/else here
@@ -278,15 +277,8 @@ struct TamaGalleryView: View {
                             .opacity(viewModel.isTranslating ? 1 : 0)
                     }
                     .frame(width: 20, height: 20)
-                    .overlay(alignment: .topTrailing) {
-                        if viewModel.isLiveTranslating {
-                            Circle()
-                                .fill(.blue)
-                                .frame(width: 6, height: 6)
-                                .offset(x: 2, y: -2)
-                        }
-                    }
                 }
+                .disabled(viewModel.isTranslating)
             }
         }
         if #available(iOS 26.0, *) {

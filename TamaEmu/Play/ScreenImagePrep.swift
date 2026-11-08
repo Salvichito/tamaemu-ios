@@ -2,18 +2,14 @@ import CoreGraphics
 import Foundation
 
 /// Shared screen-image prep for anything that asks a model to read the
-/// LCD's text, and for detecting when the readable area has actually
-/// changed (live translation's debounce). Every device this core
-/// currently emulates (Plus Color, ID/4U) shares the same layout: a strip
-/// of stat icons along the top and bottom, with the actual readable text
-/// centered in a box in the middle — those icon strips cost a model's
-/// visual budget without giving it anything to read, and they're also the
-/// thing most likely to be mid-animation, which would otherwise keep
-/// re-triggering live translation for no reason. Fixed fractions, not
-/// pixel constants, so this holds regardless of source resolution. Not
-/// device-aware — if a future device family uses a different layout, this
-/// will need to become device-specific, or fall back to the uncropped
-/// frame for it.
+/// LCD's text. Every device this core currently emulates (Plus Color,
+/// ID/4U) shares the same layout: a strip of stat icons along the top and
+/// bottom, with the actual readable text centered in a box in the middle —
+/// those icon strips cost a model's visual budget without giving it
+/// anything to read. Fixed fractions, not pixel constants, so this holds
+/// regardless of source resolution. Not device-aware — if a future device
+/// family uses a different layout, this will need to become
+/// device-specific, or fall back to the uncropped frame for it.
 enum ScreenImagePrep {
     static func croppedToTextArea(_ cgImage: CGImage) -> CGImage? {
         let height = CGFloat(cgImage.height)
@@ -43,14 +39,5 @@ enum ScreenImagePrep {
         context.interpolationQuality = .none
         context.draw(cropped, in: CGRect(x: 0, y: 0, width: width, height: height))
         return context.makeImage()
-    }
-
-    /// The cropped text area's raw pixel bytes, for cheap equality checks.
-    /// Live translation uses this to tell "the text area actually
-    /// changed" apart from "an icon above/below it is mid-animation",
-    /// without running a whole model call just to find out.
-    static func textAreaFingerprint(_ cgImage: CGImage) -> Data? {
-        guard let cropped = croppedToTextArea(cgImage) else { return nil }
-        return cropped.dataProvider?.data as Data?
     }
 }
