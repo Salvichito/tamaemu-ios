@@ -27,8 +27,11 @@ struct TamaGalleryView: View {
 
     /// The page currently on screen — the one whose colors the full-bleed
     /// background should show, since that's the only page actually visible.
+    /// `nil` for a V1 page: that family has no PlayViewModel at all, which
+    /// is also what keeps the CTama-specific toolbar (screenshot,
+    /// recording, translation, set clock) from showing for it below.
     private var selectedViewModel: PlayViewModel? {
-        guard let device = selectedDevice else { return nil }
+        guard let device = selectedDevice, device.family == .ctama else { return nil }
         return gallery.viewModel(for: device)
     }
 
@@ -73,11 +76,20 @@ struct TamaGalleryView: View {
         }
     }
 
+    @ViewBuilder
     private func pageView(for device: TamaDevice) -> some View {
-        TamaPageView(
-            viewModel: gallery.viewModel(for: device),
-            ambientBackgroundEnabled: ambientBackgroundEnabled
-        )
+        switch device.family {
+        case .ctama:
+            TamaPageView(
+                viewModel: gallery.viewModel(for: device),
+                ambientBackgroundEnabled: ambientBackgroundEnabled
+            )
+        case .v1:
+            V1PageView(
+                viewModel: gallery.v1ViewModel(for: device),
+                ambientBackgroundEnabled: ambientBackgroundEnabled
+            )
+        }
     }
 
     /// Asks for add-only Photos access (never full-library) and runs
@@ -179,6 +191,37 @@ struct TamaGalleryView: View {
         viewModel.restartTamaClock { engine in
             let now = Calendar.current.dateComponents([.hour, .minute, .second], from: Date())
             _ = engine.setClock(hour: now.hour ?? 0, minute: now.minute ?? 0, second: now.second ?? 0)
+        }
+    }
+
+    /// A V1 page's whole toolbar: just enough to add/rearrange/delete
+    /// Tamas without being stranded on this page, since it has no
+    /// PlayViewModel for the pause/settings/screenshot/recording/
+    /// translation/set-clock items below to hook into — those are all
+    /// still CTama-only, undecided whether (or how) they'd apply to this
+    /// family at all.
+    @ToolbarContentBuilder
+    private func minimalToolbarContent() -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    gallery.showingImport = true
+                } label: {
+                    Label("Add a Tama", systemImage: "plus")
+                }
+                Button {
+                    gallery.showingReorder = true
+                } label: {
+                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                }
+                Button(role: .destructive) {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
         }
     }
 
@@ -344,6 +387,8 @@ struct TamaGalleryView: View {
                 if let viewModel = selectedViewModel {
                     topToolbarContent(viewModel: viewModel)
                     bottomToolbarContent(viewModel: viewModel)
+                } else if selectedDevice != nil {
+                    minimalToolbarContent()
                 }
             }
             .sheet(isPresented: $showingSettings) {

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B76611C89874CD080A593F7 /* FirmwareImportView.swift */; };
 		04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */; };
+		0765E45E30A02EC237F40ADC /* V1PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 023C1973A2D15C0221C66D74 /* V1PlayViewModel.swift */; };
 		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
 		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
 		105C8B5E80F65564F54A08A6 /* BackgroundRefreshCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */; };
@@ -27,6 +28,7 @@
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
 		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
+		6876BF308047341A244531B7 /* V1PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382CE8A382C98053A51E7AB9 /* V1PageView.swift */; };
 		694922B0124194E5CAB93EE0 /* ScreenTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3DE16C24D18BB2F54C7241D /* ScreenTranslator.swift */; };
 		6C357B264E2775A5E88D2A74 /* TamaLibCore in Frameworks */ = {isa = PBXBuildFile; productRef = A11D632E4B54DF8C670B5778 /* TamaLibCore */; };
 		748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */; };
@@ -85,6 +87,7 @@
 
 /* Begin PBXFileReference section */
 		0166CB9A3B0725D2C7861438 /* P1ScreenView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = P1ScreenView.swift; sourceTree = "<group>"; };
+		023C1973A2D15C0221C66D74 /* V1PlayViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V1PlayViewModel.swift; sourceTree = "<group>"; };
 		04981D1305DB4733ACBC657E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenGlow.swift; path = ScreenGlow.swift; sourceTree = "<group>"; };
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
@@ -99,6 +102,7 @@
 		33A5894F6DD24F569DA1474D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudTranslator.swift; sourceTree = "<group>"; };
 		36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
+		382CE8A382C98053A51E7AB9 /* V1PageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V1PageView.swift; sourceTree = "<group>"; };
 		40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveDeviceLookup.swift; sourceTree = "<group>"; };
 		42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectTamaIntent.swift; sourceTree = "<group>"; };
 		42D45A04487E1B1C19010476 /* V1EmulatorEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V1EmulatorEngine.swift; sourceTree = "<group>"; };
@@ -283,6 +287,8 @@
 				04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */,
 				D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */,
 				0166CB9A3B0725D2C7861438 /* P1ScreenView.swift */,
+				023C1973A2D15C0221C66D74 /* V1PlayViewModel.swift */,
+				382CE8A382C98053A51E7AB9 /* V1PageView.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -441,6 +447,8 @@
 				832BCB74B2DFD79FFC09EC39 /* ReorderTamasView.swift in Sources */,
 				BA5FDB4EA0ED1C08A401C2FA /* V1EmulatorEngine.swift in Sources */,
 				9C2ABB0AE0ED1B8AA21A44CF /* P1ScreenView.swift in Sources */,
+				0765E45E30A02EC237F40ADC /* V1PlayViewModel.swift in Sources */,
+				6876BF308047341A244531B7 /* V1PageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
