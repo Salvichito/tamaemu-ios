@@ -1,14 +1,15 @@
 import AVFoundation
 import SwiftUI
 
-/// Renders the LCD exactly as TamaPageView shows it — same sharp-pixels/
-/// scanline AppStorage settings LCDView itself reads — into a single
-/// square image. Shared by the screenshot button and, once per frame, by
-/// ScreenRecorder below, so both capture paths stay visually identical to
-/// whatever's actually on screen.
+/// Renders the LCD pixels exactly as TamaPageView shows them — same
+/// sharp-pixels/scanline AppStorage settings LCDView itself reads — into a
+/// single square image, but unrounded: a saved JPEG/video can't carry
+/// alpha, so LCDView's on-screen corner rounding would otherwise flatten
+/// to solid black triangles once exported. Shared by the screenshot button
+/// and, once per frame, by ScreenRecorder below.
 @MainActor
 func renderLCDSnapshot(image: CGImage?, side: CGFloat, scale: CGFloat = 3) -> CGImage? {
-    let renderer = ImageRenderer(content: LCDView(image: image).frame(width: side, height: side))
+    let renderer = ImageRenderer(content: LCDView(image: image, rounded: false).frame(width: side, height: side))
     renderer.scale = scale
     return renderer.cgImage
 }
