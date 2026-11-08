@@ -47,6 +47,13 @@ final class EmulatorEngine {
     /// attempt instead of silently vanishing.
     private var catchUpBacklog: TimeInterval = 0
 
+    /// Whether a catch-up pass stopped on its wall-clock budget before
+    /// closing the whole gap — PlayViewModel uses this to keep running
+    /// more budgeted passes (continueCatchUp) while this page stays
+    /// visible, rather than leaving the rest for the next time this
+    /// engine is loaded.
+    var hasCatchUpBacklog: Bool { catchUpBacklog > 0 }
+
     /// Real seconds lost to a large (>250ms) frame overrun during live
     /// play — e.g. a genuine stall, not routine scheduling jitter — that
     /// `runLoop()` deliberately did NOT correct for in the moment (see its
@@ -210,6 +217,39 @@ final class EmulatorEngine {
         periph_write8(emu, 0x301914, bcd(minute))
         periph_write8(emu, 0x301918, bcd(hour))
         return true
+    }
+
+    /// Byte offset into the raw `Emu` struct where each ROM we've mapped
+    /// so far keeps its points/wallet total, as a plain little-endian
+    /// 16-bit value. Found empirically, one device at a time, by diffing
+    /// .state saves while earning/spending a known amount in-game and
+    /// watching which byte moved by exactly that amount (confirmed twice
+    /// per device, at different points totals, to rule out coincidence).
+    /// Each entry is specific to that one ROM's own firmware layout —
+    /// there's no reason to expect it to match another device, and it
+    /// hasn't (each one really is different). Unlike `setClock`, this
+    /// isn't a `periph_write8` call — it's a raw poke into plain working
+    /// RAM, not a memory-mapped hardware register, so there's no
+    /// dedicated write path to go through.
+    private static let pointsByteOffset: [String: Int] = [
+        "plus-color": 45792,  // confirmed 750→760 after earning 10
+        "id": 45920,          // confirmed 650→680 after earning 30
+        "4u-plain": 5220,     // confirmed 260→280 after earning 20
+    ]
+
+    /// Adds to the points/wallet total for a device in `pointsByteOffset`;
+    /// a no-op (returns `nil`) for anything not yet mapped there. Call
+    /// only while the engine's thread is stopped (same precondition as
+    /// `save()`).
+    @discardableResult
+    func addPoints(_ amount: Int) -> Int? {
+        guard let byteOffset = Self.pointsByteOffset[device.id] else { return nil }
+        let ptr = UnsafeMutableRawPointer(emu).advanced(by: byteOffset).assumingMemoryBound(to: UInt8.self)
+        let current = Int(ptr[0]) | (Int(ptr[1]) << 8)
+        let updated = max(0, min(65535, current + amount))
+        ptr[0] = UInt8(updated & 0xFF)
+        ptr[1] = UInt8((updated >> 8) & 0xFF)
+        return updated
     }
 
     deinit {
@@ -396,6 +436,15 @@ final class EmulatorEngine {
         if emu.pointee.stopped {
             cpu_reset(emu)
         }
+    }
+
+    /// Runs another budgeted pass against whatever `catchUpBacklog` is
+    /// still owed from a previous pass that ran out of wall-clock time —
+    /// call only before `start()`, never once the live thread is running
+    /// (both touch `emu` with no synchronization between them).
+    func continueCatchUp(wallClockBudget: TimeInterval) {
+        guard catchUpBacklog > 0 else { return }
+        catchUp(seconds: catchUpBacklog, wallClockBudget: wallClockBudget)
     }
 
     private func runLoop() {
