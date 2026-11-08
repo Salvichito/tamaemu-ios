@@ -68,15 +68,24 @@ struct P1ScreenView: View {
     /// via @State -- each cell only resets its transition when its own
     /// bit actually flips, not on every frame.
     @State private var ghosts = [PixelGhost](repeating: PixelGhost(), count: 32 * 16)
+    /// True only while some cell is still mid-fade -- gates the 30fps
+    /// TimelineView below so it ticks for a brief burst after each real
+    /// change and then stops dead, rather than redrawing forever. The
+    /// first version of this ticked continuously the whole time the page
+    /// was open (wrapping the *entire* screen -- background image, all 8
+    /// icons, everything -- not just the dot matrix), which nearly
+    /// tripled this view's idle CPU cost and was starving the emulator's
+    /// own stepping thread badly enough to look and sound frozen -- found
+    /// via the user's own device, not caught here first.
+    @State private var isAnimating = false
+    @State private var animatingUntil = Date.distantPast
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { timeline in
-            GeometryReader { geo in
-                let side = min(geo.size.width, geo.size.height)
-                screenContent(side: side, now: timeline.date)
-                    .frame(width: side, height: side)
-                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
-            }
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            screenContent(side: side)
+                .frame(width: side, height: side)
+                .position(x: geo.size.width / 2, y: geo.size.height / 2)
         }
         .aspectRatio(1, contentMode: .fit)
         .onChange(of: state.bits) { _, newBits in
@@ -84,17 +93,19 @@ struct P1ScreenView: View {
             for i in newBits.indices {
                 ghosts[i].update(isOn: newBits[i], at: now)
             }
+            animatingUntil = now.addingTimeInterval(PixelGhost.fallDuration)
+            isAnimating = true
         }
     }
 
-    private func screenContent(side: CGFloat, now: Date) -> some View {
+    private func screenContent(side: CGFloat) -> some View {
         ZStack {
             Image(Self.backgroundAssetName)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: side, height: side)
 
-            pixelGrid(now: now)
+            pixelGridContainer
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
                 .frame(width: side * 0.62)
 
@@ -112,6 +123,27 @@ struct P1ScreenView: View {
         .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
     }
 
+    /// Only this -- the small dot matrix, not the background or icons --
+    /// ever sits inside a ticking TimelineView, and only while something
+    /// is actually fading. Settled (the common case: nothing's changed in
+    /// the last fallDuration) renders once, statically, same as before
+    /// any of this existed.
+    @ViewBuilder
+    private var pixelGridContainer: some View {
+        if isAnimating {
+            TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { timeline in
+                pixelGrid(now: timeline.date)
+                    .onChange(of: timeline.date) { _, newDate in
+                        if newDate >= animatingUntil {
+                            isAnimating = false
+                        }
+                    }
+            }
+        } else {
+            pixelGrid(now: Date())
+        }
+    }
+
     private func pixelGrid(now: Date) -> some View {
         GeometryReader { geo in
             if let image = makeBitmapImage(now: now) {
@@ -123,12 +155,15 @@ struct P1ScreenView: View {
         }
     }
 
-    /// Supersamples each logical cell into an 8x8 block so there's room
-    /// to draw a 1px grid line around it -- at native 32x16 there's
-    /// nothing to inset a border into. `.interpolation(.none)` upstream
-    /// keeps every block crisp and blocky when this gets scaled up,
-    /// exactly like the real dot matrix's own hard cell edges.
-    private static let subpixelsPerCell = 8
+    /// Supersamples each logical cell into a 4x4 block so there's room to
+    /// draw a 1px grid line around it -- at native 32x16 there's nothing
+    /// to inset a border into. `.interpolation(.none)` upstream keeps
+    /// every block crisp and blocky when this gets scaled up, exactly
+    /// like the real dot matrix's own hard cell edges. Kept to 4x, not
+    /// more -- this buffer gets rebuilt from scratch on every tick while
+    /// isAnimating, so its size is a direct, continuous CPU cost for
+    /// however many bursts of fading happen, not a one-time one.
+    private static let subpixelsPerCell = 4
 
     private func makeBitmapImage(now: Date) -> CGImage? {
         let cols = 32, rows = 16
