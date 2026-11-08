@@ -30,6 +30,20 @@ final class V1EmulatorEngine {
     private let stopLock = NSLock()
     private var shouldStop = false
     private var lastButtonMask: UInt8 = 0
+    /// cpu_init() (via ios_hal_start) only stores the raw pointer it's
+    /// given -- g_program -- and dereferences it on every single
+    /// instruction fetch for as long as the core runs; it never copies the
+    /// ROM into its own buffer. So whatever array backs that pointer has
+    /// to outlive the whole run, not just the ios_hal_start() call that
+    /// hands the pointer over. Keeping it here (rather than as a local in
+    /// start()) is what gives it that lifetime -- without this, Swift
+    /// frees the parsed-words buffer the moment start() returns, and the
+    /// stepping thread spends the rest of the session reading freed heap
+    /// memory as "ROM," corrupting execution the moment something else's
+    /// allocation reuses that block: exactly the random freezes/resets
+    /// reported after actual gameplay (not reproduced by short smoke
+    /// tests, since the block often isn't reused that quickly).
+    private var romWords: [UInt16] = []
     /// Signaled right as runLoop() returns -- stop() waits on this so a
     /// save() called right after it is guaranteed the stepping thread is
     /// no longer touching the core's state (ios_hal_save_state() has no
@@ -62,8 +76,8 @@ final class V1EmulatorEngine {
     func start(romData: Data, savedState: Data? = nil) -> Bool {
         guard thread == nil else { return true }
 
-        let words = Self.parseROM(romData)
-        let started = words.withUnsafeBufferPointer { buf in
+        romWords = Self.parseROM(romData)
+        let started = romWords.withUnsafeBufferPointer { buf in
             ios_hal_start(buf.baseAddress, UInt32(buf.count))
         }
         guard started == 0 else { return false }
