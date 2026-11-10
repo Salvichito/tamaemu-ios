@@ -76,7 +76,7 @@ struct P1ScreenView: View {
 
             pixelGrid
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
-                .frame(width: side * 0.88)
+                .frame(width: side)
 
             ForEach(0..<8, id: \.self) { i in
                 Image(Self.iconAssetNames[i])
@@ -105,19 +105,40 @@ struct P1ScreenView: View {
 
     /// "Off" pixels are fully transparent, not a solid LCD tint -- the
     /// background pattern shows straight through them, same as the icons
-    /// sitting directly on it. Only "on" pixels are opaque.
+    /// sitting directly on it. "On" pixels are mostly opaque but not fully --
+    /// the background pattern underneath still shows through faintly.
+    private static let onAlpha: CGFloat = 0.9
+    private static let cols = 32, rows = 16
+    /// Each logical LCD pixel is rendered as an oversample x oversample
+    /// block, with its rightmost/bottommost texel left transparent -- a
+    /// thin gap line so adjacent "on" pixels read as separate squares
+    /// instead of one solid blob, same as a real LCD's pixel grid.
+    private static let oversample = 24
     private func makeBitmapImage() -> CGImage? {
-        let w = 32, h = 16
+        let scale = Self.oversample
+        let w = Self.cols * scale, h = Self.rows * scale
+        // Premultiplied alpha: RGB must be scaled by onAlpha too, or the
+        // "on" color comes out brighter than intended (CG reads raw bytes,
+        // it doesn't premultiply them for us).
+        let alpha = UInt8((Self.onAlpha * 255).rounded())
+        let r = UInt8((43 * Self.onAlpha).rounded())
+        let g = UInt8((42 * Self.onAlpha).rounded())
+        let b = UInt8((40 * Self.onAlpha).rounded())
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
         for y in 0..<h {
+            let localY = y % scale
+            guard localY < scale - 1 else { continue }
+            let py = y / scale
             for x in 0..<w {
+                let localX = x % scale
+                guard localX < scale - 1 else { continue }
+                let px = x / scale
+                guard state.pixel(px, py) else { continue }
                 let i = (y * w + x) * 4
-                if state.pixel(x, y) {
-                    pixels[i] = 43
-                    pixels[i + 1] = 42
-                    pixels[i + 2] = 40
-                    pixels[i + 3] = 255
-                }
+                pixels[i] = r
+                pixels[i + 1] = g
+                pixels[i + 2] = b
+                pixels[i + 3] = alpha
             }
         }
         let colorSpace = CGColorSpaceCreateDeviceRGB()
