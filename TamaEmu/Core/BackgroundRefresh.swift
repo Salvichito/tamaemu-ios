@@ -69,29 +69,62 @@ enum BackgroundRefresh {
             // warn them *before* they do.
             guard !isAppActive else { return }
             let paths = SavePaths(device: device)
-            guard let engine = try? EmulatorEngine(
-                device: device,
-                savePaths: paths,
-                catchUpWallClockBudget: perDeviceBudget,
-                onCallDetected: {
-                    guard !isAppActive else { return }
-                    NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
-                    // A real heads-up just went out — no need for the dumb
-                    // "it's been a while" reminder on top of it.
-                    ReminderNotificationScheduler.cancel()
+
+            switch device.family {
+            case .ctama:
+                guard let engine = try? EmulatorEngine(
+                    device: device,
+                    savePaths: paths,
+                    catchUpWallClockBudget: perDeviceBudget,
+                    onCallDetected: {
+                        guard !isAppActive else { return }
+                        NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+                        // A real heads-up just went out — no need for the dumb
+                        // "it's been a while" reminder on top of it.
+                        ReminderNotificationScheduler.cancel()
+                    }
+                ) else {
+                    break
                 }
-            ) else {
-                BackgroundRefreshCursor.recordStoppedAfter(device)
-                continue
+                // init() already ran its catch-up pass. Publish + save, then
+                // let `engine` deallocate — it was never start()ed, so there's
+                // no thread to stop and no concurrent writer for save() to
+                // worry about, same as the foreground path's precondition.
+                if let image = LCDImageBuilder.makeImage(from: engine.renderCurrentFrame(), width: 128, height: 128) {
+                    WidgetSharedState.publish(image: image, device: device)
+                }
+                engine.save()
+
+            case .v1:
+                // No widget image published here yet (unlike .ctama above)
+                // -- rendering one needs the same icon/background artwork
+                // P1ScreenView draws with, which lives in SwiftUI, not
+                // something this headless pass can call into. Catch-up and
+                // the call notification both work without it, so that's
+                // just a gap, not a blocker.
+                guard let romData = try? Data(contentsOf: paths.importedROMPath),
+                      let savedState = try? Data(contentsOf: paths.v1StatePath) else {
+                    break
+                }
+                let backlogSeconds = paths.lastSavedAt.map { max(0, Date().timeIntervalSince($0)) } ?? 0
+                guard backlogSeconds > 1 else { break }
+                let words = V1EmulatorEngine.parseROM(romData)
+                let newState = V1EmulatorEngine.catchUp(
+                    romWords: words,
+                    from: savedState,
+                    backlogSeconds: backlogSeconds,
+                    wallClockBudget: perDeviceBudget,
+                    onCallDetected: {
+                        guard !isAppActive else { return }
+                        NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+                        ReminderNotificationScheduler.cancel()
+                    }
+                )
+                try? paths.ensureDirectoriesExist()
+                try? newState.write(to: paths.v1StatePath)
+                paths.lastSavedAt = Date()
             }
-            // init() already ran its catch-up pass. Publish + save, then
-            // let `engine` deallocate — it was never start()ed, so there's
-            // no thread to stop and no concurrent writer for save() to
-            // worry about, same as the foreground path's precondition.
-            if let image = LCDImageBuilder.makeImage(from: engine.renderCurrentFrame(), width: 128, height: 128) {
-                WidgetSharedState.publish(image: image, device: device)
-            }
-            engine.save()
+
             BackgroundRefreshCursor.recordStoppedAfter(device)
         }
     }
