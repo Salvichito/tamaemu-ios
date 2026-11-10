@@ -76,6 +76,22 @@ enum WidgetSharedState {
     static func recordAppClosed() {
         sharedDefaults?.set(Date(), forKey: appClosedAtKey)
         WidgetCenter.shared.reloadTimelines(ofKind: neglectWidgetKind)
+        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
+    }
+
+    /// Minute granularity, never seconds. Starts at "1m" immediately and
+    /// steps up exactly as each full minute elapses (floor+1, so it never
+    /// reads "0m"), then switches to the "Xh Ym" form once past an hour.
+    /// Shared by both the lock screen neglect widget and the home screen
+    /// widget's own neglect badge so the two never drift apart.
+    static func formatNeglectDuration(_ elapsed: TimeInterval) -> String {
+        let totalMinutes = Int(elapsed / 60) + 1
+        if totalMinutes < 60 {
+            return "\(totalMinutes)m"
+        }
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return "\(hours)h \(minutes)m"
     }
 
     private static let ownedDeviceIDsKey = "ownedDeviceIDs"

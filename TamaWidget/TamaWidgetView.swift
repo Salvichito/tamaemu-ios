@@ -30,6 +30,23 @@ struct TamaWidgetView: View {
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            .overlay(alignment: .bottom) {
+                // Only once there's an actual Tama on screen to be neglected
+                // — the "long-press to choose a Tama" placeholder has
+                // nothing to count. A dark capsule behind the text keeps it
+                // legible over whatever colors the LCD frame underneath
+                // happens to have, unlike the lock screen widget's flat
+                // system tint.
+                if let appClosedAt = entry.appClosedAt, entry.image != nil {
+                    Text(WidgetSharedState.formatNeglectDuration(max(0, entry.date.timeIntervalSince(appClosedAt))))
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.black.opacity(0.55)))
+                        .padding(.bottom, 6)
+                }
+            }
         }
         // Mandatory on iOS 17 — a plain background color/material alone
         // triggers a runtime warning and visibly broken rendering.
