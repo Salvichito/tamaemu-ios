@@ -38,7 +38,10 @@ public struct TamaDevice: Identifiable, Hashable, Sendable {
 /// tiny and separate from device.c's table on purpose — these aren't
 /// CTama devices at all, just entries this catalog also hands out.
 private let v1Devices: [TamaDevice] = [
-    TamaDevice(id: "p1", title: "Tamagotchi (P1)", romSize: 12288, family: .v1),
+    // id stays "p1" -- it's the on-disk save-path key, not shown to the
+    // user. The title is what needed fixing: this core plays both P1 and
+    // P2 ROMs (same chip generation, same romSize), so "(P1)" overclaimed.
+    TamaDevice(id: "p1", title: "Tamagotchi (Original)", romSize: 12288, family: .v1),
 ]
 
 public enum DeviceCatalog {
