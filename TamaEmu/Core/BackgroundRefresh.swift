@@ -123,6 +123,34 @@ enum BackgroundRefresh {
                 try? paths.ensureDirectoriesExist()
                 try? newState.write(to: paths.v1StatePath)
                 paths.lastSavedAt = Date()
+
+            case .t7:
+                // No widget image and no call-detection notification yet,
+                // same reasoning as .v1 above for the image, plus T7's
+                // 10 icons have no confirmed "needs attention" equivalent
+                // yet either (see T7EmulatorEngine's own doc comment) --
+                // catch-up alone still runs so the Tama isn't frozen in
+                // time the next time its page is opened.
+                guard let romData = try? Data(contentsOf: paths.importedROMPath),
+                      let savedState = try? Data(contentsOf: paths.t7StatePath) else {
+                    break
+                }
+                let savedEeprom = try? Data(contentsOf: paths.t7EepromPath)
+                let backlogSeconds = paths.lastSavedAt.map { max(0, Date().timeIntervalSince($0)) } ?? 0
+                guard backlogSeconds > 1 else { break }
+                let result = T7EmulatorEngine.catchUp(
+                    romData: romData,
+                    eepromData: savedEeprom,
+                    from: savedState,
+                    backlogSeconds: backlogSeconds,
+                    wallClockBudget: perDeviceBudget
+                )
+                try? paths.ensureDirectoriesExist()
+                try? result.state.write(to: paths.t7StatePath)
+                if let eeprom = result.eeprom {
+                    try? eeprom.write(to: paths.t7EepromPath)
+                }
+                paths.lastSavedAt = Date()
             }
 
             BackgroundRefreshCursor.recordStoppedAfter(device)

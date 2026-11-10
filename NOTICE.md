@@ -21,6 +21,19 @@ See [`Packages/TamaCore/CREDITS.md`](Packages/TamaCore/CREDITS.md) for the
 itemized list of changes made to the upstream core for this iOS port (each
 marked `// iOS port:` at the change site), as required by GPLv3 §5(a).
 
+Two further device families are emulated the same way, each its own
+statically-linked package under the same GPLv3 terms:
+
+- [`Packages/TamaLibCore/`](Packages/TamaLibCore/) vendors
+  [TamaLib](https://github.com/jcrona/tamalib) by Jean-Christophe Rona (P1,
+  P2, Angel, Morino, Digimon V1/V2), under its own license, GPL-2.0-or-later.
+  See [`Packages/TamaLibCore/CREDITS.md`](Packages/TamaLibCore/CREDITS.md).
+- [`Packages/T7EmuCore/`](Packages/T7EmuCore/) vendors T7Emu by mameise, from
+  [mameise/Paramix-Studio](https://github.com/mameise/Paramix-Studio) (Tama-Go,
+  Tamagotchi Friends), under that repository's license, GPL-3.0-or-later —
+  itself a C port of [tamago](https://github.com/asterick/tamago) by asterick
+  (BSD). See [`Packages/T7EmuCore/CREDITS.md`](Packages/T7EmuCore/CREDITS.md).
+
 ## What this repository does not grant rights to
 
 - **Game firmware/ROM images** are not included, linked, or distributed by

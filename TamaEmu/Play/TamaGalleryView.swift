@@ -27,9 +27,10 @@ struct TamaGalleryView: View {
 
     /// The page currently on screen — the one whose colors the full-bleed
     /// background should show, since that's the only page actually visible.
-    /// `nil` for a V1 page: that family has no PlayViewModel at all, which
-    /// is also what keeps the CTama-specific toolbar (screenshot,
-    /// recording, translation, set clock) from showing for it below.
+    /// `nil` for a V1 or T7 page: neither family has a PlayViewModel at
+    /// all, which is also what keeps the CTama-specific toolbar
+    /// (screenshot, recording, translation, set clock) from showing for
+    /// them below.
     private var selectedViewModel: PlayViewModel? {
         guard let device = selectedDevice, device.family == .ctama else { return nil }
         return gallery.viewModel(for: device)
@@ -92,6 +93,11 @@ struct TamaGalleryView: View {
         case .v1:
             V1PageView(
                 viewModel: gallery.v1ViewModel(for: device),
+                ambientBackgroundEnabled: ambientBackgroundEnabled
+            )
+        case .t7:
+            T7PageView(
+                viewModel: gallery.t7ViewModel(for: device),
                 ambientBackgroundEnabled: ambientBackgroundEnabled
             )
         }

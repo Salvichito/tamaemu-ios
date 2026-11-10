@@ -7,6 +7,7 @@ import CTama
 public enum TamaDeviceFamily: Hashable, Sendable {
     case ctama
     case v1
+    case t7
 }
 
 public struct TamaDevice: Identifiable, Hashable, Sendable {
@@ -44,6 +45,15 @@ private let v1Devices: [TamaDevice] = [
     TamaDevice(id: "p1", title: "Tamagotchi (Original)", romSize: 12288, family: .v1),
 ]
 
+/// Same reasoning as `v1Devices` -- T7Emu (via T7EmuCore) speaks neither
+/// CTama's `DeviceProfile` nor TamaLib's HAL. The two sizes are distinct
+/// (640 KB vs. 768 KB), so romSize alone tells them apart during import,
+/// same as every other device in this catalog.
+private let t7Devices: [TamaDevice] = [
+    TamaDevice(id: "tamago", title: "Tama-Go", romSize: 640 * 1024, family: .t7),
+    TamaDevice(id: "tamagotchi-friends", title: "Tamagotchi Friends", romSize: 768 * 1024, family: .t7),
+]
+
 public enum DeviceCatalog {
     public static func all() -> [TamaDevice] {
         var result: [TamaDevice] = []
@@ -53,12 +63,16 @@ public enum DeviceCatalog {
             i += 1
         }
         result.append(contentsOf: v1Devices)
+        result.append(contentsOf: t7Devices)
         return result
     }
 
     public static func find(name: String) -> TamaDevice? {
         if let v1 = v1Devices.first(where: { $0.id == name }) {
             return v1
+        }
+        if let t7 = t7Devices.first(where: { $0.id == name }) {
+            return t7
         }
         guard let p = device_find(name) else { return nil }
         return TamaDevice(profile: p)

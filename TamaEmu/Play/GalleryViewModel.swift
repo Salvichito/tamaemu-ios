@@ -14,6 +14,7 @@ private protocol EngineLifecycle: AnyObject {
 
 extension PlayViewModel: EngineLifecycle {}
 extension V1PlayViewModel: EngineLifecycle {}
+extension T7PlayViewModel: EngineLifecycle {}
 
 /// Owns the set of owned Tamas and one cached view-model per device —
 /// PlayViewModel for CTama devices, V1PlayViewModel for TamaLib ones.
@@ -31,6 +32,7 @@ final class GalleryViewModel {
 
     private var viewModels: [TamaDevice.ID: PlayViewModel] = [:]
     private var v1ViewModels: [TamaDevice.ID: V1PlayViewModel] = [:]
+    private var t7ViewModels: [TamaDevice.ID: T7PlayViewModel] = [:]
 
     init() {
         ownedDevices = Self.restoreOrder(of: ActiveDeviceLookup.allImported())
@@ -68,12 +70,19 @@ final class GalleryViewModel {
         return vm
     }
 
+    func t7ViewModel(for device: TamaDevice) -> T7PlayViewModel {
+        if let existing = t7ViewModels[device.id] { return existing }
+        let vm = T7PlayViewModel(device: device)
+        t7ViewModels[device.id] = vm
+        return vm
+    }
+
     /// Already-cached view-model for a device, regardless of family — for
     /// the lifecycle calls below, which don't need to know which kind it
     /// is, and shouldn't create one on demand the way the typed accessors
     /// above do.
     private func cachedEngine(for id: TamaDevice.ID) -> EngineLifecycle? {
-        (viewModels[id] as EngineLifecycle?) ?? (v1ViewModels[id] as EngineLifecycle?)
+        (viewModels[id] as EngineLifecycle?) ?? (v1ViewModels[id] as EngineLifecycle?) ?? (t7ViewModels[id] as EngineLifecycle?)
     }
 
     func device(withID id: TamaDevice.ID) -> TamaDevice? {
@@ -87,6 +96,7 @@ final class GalleryViewModel {
         switch device.family {
         case .ctama: viewModel(for: device).resumeIfNeeded()
         case .v1: v1ViewModel(for: device).resumeIfNeeded()
+        case .t7: t7ViewModel(for: device).resumeIfNeeded()
         }
     }
 
@@ -106,6 +116,7 @@ final class GalleryViewModel {
         cachedEngine(for: device.id)?.stopEngine()
         viewModels[device.id] = nil
         v1ViewModels[device.id] = nil
+        t7ViewModels[device.id] = nil
         if !ownedDevices.contains(where: { $0.id == device.id }) {
             ownedDevices.append(device)
         }
@@ -127,9 +138,11 @@ final class GalleryViewModel {
         switch device.family {
         case .ctama: PlayViewModel.removeDeviceData(device)
         case .v1: V1PlayViewModel.removeDeviceData(device)
+        case .t7: T7PlayViewModel.removeDeviceData(device)
         }
         viewModels[device.id] = nil
         v1ViewModels[device.id] = nil
+        t7ViewModels[device.id] = nil
         ownedDevices.removeAll { $0.id == device.id }
         WidgetSharedState.publishOwnedDevices(ownedDevices)
         if selectedPage == device.id {
