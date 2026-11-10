@@ -63,7 +63,7 @@ struct TamaNeglectWidgetView: View {
 
     private var label: String {
         guard let appClosedAt = entry.appClosedAt else { return "—" }
-        return Self.format(max(0, entry.date.timeIntervalSince(appClosedAt)))
+        return WidgetSharedState.formatNeglectDuration(max(0, entry.date.timeIntervalSince(appClosedAt)))
     }
 
     var body: some View {
@@ -96,19 +96,6 @@ struct TamaNeglectWidgetView: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .containerBackground(for: .widget) { Color.clear }
-    }
-
-    /// Minute granularity, never seconds. Starts at "1m" immediately and
-    /// steps up exactly as each full minute elapses (floor+1, so it never
-    /// reads "0m"), then switches to the "Xh Ym" form once past an hour.
-    static func format(_ elapsed: TimeInterval) -> String {
-        let totalMinutes = Int(elapsed / 60) + 1
-        if totalMinutes < 60 {
-            return "\(totalMinutes)m"
-        }
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        return "\(hours)h \(minutes)m"
     }
 }
 

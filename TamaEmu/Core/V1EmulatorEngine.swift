@@ -51,6 +51,15 @@ final class V1EmulatorEngine {
     private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
     private(set) var onFrame: ((P1ScreenState) -> Void)?
+    /// Set by whoever owns this engine to be told when the Tama starts
+    /// calling for attention -- mirrors CTama's EmulatorEngine.onCallDetected,
+    /// but driven by TamaLib's own icon bit 7 ("attention"), which the core
+    /// already lights up on its own, rather than a melody-tone heuristic.
+    private(set) var onCallDetected: (() -> Void)?
+    /// nil until the first frame is read -- lets runLoop() tell "icon was
+    /// already on when this engine started" (not a new call, don't fire)
+    /// apart from "icon just turned on" (a real new edge).
+    private var lastAttentionOn: Bool?
 
     private lazy var audioOutput = AudioOutput(
         toneProvider: {
@@ -61,8 +70,9 @@ final class V1EmulatorEngine {
         }
     )
 
-    init(onFrame: @escaping (P1ScreenState) -> Void) {
+    init(onFrame: @escaping (P1ScreenState) -> Void, onCallDetected: (() -> Void)? = nil) {
         self.onFrame = onFrame
+        self.onCallDetected = onCallDetected
     }
 
     /// romData is a raw P1 ROM dump: 12-bit words stored as big-endian
@@ -136,10 +146,17 @@ final class V1EmulatorEngine {
 
             ios_hal_step()
 
-            let now = Date()
-            guard now.timeIntervalSince(lastPublish) >= 1.0 / 30.0 else { continue }
-            lastPublish = now
-
+            // Forwarded every step, not just on the throttled publish tick
+            // below -- hw_set_button() is a cheap, idempotent CPU-pin write
+            // (see hw.c), so there's no cost reason to hold a fresh press
+            // back. ios_hal_step() advances only one instruction and paces
+            // itself to the real chip's speed internally (sleep_until), so
+            // this loop iterates far more often than 30Hz; gating button
+            // forwarding on the same 1/30s check the screen publish uses
+            // below meant a press could sit unseen by the chip for up to
+            // ~33ms for no reason -- the actual cause of P1/P2 feeling
+            // laggy, not the CTama engine's frame ordering (that engine
+            // doesn't even run this device; see DeviceCatalog's .v1 family).
             let mask = input.currentMask()
             let changed = mask ^ lastButtonMask
             if changed != 0 {
@@ -151,6 +168,10 @@ final class V1EmulatorEngine {
                 }
                 lastButtonMask = mask
             }
+
+            let now = Date()
+            guard now.timeIntervalSince(lastPublish) >= 1.0 / 30.0 else { continue }
+            lastPublish = now
 
             var iconsByte: UInt8 = 0
             bitsBuf.withUnsafeMutableBufferPointer { buf in
@@ -165,6 +186,19 @@ final class V1EmulatorEngine {
             for i in 0..<8 {
                 icons[i] = (iconsByte & (1 << i)) != 0
             }
+
+            // Index 7 is the "attention" icon -- TamaLib already lights it
+            // up on its own when the Tama needs care, no melody-matching
+            // needed. Firing on every false->true edge, not merely "is it
+            // on", so a call that's been sitting on since before this
+            // engine even started doesn't immediately fire (lastAttentionOn
+            // starts nil, so the very first read only primes it) while a
+            // real new call still does, live, the same instant it starts.
+            let attentionOn = icons[7]
+            if let last = lastAttentionOn, attentionOn && !last {
+                onCallDetected?()
+            }
+            lastAttentionOn = attentionOn
 
             let state = P1ScreenState(bits: bits, icons: icons)
             let callback = onFrame
@@ -193,13 +227,34 @@ extension V1EmulatorEngine {
     /// chunks the backlog into repeated, fresh-epoch hops, saving and
     /// reloading state between them -- the overnight-gap case this
     /// exists for needs exactly that, not a single pass.
-    static func catchUp(romWords: [UInt16], from state: Data, backlogSeconds: TimeInterval, wallClockBudget: TimeInterval) -> Data {
+    /// `onCallDetected`, if given, is invoked once per false->true edge of
+    /// TamaLib's own "attention" icon (bit 7) encountered anywhere along the
+    /// replay -- not just whatever the icon happens to read at the very
+    /// end -- mirroring EmulatorEngine's own `checkCallDetection(duringCatchUp:)`.
+    /// Pass nil for a plain foreground resume (the player is about to look
+    /// at the live screen regardless, same reasoning PlayViewModel's own
+    /// CTama catch-up uses); pass a real closure only for a headless pass
+    /// that exists specifically to warn the player before they open the
+    /// app (BackgroundRefresh).
+    static func catchUp(
+        romWords: [UInt16],
+        from state: Data,
+        backlogSeconds: TimeInterval,
+        wallClockBudget: TimeInterval,
+        onCallDetected: (() -> Void)? = nil
+    ) -> Data {
         guard backlogSeconds > 1 else { return state }
 
         let hopSeconds: TimeInterval = 50
         let deadline = Date().addingTimeInterval(wallClockBudget)
         var remaining = backlogSeconds
         var currentState = state
+        // Persists across hops (each hop tears down and reloads the HAL
+        // session), same reason the live engine's own lastAttentionOn
+        // isn't reset per-call -- nil until the first read primes it, so a
+        // call already sitting on in the loaded save doesn't itself count
+        // as a new edge.
+        var lastAttentionOn: Bool?
 
         while remaining > 1, Date() < deadline {
             let hop = min(remaining, hopSeconds)
@@ -222,6 +277,13 @@ extension V1EmulatorEngine {
             ios_hal_set_fast_forward(true)
             while (ios_hal_elapsed_us() &- startUs) < targetDeltaUs, Date() < deadline {
                 ios_hal_step()
+                if onCallDetected != nil {
+                    let attentionOn = ios_hal_get_icon(7)
+                    if let last = lastAttentionOn, attentionOn && !last {
+                        onCallDetected?()
+                    }
+                    lastAttentionOn = attentionOn
+                }
             }
             ios_hal_set_fast_forward(false)
 
