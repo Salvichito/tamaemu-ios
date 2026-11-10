@@ -36,6 +36,29 @@ final class EmulatorEngine {
     private var shouldStop = false
     private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
+    /// Momentary speed-up while the player holds down on the Tama's
+    /// screen — not persisted, not saved, leaves no trace once released.
+    /// Guarded the same way stopLock guards shouldStop: set from the main
+    /// thread (PlayViewModel), read every frame by runLoop() on the
+    /// emulator thread.
+    private let fastForwardLock = NSLock()
+    private var fastForwardMultiplier: Double = 1.0
+
+    /// 1.0 is normal speed; call with 1.0 again to return to it. A value
+    /// above 1.0 advances game time faster than real time — the same
+    /// mechanism catch-up already uses, just live and interactive instead
+    /// of a one-shot pass. The piezo's own tone frequency is untouched, but
+    /// notes play back faster, so sound speeds up right along with the
+    /// animation — a deliberate fast-forward effect, not a bug.
+    func setFastForward(_ multiplier: Double) {
+        fastForwardLock.lock(); fastForwardMultiplier = multiplier; fastForwardLock.unlock()
+    }
+
+    private func currentFastForwardMultiplier() -> Double {
+        fastForwardLock.lock(); defer { fastForwardLock.unlock() }
+        return fastForwardMultiplier
+    }
+
     /// How many seconds of real elapsed time catch-up has NOT yet applied
     /// to `emu_secs` — set once, right after `init()`'s catch-up pass, and
     /// unchanged for the rest of this engine's life (normal real-time play
@@ -469,7 +492,8 @@ final class EmulatorEngine {
             stopLock.lock(); let stop = shouldStop; stopLock.unlock()
             if stop { break }
 
-            targetSecs += 1.0 / 60.0
+            let fastForward = currentFastForwardMultiplier()
+            targetSecs += (1.0 / 60.0) * fastForward
             // Mirrors the Android port's own "notbremse" (emergency brake).
             // The firmware's clock isn't constant — e.g. entering its
             // low-power sleep mode mid-frame drops OSC3's ~20MHz down to
@@ -485,7 +509,12 @@ final class EmulatorEngine {
             // catching up a small lag, bounds how bad one transition can
             // be — identical in spirit to upstream's own fix for this.
             let mclk = emu.pointee.cmu.mclk_hz > 0 ? emu.pointee.cmu.mclk_hz : emu.pointee.dev.osc3_hz
-            let cycleCeiling = emu.pointee.cycles &+ UInt64(mclk / 60.0) &+ 100_000
+            // Scaled by the same fastForward factor as targetSecs above, so
+            // a frame fast-forwarding at 2x is actually allowed to run
+            // roughly twice the cycles needed to catch its target up within
+            // this one real frame, instead of being throttled back down to
+            // normal speed by a ceiling sized for 1x.
+            let cycleCeiling = emu.pointee.cycles &+ UInt64(mclk / 60.0 * fastForward) &+ 100_000
             while emu.pointee.emu_secs < targetSecs && emu.pointee.cycles < cycleCeiling && !emu.pointee.stopped {
                 let before = emu.pointee.cycles
                 cpu_step(emu)
