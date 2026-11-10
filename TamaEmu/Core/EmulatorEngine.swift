@@ -515,6 +515,16 @@ final class EmulatorEngine {
             // this one real frame, instead of being throttled back down to
             // normal speed by a ceiling sized for 1x.
             let cycleCeiling = emu.pointee.cycles &+ UInt64(mclk / 60.0 * fastForward) &+ 100_000
+            // Applied before this frame's cpu_step calls, not after — a
+            // press/release that lands anywhere in the current real-time
+            // frame is live for the whole of this frame's CPU stepping, so
+            // the firmware's interrupt handler can see it immediately
+            // instead of only starting next frame. That shaves a full
+            // wasted frame (~16ms) off perceived input lag for free: it
+            // changes nothing about btn_mask's value or when the ITC edge
+            // fires relative to wall-clock time, only how many of this
+            // frame's instructions get to react to it.
+            periph_buttons(emu, input.currentMask())
             while emu.pointee.emu_secs < targetSecs && emu.pointee.cycles < cycleCeiling && !emu.pointee.stopped {
                 let before = emu.pointee.cycles
                 cpu_step(emu)
@@ -522,7 +532,6 @@ final class EmulatorEngine {
                 periph_tick(emu, delta)
                 checkCallDetection()
             }
-            periph_buttons(emu, input.currentMask())
 
             pixels.withUnsafeMutableBufferPointer { buf in
                 lcd_render(emu, buf.baseAddress, &w, &h)
