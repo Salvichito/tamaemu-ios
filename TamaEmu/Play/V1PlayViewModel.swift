@@ -88,6 +88,7 @@ final class V1PlayViewModel {
         startGeneration += 1
         let generation = startGeneration
         isLoading = true
+        NotificationScheduler.requestAuthorizationIfNeeded()
 
         Task.detached(priority: .userInitiated) { [weak self] in
             let stateToLoad: Data?
@@ -105,9 +106,11 @@ final class V1PlayViewModel {
             guard let self else { return }
             await MainActor.run {
                 guard self.startGeneration == generation else { return }
-                let newEngine = V1EmulatorEngine { [weak self] state in
+                let newEngine = V1EmulatorEngine(onFrame: { [weak self] state in
                     self?.screenState = state
-                }
+                }, onCallDetected: {
+                    NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+                })
                 guard newEngine.start(romData: romData, savedState: stateToLoad) else {
                     self.errorMessage = "Couldn't start this Tama's emulator core."
                     self.isLoading = false
