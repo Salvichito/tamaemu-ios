@@ -43,6 +43,11 @@ final class PlayViewModel {
     /// countdown instead of silently keeping the old one running.
     private(set) var translationID: UUID?
     private(set) var isTranslating = false
+    /// Whether the live engine is currently running at the
+    /// tap-and-hold fast-forward speed — purely a UI flag for the badge
+    /// TamaPageView shows while held. Never persisted: losing the engine
+    /// (background, swipe away) always comes back at normal speed.
+    private(set) var isFastForwarding = false
 
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
@@ -111,6 +116,7 @@ final class PlayViewModel {
         startGeneration += 1  // invalidates any startEngine() load still in flight
         displayTimer?.invalidate()
         displayTimer = nil
+        isFastForwarding = false
         // stop() must come first: it blocks until the emulator thread has
         // actually exited, which save() and renderCurrentFrame() both
         // depend on to safely read the Emu struct without a concurrent
@@ -131,6 +137,23 @@ final class PlayViewModel {
     func resumeIfNeeded() {
         guard engine == nil, !isPaused else { return }
         startEngine()
+    }
+
+    /// Tap-and-hold on the Tama's screen. A no-op while paused or loading
+    /// — there's no running engine to speed up — or if already held.
+    func beginFastForward() {
+        guard !isPaused, !isFastForwarding, engine != nil else { return }
+        isFastForwarding = true
+        engine?.setFastForward(2.0)
+    }
+
+    /// Releasing the hold. Always safe to call, even if beginFastForward()
+    /// above was skipped (e.g. the hold started while paused) — it's a
+    /// no-op whenever isFastForwarding is already false.
+    func endFastForward() {
+        guard isFastForwarding else { return }
+        isFastForwarding = false
+        engine?.setFastForward(1.0)
     }
 
     func pressButton(_ button: InputController.Button) {
