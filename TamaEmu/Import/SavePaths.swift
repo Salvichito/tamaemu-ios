@@ -33,6 +33,16 @@ struct SavePaths {
     /// own extension rather than reusing stateBasePath.
     var v1StatePath: URL { savesDir.appendingPathComponent(device.id).appendingPathExtension("v1state") }
 
+    /// The T7 (T7Emu/Tama-Go) family's own CPU/RAM/DRAM/bank snapshot --
+    /// `ios_t7_save_state`'s format, unrelated to every other family's.
+    var t7StatePath: URL { savesDir.appendingPathComponent(device.id).appendingPathExtension("t7state") }
+
+    /// The T7 family's emulated 4 KB I2C EEPROM -- the Tama's actual game
+    /// save (character/stats), kept separate from t7StatePath on purpose:
+    /// it's the one piece of this device's state real hardware preserves
+    /// across a power-loss, same split as the real chip.
+    var t7EepromPath: URL { savesDir.appendingPathComponent(device.id).appendingPathExtension("t7eeprom") }
+
     func ensureDirectoriesExist() throws {
         try FileManager.default.createDirectory(at: romsDir, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: savesDir, withIntermediateDirectories: true)
@@ -59,7 +69,7 @@ struct SavePaths {
     /// wrong device was picked at import time and the data underneath it is
     /// simply wrong, not something worth keeping.
     func deleteAll() {
-        for url in [importedROMPath, liveFlashPath, stateFilePath, stateLockPath, v1StatePath] {
+        for url in [importedROMPath, liveFlashPath, stateFilePath, stateLockPath, v1StatePath, t7StatePath, t7EepromPath] {
             try? FileManager.default.removeItem(at: url)
         }
         UserDefaults.standard.removeObject(forKey: lastSavedAtKey)
