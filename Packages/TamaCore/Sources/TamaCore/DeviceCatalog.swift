@@ -54,6 +54,17 @@ private let t7Devices: [TamaDevice] = [
     TamaDevice(id: "tamagotchi-friends", title: "Tamagotchi Friends", romSize: 768 * 1024, family: .t7),
 ]
 
+/// Temporarily off while the T7 (Tama-Go/Tamagotchi Friends) integration
+/// gets more polish before shipping -- flip back to `true` when it's ready.
+/// Leaving `t7Devices` out of `all()` is enough on its own: `DeviceDetector`
+/// only ever matches against whatever `all()` hands it, so a Tama-Go/Friends
+/// `.bin` simply won't match any candidate during import (same as any other
+/// unrecognized file) while every other device keeps working unchanged.
+/// `find(name:)` deliberately still resolves `.t7` ids regardless of this
+/// flag, so the rest of the T7 code (engine, views, save paths) stays fully
+/// intact and compiling, not half-ripped-out.
+private let t7Enabled = false
+
 public enum DeviceCatalog {
     public static func all() -> [TamaDevice] {
         var result: [TamaDevice] = []
@@ -63,7 +74,9 @@ public enum DeviceCatalog {
             i += 1
         }
         result.append(contentsOf: v1Devices)
-        result.append(contentsOf: t7Devices)
+        if t7Enabled {
+            result.append(contentsOf: t7Devices)
+        }
         return result
     }
 
