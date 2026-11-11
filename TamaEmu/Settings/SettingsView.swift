@@ -11,6 +11,7 @@ struct SettingsView: View {
     var onDelete: () -> Void
     var onDeviceImported: (TamaDevice) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(PurchaseManager.self) private var purchases
 
     @AppStorage(AppSettings.Keys.volume) private var volume = 0.6
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
@@ -36,6 +37,7 @@ struct SettingsView: View {
     @State private var toast: String?
     @State private var showingAPIKeyPrompt = false
     @State private var apiKeyDraft = ""
+    @State private var showingPaywall = false
 
     init(
         device: TamaDevice,
@@ -58,6 +60,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                premiumSection
                 firmwareSection
                 soundAndGameplaySection
                 remindersSection
@@ -134,6 +137,9 @@ struct SettingsView: View {
             .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
                 Button("OK") { toast = nil }
             }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView()
+            }
             .alert("Gemini API Key", isPresented: $showingAPIKeyPrompt) {
                 TextField("Paste your Gemini API key", text: $apiKeyDraft)
                     .textInputAutocapitalization(.never)
@@ -142,6 +148,27 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Get a free key at aistudio.google.com — no credit card needed.")
+            }
+        }
+    }
+
+    // MARK: - Premium
+
+    @ViewBuilder
+    private var premiumSection: some View {
+        Section {
+            if purchases.isPremium {
+                Label("Premium unlocked", systemImage: "checkmark.seal.fill")
+                    .foregroundStyle(.secondary)
+            } else {
+                Button("Unlock Premium…") { showingPaywall = true }
+                Button("Restore Purchase") {
+                    Task { await purchases.restore() }
+                }
+            }
+        } footer: {
+            if !purchases.isPremium {
+                Text("Unlocks more than one Tama, Ambient Background, Live Translation, Fast-Forward, photo/video capture, and the points hacks.")
             }
         }
     }
@@ -270,11 +297,12 @@ struct SettingsView: View {
                 get: { lcdEffectEnabled },
                 set: { lcdEffectEnabled = $0; WidgetSharedState.requestWidgetRefresh() }
             ))
-            Toggle("Ambient Background", isOn: $ambientBackgroundEnabled)
+            Toggle("Ambient Background", isOn: purchases.isPremium ? $ambientBackgroundEnabled : .constant(false))
+                .disabled(!purchases.isPremium)
         } header: {
             Text("Display")
         } footer: {
-            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it. These apply app-wide, not just to this Tama.")
+            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it — a Premium feature. These apply app-wide, not just to this Tama.")
         }
     }
 

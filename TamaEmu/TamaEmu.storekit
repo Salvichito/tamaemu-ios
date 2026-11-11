@@ -1,0 +1,29 @@
+{
+  "identifier" : "8E99D521-A8A1-4462-AC0E-7A248B536A1F",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "CD3570EE-341E-49F8-8582-88745E7B3602",
+      "localizations" : [
+        {
+          "description" : "Unlocks multiple Tamas, ambient background, live translation, fast-forward, photo/video capture, and the points hacks.",
+          "displayName" : "TamaEmu Premium",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.fluorescente.TamaEmu.premium",
+      "referenceName" : "Premium Unlock",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_locale" : "en_US"
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}

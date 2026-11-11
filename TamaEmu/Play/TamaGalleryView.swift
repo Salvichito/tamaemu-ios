@@ -6,6 +6,7 @@ import UIKit
 struct TamaGalleryView: View {
     @State private var gallery = GalleryViewModel()
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(PurchaseManager.self) private var purchases
 
     @AppStorage(AppSettings.Keys.appearanceMode) private var appearanceModeRaw = AppSettings.AppearanceMode.system.rawValue
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
@@ -17,6 +18,30 @@ struct TamaGalleryView: View {
     @State private var isRecording = false
     @State private var activeRecorder: ScreenRecorder?
     @State private var recordingStartDate: Date?
+    @State private var showingPaywall = false
+
+    /// Ambient Background is a premium feature — forced off for free users
+    /// regardless of their own stored preference, which is left untouched
+    /// so it springs back on the moment they unlock Premium.
+    private var effectiveAmbientBackgroundEnabled: Bool {
+        ambientBackgroundEnabled && purchases.isPremium
+    }
+
+    /// First Tama is always free; anything past that needs Premium.
+    /// Pulled out of the `.alert` call itself — inlined there, this
+    /// Binding's closures pushed an already-long modifier chain past what
+    /// the type checker could resolve in reasonable time.
+    private var toastIsPresented: Binding<Bool> {
+        Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })
+    }
+
+    private func requestAddTama() {
+        if !gallery.ownedDevices.isEmpty && !purchases.isPremium {
+            showingPaywall = true
+        } else {
+            gallery.showingImport = true
+        }
+    }
 
     /// The device behind the page currently on screen — i.e. the one the
     /// overflow menu (toolbar), its Settings sheet, and its delete
@@ -88,17 +113,17 @@ struct TamaGalleryView: View {
         case .ctama:
             TamaPageView(
                 viewModel: gallery.viewModel(for: device),
-                ambientBackgroundEnabled: ambientBackgroundEnabled
+                ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
             )
         case .v1:
             V1PageView(
                 viewModel: gallery.v1ViewModel(for: device),
-                ambientBackgroundEnabled: ambientBackgroundEnabled
+                ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
             )
         case .t7:
             T7PageView(
                 viewModel: gallery.t7ViewModel(for: device),
-                ambientBackgroundEnabled: ambientBackgroundEnabled
+                ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
             )
         }
     }
@@ -216,7 +241,7 @@ struct TamaGalleryView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button {
-                    gallery.showingImport = true
+                    requestAddTama()
                 } label: {
                     Label("Add a Tama", systemImage: "plus")
                 }
@@ -259,7 +284,7 @@ struct TamaGalleryView: View {
                     )
                 }
                 Button {
-                    gallery.showingImport = true
+                    requestAddTama()
                 } label: {
                     Label("Add a Tama", systemImage: "plus")
                 }
@@ -275,11 +300,15 @@ struct TamaGalleryView: View {
                 }
                 if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
                     Button {
-                        viewModel.restartTamaClock { engine in
-                            _ = engine.addPoints(1000)
+                        if purchases.isPremium {
+                            viewModel.restartTamaClock { engine in
+                                _ = engine.addPoints(1000)
+                            }
+                        } else {
+                            showingPaywall = true
                         }
                     } label: {
-                        Label("Add 1000 Points", systemImage: "plus.circle")
+                        Label(purchases.isPremium ? "Add 1000 Points" : "Add 1000 Points (Premium)", systemImage: "plus.circle")
                     }
                 }
                 Button(role: .destructive) {
@@ -304,14 +333,22 @@ struct TamaGalleryView: View {
     private func bottomToolbarContent(viewModel: PlayViewModel) -> some ToolbarContent {
         ToolbarItem(placement: .bottomBar) {
             Button {
-                saveScreenshot(of: viewModel)
+                if purchases.isPremium {
+                    saveScreenshot(of: viewModel)
+                } else {
+                    showingPaywall = true
+                }
             } label: {
                 Image(systemName: "camera")
             }
         }
         ToolbarItem(placement: .bottomBar) {
             Button {
-                toggleRecording(for: viewModel)
+                if purchases.isPremium {
+                    toggleRecording(for: viewModel)
+                } else {
+                    showingPaywall = true
+                }
             } label: {
                 Image(systemName: isRecording ? "stop.circle.fill" : "video")
                     .foregroundStyle(isRecording ? .red : .primary)
@@ -327,7 +364,11 @@ struct TamaGalleryView: View {
                 // watching the screen afterward. Which engine it uses (and
                 // whether a key is set at all) is a Settings question.
                 Button {
-                    viewModel.translateNow()
+                    if purchases.isPremium {
+                        viewModel.translateNow()
+                    } else {
+                        showingPaywall = true
+                    }
                 } label: {
                     // Both the icon and the spinner stay mounted the whole
                     // time — only their opacity toggles. An if/else here
@@ -352,8 +393,80 @@ struct TamaGalleryView: View {
 
     private var galleryStack: some View {
         NavigationStack {
-            TabView(selection: Binding(
-                get: { gallery.selectedPage ?? gallery.ownedDevices[0].id },
+            tabViewWithToolbar
+                .sheet(isPresented: $showingSettings) {
+                    if let device = selectedDevice, let viewModel = selectedViewModel {
+                        SettingsView(
+                            device: device,
+                            viewModel: viewModel,
+                            onDelete: { gallery.removeDevice(device) },
+                            onDeviceImported: { gallery.deviceImported($0) }
+                        )
+                    }
+                }
+                .confirmationDialog(
+                    "Delete \(selectedDevice?.title ?? "")?",
+                    isPresented: $showingDeleteConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Delete", role: .destructive) {
+                        if let device = selectedDevice { gallery.removeDevice(device) }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
+                }
+                .confirmationDialog(
+                    "Set the clock to the current time?",
+                    isPresented: $showingSetClockConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Set clock", role: .destructive) {
+                        if let viewModel = selectedViewModel { syncClockToNow(for: viewModel) }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This jumps straight to the current time, unlike normal catch-up which ages through every second in between.")
+                }
+                .sheet(isPresented: $gallery.showingReorder) {
+                    ReorderTamasView(gallery: gallery)
+                }
+                .sheet(isPresented: $showingPaywall) {
+                    PaywallView()
+                }
+                .alert(toast ?? "", isPresented: toastIsPresented) {
+                    Button("OK") { toast = nil }
+                }
+                .sheet(isPresented: $gallery.showingImport) {
+                    NavigationStack {
+                        FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in
+                            gallery.deviceImported(device)
+                            gallery.showingImport = false
+                        }
+                        .navigationTitle("Add a Tama")
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Cancel") { gallery.showingImport = false }
+                            }
+                        }
+                    }
+                }
+        }
+    }
+
+    /// Split out of `galleryStack` — folding this back into one modifier
+    /// chain (adding the paywall sheet to it did, briefly) is enough to
+    /// push the type checker past "reasonable time"; two separate `some
+    /// View` properties keep each chain's inference small.
+    private var tabViewWithToolbar: some View {
+        TabView(selection: Binding(
+                // Not ownedDevices[0] — removing the last Tama can leave
+                // this read running one more time (SwiftUI re-evaluates the
+                // old galleryStack graph briefly while swapping to the
+                // empty-state view), and an unconditional [0] subscript on
+                // an empty array there was a real crash on-device, not just
+                // in theory.
+                get: { gallery.selectedPage ?? gallery.ownedDevices.first?.id ?? "" },
                 set: { gallery.selectedPage = $0 }
             )) {
                 ForEach(gallery.ownedDevices) { device in
@@ -363,9 +476,9 @@ struct TamaGalleryView: View {
             }
             .tabViewStyle(.page)
             .indexViewStyle(.page(backgroundDisplayMode: .never))
-            .scrollContentBackground(ambientBackgroundEnabled ? .hidden : .visible)
+            .scrollContentBackground(effectiveAmbientBackgroundEnabled ? .hidden : .visible)
             .background {
-                if ambientBackgroundEnabled {
+                if effectiveAmbientBackgroundEnabled {
                     BlurredLCDBackground(image: selectedViewModel?.lcdImage)
                 }
             }
@@ -381,7 +494,7 @@ struct TamaGalleryView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(ambientBackgroundEnabled ? .hidden : .automatic, for: .navigationBar)
+            .toolbarBackground(effectiveAmbientBackgroundEnabled ? .hidden : .automatic, for: .navigationBar)
             // Attached once here, to the gallery's single NavigationStack,
             // rather than per-page in TamaPageView — see that view's doc
             // comment for why a per-page toolbar could show up twice.
@@ -405,61 +518,6 @@ struct TamaGalleryView: View {
                     minimalToolbarContent()
                 }
             }
-            .sheet(isPresented: $showingSettings) {
-                if let device = selectedDevice, let viewModel = selectedViewModel {
-                    SettingsView(
-                        device: device,
-                        viewModel: viewModel,
-                        onDelete: { gallery.removeDevice(device) },
-                        onDeviceImported: { gallery.deviceImported($0) }
-                    )
-                }
-            }
-            .confirmationDialog(
-                "Delete \(selectedDevice?.title ?? "")?",
-                isPresented: $showingDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) {
-                    if let device = selectedDevice { gallery.removeDevice(device) }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
-            }
-            .confirmationDialog(
-                "Set the clock to the current time?",
-                isPresented: $showingSetClockConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Set clock", role: .destructive) {
-                    if let viewModel = selectedViewModel { syncClockToNow(for: viewModel) }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This jumps straight to the current time, unlike normal catch-up which ages through every second in between.")
-            }
-            .sheet(isPresented: $gallery.showingReorder) {
-                ReorderTamasView(gallery: gallery)
-            }
-            .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
-                Button("OK") { toast = nil }
-            }
-            .sheet(isPresented: $gallery.showingImport) {
-                NavigationStack {
-                    FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in
-                        gallery.deviceImported(device)
-                        gallery.showingImport = false
-                    }
-                    .navigationTitle("Add a Tama")
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { gallery.showingImport = false }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -493,4 +551,5 @@ private struct RecordingBadge: View {
 
 #Preview {
     TamaGalleryView()
+        .environment(PurchaseManager())
 }

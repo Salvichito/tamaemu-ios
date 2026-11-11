@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct TamaEmuApp: App {
+    @State private var purchases = PurchaseManager()
+
     init() {
         NotificationScheduler.configure()
         BackgroundRefresh.observeAppState()
@@ -17,6 +19,7 @@ struct TamaEmuApp: App {
     var body: some Scene {
         WindowGroup {
             TamaGalleryView()
+                .environment(purchases)
         }
         .backgroundTask(.appRefresh(BackgroundRefresh.taskID)) {
             await BackgroundRefresh.run()
