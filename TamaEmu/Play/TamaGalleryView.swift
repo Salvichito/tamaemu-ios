@@ -308,7 +308,10 @@ struct TamaGalleryView: View {
                             showingPaywall = true
                         }
                     } label: {
-                        Label(purchases.isPremium ? "Add 1000 Points" : "Add 1000 Points (Premium)", systemImage: "plus.circle")
+                        Label(
+                            purchases.isPremium ? "Add 1000 Points" : "Add 1000 Points (Premium)",
+                            systemImage: purchases.isPremium ? "plus.circle" : "star.fill"
+                        )
                     }
                 }
                 Button(role: .destructive) {

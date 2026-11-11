@@ -158,17 +158,21 @@ struct SettingsView: View {
     private var premiumSection: some View {
         Section {
             if purchases.isPremium {
-                Label("Premium unlocked", systemImage: "checkmark.seal.fill")
+                Label("Premium unlocked", systemImage: "star.fill")
                     .foregroundStyle(.secondary)
             } else {
-                Button("Unlock Premium…") { showingPaywall = true }
+                Button {
+                    showingPaywall = true
+                } label: {
+                    Label("Unlock Premium…", systemImage: "star.fill")
+                }
                 Button("Restore Purchase") {
                     Task { await purchases.restore() }
                 }
             }
         } footer: {
             if !purchases.isPremium {
-                Text("Unlocks more than one Tama, Ambient Background, Live Translation, Fast-Forward, photo/video capture, and the points hacks.")
+                Text("Unlocks more than one Tama, Ambient Background, Live Translation, Fast-Forward, photo/video capture, and the points hacks. Premium helps cover the costs of running and maintaining this app, while supporting its continued development. It's completely optional, but every bit of support helps. Thank you!")
             }
         }
     }

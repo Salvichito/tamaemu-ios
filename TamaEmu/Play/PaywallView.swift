@@ -13,6 +13,18 @@ struct PaywallView: View {
         NavigationStack {
             List {
                 Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Premium", systemImage: "star.fill")
+                            .font(.title2.bold())
+                            .foregroundStyle(.orange)
+                        Text("Premium helps cover the costs of running and maintaining this app, while supporting its continued development. It's completely optional, but every bit of support helps. Thank you!")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section {
                     Label("More than one Tama", systemImage: "square.grid.2x2.fill")
                     Label("Ambient Background", systemImage: "sparkles")
                     Label("Live Translation", systemImage: "character.bubble.fill")
