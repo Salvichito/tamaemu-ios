@@ -11,7 +11,12 @@ let package = Package(
         .target(
             name: "CT7Emu",
             cSettings: [
-                .unsafeFlags(["-O3", "-fno-strict-aliasing"])
+                .unsafeFlags(["-O3", "-fno-strict-aliasing"]),
+                // t7_cpu.c's __attribute__((hot, optimize("O2"))) is a GCC-only
+                // attribute combination; Clang understands `hot` but not
+                // `optimize`, so it ignores the latter and warns. Vendored
+                // code, not modified for that reason alone (see CREDITS.md).
+                .unsafeFlags(["-Wno-unknown-attributes"])
             ]
         ),
         .testTarget(

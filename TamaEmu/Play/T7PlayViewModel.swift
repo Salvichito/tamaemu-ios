@@ -79,8 +79,8 @@ final class T7PlayViewModel {
         isLoading = true
 
         Task.detached(priority: .userInitiated) { [weak self] in
-            var stateToLoad = savedState
-            var eepromToLoad = savedEeprom
+            let stateToLoad: Data?
+            let eepromToLoad: Data?
             if let savedState, backlogSeconds > 1 {
                 let result = T7EmulatorEngine.catchUp(
                     romData: romData,
@@ -91,6 +91,9 @@ final class T7PlayViewModel {
                 )
                 stateToLoad = result.state
                 eepromToLoad = result.eeprom
+            } else {
+                stateToLoad = savedState
+                eepromToLoad = savedEeprom
             }
             guard let self else { return }
             await MainActor.run {
