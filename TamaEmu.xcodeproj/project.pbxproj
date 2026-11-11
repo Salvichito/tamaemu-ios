@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		03C9FC6E25C2432EB7465B1B /* FirmwareImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B76611C89874CD080A593F7 /* FirmwareImportView.swift */; };
 		04D4DEC462604C0A95529731 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */; };
+		05A30627DECD7987DCFE1431 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BBD0D1B0503923459126E75 /* PurchaseManager.swift */; };
 		0765E45E30A02EC237F40ADC /* V1PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 023C1973A2D15C0221C66D74 /* V1PlayViewModel.swift */; };
 		0CCA247943E19697EC426D4F /* FrameBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F4FF748837C7960C6F8AB7 /* FrameBuffer.swift */; };
 		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
@@ -47,6 +48,7 @@
 		8FA58851B1A7D70721182E97 /* T7PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E2ABE30C3A16622D447D9B /* T7PlayViewModel.swift */; };
 		9A728C37BBD35895FD2E3205 /* TamaPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */; };
 		9C2ABB0AE0ED1B8AA21A44CF /* P1ScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0166CB9A3B0725D2C7861438 /* P1ScreenView.swift */; };
+		A3D4EAF7B72EA340385B50F1 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B463E74FCC99EE8258DD71F /* PaywallView.swift */; };
 		AE6186A0722B2D81648CEF71 /* CloudTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */; };
 		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
 		BA5FDB4EA0ED1C08A401C2FA /* V1EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D45A04487E1B1C19010476 /* V1EmulatorEngine.swift */; };
@@ -101,6 +103,7 @@
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
 		1122334455667788990AABBC /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		14B814DDD09245609E359714 /* TamaEmu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaEmu.entitlements; sourceTree = "<group>"; };
+		1BBD0D1B0503923459126E75 /* PurchaseManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TamaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2267519E09184C139C7BAC4C /* ButtonPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonPad.swift; sourceTree = "<group>"; };
 		291654CFB51D6F793B885E33 /* GalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryViewModel.swift; sourceTree = "<group>"; };
@@ -129,6 +132,7 @@
 		76E2ABE30C3A16622D447D9B /* T7PlayViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = T7PlayViewModel.swift; sourceTree = "<group>"; };
 		7B76611C89874CD080A593F7 /* FirmwareImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareImportView.swift; sourceTree = "<group>"; };
 		84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRecorder.swift; sourceTree = "<group>"; };
+		8B463E74FCC99EE8258DD71F /* PaywallView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorEngine.swift; sourceTree = "<group>"; };
 		9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BlurredLCDBackground.swift; path = BlurredLCDBackground.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDScreenEffect.swift; sourceTree = "<group>"; };
@@ -138,6 +142,7 @@
 		ABE647F4A560420EAE69A61E /* SavePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavePaths.swift; sourceTree = "<group>"; };
 		AE4595FCF428E95973D802C6 /* TamaCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TamaCore; path = Packages/TamaCore; sourceTree = SOURCE_ROOT; };
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
+		B13BA0BC3698C849674338E2 /* TamaEmu.storekit */ = {isa = PBXFileReference; includeInIndex = 1; path = TamaEmu.storekit; sourceTree = "<group>"; };
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenImagePrep.swift; sourceTree = "<group>"; };
 		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
@@ -228,6 +233,7 @@
 				DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */,
 				42D45A04487E1B1C19010476 /* V1EmulatorEngine.swift */,
 				51134BD9CBB7FA2AC0B5BD6C /* T7EmulatorEngine.swift */,
+				1BBD0D1B0503923459126E75 /* PurchaseManager.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -280,6 +286,7 @@
 				DE104E757C15A22698966789 /* Play */,
 				8899001122334455AABBCC22 /* Settings */,
 				8E9FAE9C242B6BB117C6B454 /* Resources */,
+				B13BA0BC3698C849674338E2 /* TamaEmu.storekit */,
 			);
 			path = TamaEmu;
 			sourceTree = "<group>";
@@ -307,6 +314,7 @@
 				76E2ABE30C3A16622D447D9B /* T7PlayViewModel.swift */,
 				D07A735B64EEDCE8C20FB0B1 /* T7PageView.swift */,
 				68590EC05C8F0DC1D4C3BE24 /* T7ScreenView.swift */,
+				8B463E74FCC99EE8258DD71F /* PaywallView.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -475,6 +483,8 @@
 				8FA58851B1A7D70721182E97 /* T7PlayViewModel.swift in Sources */,
 				6DEF195F7215573C55FFE139 /* T7PageView.swift in Sources */,
 				D57313C8EEDE13289B664DB7 /* T7ScreenView.swift in Sources */,
+				05A30627DECD7987DCFE1431 /* PurchaseManager.swift in Sources */,
+				A3D4EAF7B72EA340385B50F1 /* PaywallView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

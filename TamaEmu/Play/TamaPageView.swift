@@ -15,11 +15,20 @@ struct TamaPageView: View {
     let viewModel: PlayViewModel
     let ambientBackgroundEnabled: Bool
 
+    @Environment(PurchaseManager.self) private var purchases
+    @State private var showingPaywall = false
+
     /// Set once a press has been held long enough to count as "hold" rather
     /// than "tap" — nil while no finger is down. Distinguishing the two
     /// needs a delay before committing to fast-forward, since a tap starts
     /// out looking identical to the first moment of a hold.
     @State private var holdTask: Task<Void, Never>?
+
+    /// Set when a hold was long enough to fire but got turned into a
+    /// paywall prompt instead of fast-forward (free tier) — endPress()
+    /// checks this so releasing the hold doesn't also toggle pause, which
+    /// would otherwise happen since isFastForwarding never went true.
+    @State private var heldForPaywall = false
 
     /// How long a press must be held before it counts as "hold" instead of
     /// "tap" — long enough that a normal tap-to-pause never triggers it,
@@ -28,6 +37,9 @@ struct TamaPageView: View {
 
     var body: some View {
         pageContent
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView()
+            }
     }
 
     private var pageContent: some View {
@@ -135,20 +147,29 @@ struct TamaPageView: View {
         holdTask = Task {
             try? await Task.sleep(for: Self.holdThreshold)
             guard !Task.isCancelled else { return }
+            guard purchases.isPremium else {
+                heldForPaywall = true
+                showingPaywall = true
+                return
+            }
             viewModel.beginFastForward()
         }
     }
 
     /// Finger up (or the gesture otherwise ends). If the hold timer above
-    /// already fired, this was a hold — end fast-forward. Otherwise it was
-    /// a plain tap — toggle pause, same as before this gesture existed.
+    /// already fired, this was a hold — end fast-forward. A hold that
+    /// surfaced the paywall instead (free tier) isn't a tap either, so it
+    /// skips the pause toggle too. Otherwise it was a plain tap — toggle
+    /// pause, same as before this gesture existed.
     private func endPress() {
         let wasFastForwarding = viewModel.isFastForwarding
+        let wasHeldForPaywall = heldForPaywall
+        heldForPaywall = false
         holdTask?.cancel()
         holdTask = nil
         if wasFastForwarding {
             viewModel.endFastForward()
-        } else {
+        } else if !wasHeldForPaywall {
             viewModel.togglePause()
         }
     }
