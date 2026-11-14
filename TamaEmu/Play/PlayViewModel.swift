@@ -12,7 +12,7 @@ import TamaCore
 /// selected.
 @MainActor
 @Observable
-final class PlayViewModel {
+final class PlayViewModel: SaveBackupHost {
     let selectedDevice: TamaDevice
     private(set) var lcdImage: CGImage?
     /// The screen's ambient glow color, recomputed only when `lcdImage`
@@ -56,6 +56,14 @@ final class PlayViewModel {
     /// checks this before applying its result, so it discards itself
     /// instead of resurrecting a stale engine.
     private var startGeneration = 0
+    /// Tells the in-flight load (if any) to stop its catch-up pass right
+    /// away rather than run out its budget — set alongside every
+    /// startGeneration bump that supersedes it.
+    private var loadCancel: CancelFlag?
+    /// Whether the live engine currently holds this device's EngineGate
+    /// (handed over by the load task that built it) — released once it has
+    /// been stopped and saved.
+    private var holdsGate = false
 
     /// Does NOT start the engine — construction is cheap and side-effect
     /// free (just a cached widget snapshot, if any) so the gallery can
@@ -104,7 +112,7 @@ final class PlayViewModel {
             // now before bringing the engine back — otherwise catch-up
             // would measure the entire paused interval as a backlog to
             // fast-forward through, the opposite of what pausing means.
-            SavePaths(device: selectedDevice).lastSavedAt = Date()
+            SavePaths(device: selectedDevice).markSyncedNow()
             startEngine()
         }
     }
@@ -114,6 +122,8 @@ final class PlayViewModel {
     /// scenePhase == .background for whichever page is currently visible.
     func stopEngine() {
         startGeneration += 1  // invalidates any startEngine() load still in flight
+        loadCancel?.cancel()
+        loadCancel = nil
         displayTimer?.invalidate()
         displayTimer = nil
         isFastForwarding = false
@@ -127,8 +137,19 @@ final class PlayViewModel {
         ) {
             WidgetSharedState.publish(image: image, device: selectedDevice)
         }
-        engine?.save()
+        if let engine {
+            engine.save()
+            // Rides along with a save that was happening anyway -- at most
+            // once an hour (see SavePaths.automaticBackupInterval), and
+            // still inside the gate so nothing else can be half-way
+            // through writing these files.
+            SavePaths(device: selectedDevice).makeBackup(reason: .automatic)
+        }
         engine = nil
+        if holdsGate {
+            holdsGate = false
+            EngineGate.gate(for: selectedDevice).release()
+        }
     }
 
     /// Call when this page becomes visible (swiped to) or on
@@ -189,7 +210,14 @@ final class PlayViewModel {
     /// deletes everything.
     func restartTama() {
         guard engine != nil else { return }
-        pauseEngine { $0.resetCPU() }
+        let paths = SavePaths(device: selectedDevice)
+        pauseEngine { engine in
+            // A restart loses the Tama's exact position and clock for
+            // good -- keep a way back to the moment just before it.
+            engine.save()
+            paths.makeBackup(reason: .beforeRestart)
+            engine.resetCPU()
+        }
     }
 
     /// Runs an arbitrary action on the stopped engine (e.g. `setClock`)
@@ -200,20 +228,48 @@ final class PlayViewModel {
         pauseEngine(action)
     }
 
-    /// Path to this device's live flash/save image, if any exists yet —
-    /// for the Settings screen's export action (disabled otherwise).
-    var exportableSaveURL: URL? {
+    /// Path to this device's live flash/save image, if any exists yet.
+    private var liveSaveURL: URL? {
         let path = SavePaths(device: selectedDevice).liveFlashPath
         return FileManager.default.fileExists(atPath: path.path) ? path : nil
     }
 
-    /// Briefly stops and restarts the engine around `save()` so an export
+    /// Whether Settings' export action has anything to export -- a running
+    /// engine always does (prepareExportURL() flushes it to disk first).
+    var canExportSave: Bool {
+        engine != nil || liveSaveURL != nil
+    }
+
+    /// A *copy* of the save file, for the system's "save to Files" sheet.
+    ///
+    /// Never hand that sheet the live file itself: it moves whatever it's
+    /// given out of the app. That is what this used to do, and it left the
+    /// Tama without its save file on disk -- so the next time it was
+    /// loaded (swiping away and back, reopening the app) it fell back to
+    /// the untouched firmware and started over. Only "sometimes", because
+    /// the file reappeared on its own whenever the firmware happened to
+    /// write a new in-game save before then.
+    ///
+    /// Briefly stops and restarts the engine around `save()` so the export
     /// reflects state current to the moment of export, not just the last
-    /// backgrounding — `save()` itself isn't safe to call while the
+    /// backgrounding -- `save()` itself isn't safe to call while the
     /// emulator thread might still be stepping (see `EmulatorEngine.save`).
     func prepareExportURL() -> URL? {
         if engine != nil { pauseEngine() }
-        return exportableSaveURL
+        guard let live = liveSaveURL else { return nil }
+        let fm = FileManager.default
+        let folder = fm.temporaryDirectory.appendingPathComponent("SaveExport", isDirectory: true)
+        try? fm.removeItem(at: folder)
+        let stamp = Date().formatted(.iso8601.year().month().day().dateSeparator(.dash))
+        let name = "\(selectedDevice.title) \(stamp)".replacingOccurrences(of: "/", with: "-")
+        let copy = folder.appendingPathComponent(name).appendingPathExtension("sav")
+        do {
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+            try fm.copyItem(at: live, to: copy)
+            return copy
+        } catch {
+            return nil
+        }
     }
 
     /// Stops the engine, runs an optional action on it (e.g. a soft
@@ -239,12 +295,17 @@ final class PlayViewModel {
             throw CocoaError(.fileReadNoPermission)
         }
         defer { url.stopAccessingSecurityScopedResource() }
+        // Read the whole file before touching anything, so a file that
+        // can't be read leaves the current Tama exactly as it was.
+        let imported = try Data(contentsOf: url)
+        // The engine has to be fully stopped *before* the file is
+        // replaced: stopping saves, and a save made afterwards could write
+        // the old Tama's data straight back over the imported file.
+        stopEngine()
         let paths = SavePaths(device: selectedDevice)
         try paths.ensureDirectoriesExist()
-        if FileManager.default.fileExists(atPath: paths.liveFlashPath.path) {
-            try FileManager.default.removeItem(at: paths.liveFlashPath)
-        }
-        try FileManager.default.copyItem(at: url, to: paths.liveFlashPath)
+        paths.makeBackup(reason: .beforeImport)
+        try imported.write(to: paths.liveFlashPath, options: .atomic)
         paths.deleteStateOnly()
         // Replacing the save implies resuming play with it, regardless of
         // whatever pause state this Tama was in before.
@@ -252,7 +313,28 @@ final class PlayViewModel {
             isPaused = false
             DevicePauseState.setPaused(false, for: selectedDevice)
         }
-        paths.lastSavedAt = Date()
+        paths.markSyncedNow()
+        startEngine()
+    }
+
+    // MARK: - Backups
+
+    func backupNow() {
+        if engine != nil { pauseEngine() }
+        SavePaths(device: selectedDevice).makeBackup(reason: .manual)
+    }
+
+    func restoreBackup(_ backup: SaveBackup) throws {
+        stopEngine()
+        try SavePaths(device: selectedDevice).restore(backup)
+        // The backup's own last screen, straight away, rather than the
+        // replaced Tama's lingering until the engine has loaded.
+        setLCDImage(WidgetSharedState.loadLastFrameImage(for: selectedDevice))
+        // Same as importing a save: restoring implies playing it.
+        if isPaused {
+            isPaused = false
+            DevicePauseState.setPaused(false, for: selectedDevice)
+        }
         startEngine()
     }
 
@@ -290,9 +372,23 @@ final class PlayViewModel {
         let device = selectedDevice
         let paths = SavePaths(device: device)
         let isPausedNow = isPaused
+        let cancel = CancelFlag()
+        loadCancel = cancel
+        let gate = EngineGate.gate(for: device)
         NotificationScheduler.requestAuthorizationIfNeeded()
 
         Task.detached(priority: .userInitiated) { [weak self] in
+            // Wait for anything else still touching this Tama's save — a
+            // background refresh pass caught mid-flight by the app being
+            // opened, or a previous load of this same page that was
+            // superseded and is still saving its progress. Both stop
+            // within moments once they notice, so this is normally
+            // instant; the timeout only exists so a stuck holder can't
+            // leave this page loading forever.
+            let holdsGate = gate.acquire(timeout: 15)
+            @Sendable func releaseGate() { if holdsGate { gate.release() } }
+
+            guard !cancel.isCancelled else { releaseGate(); return }
             let result = Result {
                 try EmulatorEngine(
                     device: device,
@@ -306,36 +402,41 @@ final class PlayViewModel {
                     // noise. A call during live play afterwards still
                     // notifies normally (see checkCallDetection).
                     notifyOnCatchUpCalls: false,
+                    shouldAbort: { cancel.isCancelled },
                     onCallDetected: {
                         NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
                     }
                 )
             }
-            guard let self else { return }
             switch result {
             case .success(let newEngine):
                 // A single pass only gets catchUpWallClockBudget's worth of
-                // compute, so a gap bigger than that leaves a backlog (see
-                // EmulatorEngine.hasCatchUpBacklog) — keep running further
-                // passes, still off the main thread, for as long as this
-                // page is the one actually on screen. Without this, a big
-                // backlog used to only get chipped away at one visit at a
+                // compute, so a gap bigger than that leaves time still owed
+                // (see EmulatorEngine.canContinueCatchUp) — keep running
+                // further passes, still off the main thread, for as long as
+                // this page is the one actually on screen. Without this, a
+                // big gap used to only get chipped away at one visit at a
                 // time, needing several swipes away and back to finish.
-                while newEngine.hasCatchUpBacklog {
-                    let stillCurrent = await MainActor.run { self.startGeneration == generation }
-                    guard stillCurrent else { break }
+                while newEngine.canContinueCatchUp, !cancel.isCancelled {
                     newEngine.continueCatchUp(wallClockBudget: Self.catchUpWallClockBudget)
+                }
+                guard !cancel.isCancelled, let self else {
+                    // Superseded while this was loading (stopped, paused,
+                    // restarted) — this engine never started running, so
+                    // just persist whatever catch-up progress it made and
+                    // let it go. Still inside the gate, so whoever loads
+                    // this Tama next sees this save, not a half-written one.
+                    newEngine.save()
+                    releaseGate()
+                    return
                 }
                 let image = LCDImageBuilder.makeImage(
                     from: newEngine.renderCurrentFrame(), width: 128, height: 128
                 )
                 await MainActor.run {
                     guard self.startGeneration == generation else {
-                        // Superseded while this was loading (stopped,
-                        // paused, restarted) — this engine never started
-                        // running, so just persist whatever catch-up
-                        // progress it made and let it go.
                         newEngine.save()
+                        releaseGate()
                         return
                     }
                     if let image {
@@ -348,11 +449,16 @@ final class PlayViewModel {
                     }
                     newEngine.start()
                     self.engine = newEngine
+                    // The live engine keeps the gate from here; stopEngine()
+                    // gives it back once the engine is stopped and saved.
+                    self.holdsGate = holdsGate
                     self.errorMessage = nil
                     self.isLoading = false
                     self.beginDisplayTimer()
                 }
             case .failure(let error):
+                releaseGate()
+                guard let self else { return }
                 await MainActor.run {
                     guard self.startGeneration == generation else { return }
                     self.errorMessage = error.localizedDescription
@@ -403,5 +509,12 @@ final class PlayViewModel {
     func dismissTranslation() {
         translatedText = nil
         translationID = nil
+    }
+}
+
+extension PlayViewModel: ScreenRecordable {
+    func recordingFrame(side: CGFloat) -> CGImage? {
+        guard let lcdImage else { return nil }
+        return renderLCDSnapshot(image: lcdImage, side: side)
     }
 }

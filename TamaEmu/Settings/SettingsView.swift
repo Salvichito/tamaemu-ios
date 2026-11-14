@@ -186,8 +186,11 @@ struct SettingsView: View {
                 exportURL = viewModel.prepareExportURL()
                 if exportURL != nil { showingSaveExporter = true }
             }
-            .disabled(viewModel.exportableSaveURL == nil)
+            .disabled(!viewModel.canExportSave)
             Button("Import save file…") { showingSaveImporter = true }
+            NavigationLink("Backups") {
+                BackupListView(device: device, host: viewModel) { dismiss() }
+            }
             Button("Restart (soft reset)…") { showingRestartConfirm = true }
             Button("Remove this device's data…", role: .destructive) {
                 showingRemoveConfirm = true
@@ -195,7 +198,7 @@ struct SettingsView: View {
         } header: {
             Text("Save")
         } footer: {
-            Text("Add more Tamas from the \"+\" button in the gallery, or re-import this one's firmware below.")
+            Text("A backup of this Tama is kept automatically, about once an hour while you play. Add more Tamas from the \"+\" button in the gallery, or re-import this one's firmware below.")
         }
 
         Section {
@@ -391,5 +394,106 @@ struct SettingsView: View {
         let trimmed = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         KeychainStore.write(trimmed)
+    }
+}
+
+// MARK: - Backups
+
+/// The automatic (and by-hand) backups of one Tama, newest first, with a
+/// way to go back to any of them. Family-agnostic -- pushed from Settings
+/// for a color Tama, shown in its own sheet from the gallery menu for the
+/// families that have no Settings screen.
+struct BackupListView: View {
+    let device: TamaDevice
+    let host: SaveBackupHost
+    /// Called after a successful restore, to get out of the way and back
+    /// to the Tama.
+    var onRestored: () -> Void
+
+    @State private var backups: [SaveBackup] = []
+    @State private var pendingRestore: SaveBackup?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        List {
+            Section {
+                Button("Back Up Now") {
+                    host.backupNow()
+                    reload()
+                }
+            } footer: {
+                Text("TamaEmu keeps a backup of \(device.title) automatically, about once an hour while you play, and before anything that replaces its save. The 3 most recent are kept, plus one per day for the last week.")
+            }
+
+            Section {
+                if backups.isEmpty {
+                    Text("No backups yet")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(backups) { backup in
+                    Button {
+                        pendingRestore = backup
+                    } label: {
+                        BackupRow(backup: backup)
+                    }
+                    .tint(.primary)
+                }
+            } header: {
+                if !backups.isEmpty { Text("Restore") }
+            }
+        }
+        .navigationTitle("Backups")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: reload)
+        .confirmationDialog(
+            "Restore this backup?",
+            isPresented: Binding(get: { pendingRestore != nil }, set: { if !$0 { pendingRestore = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingRestore
+        ) { backup in
+            Button("Restore") { restore(backup) }
+            Button("Cancel", role: .cancel) {}
+        } message: { backup in
+            Text("\(device.title) goes back to exactly how it was \(backup.createdAt.formatted(.relative(presentation: .named))), including its clock. How it is right now is backed up first, so you can undo this.")
+        }
+        .alert(errorMessage ?? "", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("OK") { errorMessage = nil }
+        }
+    }
+
+    private func reload() {
+        backups = SavePaths(device: device).backups()
+    }
+
+    private func restore(_ backup: SaveBackup) {
+        do {
+            try host.restoreBackup(backup)
+            onRestored()
+        } catch {
+            errorMessage = "Couldn't restore this backup. \(error.localizedDescription)"
+            reload()
+        }
+    }
+}
+
+private struct BackupRow: View {
+    let backup: SaveBackup
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let url = backup.frameURL, let image = UIImage(contentsOfFile: url.path) {
+                Image(uiImage: image)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(backup.createdAt.formatted(date: .abbreviated, time: .shortened))
+                Text("\(backup.reason.label) · \(backup.createdAt.formatted(.relative(presentation: .named)))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }

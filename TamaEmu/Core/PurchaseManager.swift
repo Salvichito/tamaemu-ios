@@ -1,10 +1,11 @@
 import Observation
 import StoreKit
+import WidgetKit
 
 /// Tracks the single one-time "Unlock Premium" purchase that gates every
 /// paid feature (multi-tama, ambient background, live translation,
-/// fast-forward, media capture, points hacks) — there's no tiering, so one
-/// non-consumable product and one `isPremium` flag is all this needs.
+/// fast-forward, media capture, points hacks, widgets) — there's no tiering,
+/// so one non-consumable product and one `isPremium` flag is all this needs.
 ///
 /// Injected app-wide via `.environment(_:)` from TamaEmuApp, same as any
 /// other @Observable read from `@Environment` rather than passed down by
@@ -81,7 +82,7 @@ final class PurchaseManager {
 
     private func handle(_ result: VerificationResult<Transaction>) async {
         guard case .verified(let transaction) = result, transaction.productID == Self.premiumProductID else { return }
-        isPremium = true
+        setPremium(true)
         await transaction.finish()
     }
 
@@ -89,10 +90,21 @@ final class PurchaseManager {
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
             if transaction.productID == Self.premiumProductID {
-                isPremium = true
+                setPremium(true)
                 return
             }
         }
-        isPremium = false
+        setPremium(false)
+    }
+
+    /// Mirrors the flag into the App Group suite and kicks both widgets to
+    /// reload immediately — without the reload a widget already on the
+    /// home/lock screen wouldn't pick up a purchase or restore until its
+    /// next natural refresh, up to ~30min out.
+    private func setPremium(_ value: Bool) {
+        isPremium = value
+        WidgetSharedState.isPremium = value
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetSharedState.widgetKind)
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetSharedState.neglectWidgetKind)
     }
 }

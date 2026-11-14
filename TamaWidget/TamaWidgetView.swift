@@ -10,7 +10,15 @@ struct TamaWidgetView: View {
     var body: some View {
         GeometryReader { geo in
             Group {
-                if let image = entry.image {
+                if !entry.isPremium {
+                    VStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.title2)
+                        Text("Premium")
+                            .font(.caption2.bold())
+                    }
+                    .foregroundStyle(.secondary)
+                } else if let image = entry.image {
                     Image(uiImage: image)
                         .resizable()
                         .interpolation(.none)
@@ -37,7 +45,7 @@ struct TamaWidgetView: View {
                 // legible over whatever colors the LCD frame underneath
                 // happens to have, unlike the lock screen widget's flat
                 // system tint.
-                if let appClosedAt = entry.appClosedAt, entry.image != nil {
+                if entry.isPremium, let appClosedAt = entry.appClosedAt, entry.image != nil {
                     Text(WidgetSharedState.formatNeglectDuration(max(0, entry.date.timeIntervalSince(appClosedAt))))
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)

@@ -31,6 +31,7 @@ struct PaywallView: View {
                     Label("Fast-Forward", systemImage: "forward.fill")
                     Label("Photos & Videos", systemImage: "camera.fill")
                     Label("Points Hacks", systemImage: "plus.circle.fill")
+                    Label("Widgets", systemImage: "square.text.square.fill")
                 } header: {
                     Text("Unlocks")
                 }

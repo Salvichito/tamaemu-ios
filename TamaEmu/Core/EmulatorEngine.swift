@@ -59,31 +59,58 @@ final class EmulatorEngine {
         return fastForwardMultiplier
     }
 
-    /// How many seconds of real elapsed time catch-up has NOT yet applied
-    /// to `emu_secs` — set once, right after `init()`'s catch-up pass, and
-    /// unchanged for the rest of this engine's life (normal real-time play
-    /// keeps `emu_secs` and wall-clock moving in lockstep, so it neither
-    /// grows nor shrinks on its own). `save()` subtracts this from `Date()`
-    /// when recording `lastSavedAt`, so a catch-up pass that couldn't
-    /// finish (wall-clock budget, or a deliberately low catch-up cap)
-    /// doesn't get forgotten — the shortfall carries into the next catch-up
-    /// attempt instead of silently vanishing.
-    private var catchUpBacklog: TimeInterval = 0
+    /// Where this Tama's clock stands against real time, as one fixed
+    /// point: "when the core's own emulated-time counter (`emu_secs`) read
+    /// `anchorEmuSecs`, the real wall-clock time was `anchorWall`". From
+    /// that, the real moment the state is caught up to right now is always
+    /// just `anchorWall + (emu_secs - anchorEmuSecs)` (see
+    /// `stateWallTime`), and the time still owed is "now" minus that.
+    ///
+    /// This replaces separately tallying up every way time could be lost
+    /// (a catch-up pass cut short by its budget, a stalled frame, a
+    /// background pass that iOS suspended half-way and resumed hours
+    /// later). Each of those tallies was a place to get it wrong, and
+    /// several did: a pass computed its target from the time it *started*,
+    /// so anything that delayed its save -- most of all iOS freezing the
+    /// process mid-pass -- was recorded as "already caught up" and the
+    /// Tama's clock fell behind by exactly that long. Deriving it from how
+    /// far the core actually advanced can't drift that way: whatever
+    /// didn't get emulated simply stays owed.
+    private var anchorWall: Date
+    private var anchorEmuSecs: Double
 
-    /// Whether a catch-up pass stopped on its wall-clock budget before
-    /// closing the whole gap — PlayViewModel uses this to keep running
-    /// more budgeted passes (continueCatchUp) while this page stays
-    /// visible, rather than leaving the rest for the next time this
-    /// engine is loaded.
-    var hasCatchUpBacklog: Bool { catchUpBacklog > 0 }
+    /// The real wall-clock moment this state is caught up to.
+    private var stateWallTime: Date {
+        anchorWall.addingTimeInterval(emu.pointee.emu_secs - anchorEmuSecs)
+    }
 
-    /// Real seconds lost to a large (>250ms) frame overrun during live
-    /// play — e.g. a genuine stall, not routine scheduling jitter — that
-    /// `runLoop()` deliberately did NOT correct for in the moment (see its
-    /// own comment for why). Written only from the emulator thread, read
-    /// only from `save()` after `stop()` has joined that thread, so there's
-    /// no concurrent access despite no lock guarding it.
-    private var liveDriftBacklog: TimeInterval = 0
+    /// Real seconds this Tama is still behind right now. Only meaningful
+    /// while the emulator thread isn't running (it reads `emu`).
+    private var owedSeconds: TimeInterval {
+        max(0, Date().timeIntervalSince(stateWallTime))
+    }
+
+    /// Declares the Tama's clock correct as of this instant -- nothing
+    /// owed. For anything that deliberately breaks the timeline: the
+    /// player setting the clock, a restart, a recovery reset.
+    private func reanchorToNow() {
+        anchorWall = Date()
+        anchorEmuSecs = emu.pointee.emu_secs
+    }
+
+    /// Whether another budgeted catch-up pass would make progress --
+    /// PlayViewModel keeps running passes (continueCatchUp) while this
+    /// page stays visible, rather than leaving the rest for the next time
+    /// this engine is loaded. False when catch-up is switched off in
+    /// Settings: the gap then just stays owed (as it always has) instead
+    /// of being retried in a loop that can never shrink it.
+    var canContinueCatchUp: Bool {
+        owedSeconds > 0.5 && AppSettings.catchUpCapHours > 0
+    }
+
+    /// Polled between batches of steps during catch-up; returning true
+    /// stops the pass early. Whatever it didn't reach stays owed.
+    private let shouldAbort: (() -> Bool)?
 
     private let callDetector = CallDetector()
     /// Set by whoever owns this engine to be told when the Tamagotchi
@@ -125,13 +152,14 @@ final class EmulatorEngine {
     /// here only matters if some future caller constructs this directly
     /// on a thread that *does* need to stay responsive. Any gap too large
     /// to fully catch up in the given budget isn't lost either way (see
-    /// catchUpBacklog) — it's picked up gradually over the next attempt.
+    /// anchorWall) — it's picked up gradually over the next attempt.
     init(
         device: TamaDevice,
         savePaths: SavePaths,
         catchUpWallClockBudget: TimeInterval = 1.0,
         isPaused: Bool = false,
         notifyOnCatchUpCalls: Bool = true,
+        shouldAbort: (() -> Bool)? = nil,
         onCallDetected: (() -> Void)? = nil
     ) throws {
         guard let profile = device_find(device.id) else {
@@ -141,6 +169,7 @@ final class EmulatorEngine {
         self.savePaths = savePaths
         self.frameStore = FrameStore(width: Int(PANEL_W), height: Int(PANEL_H))
         self.notifyOnCatchUpCalls = notifyOnCatchUpCalls
+        self.shouldAbort = shouldAbort
         self.onCallDetected = onCallDetected
 
         // Don't assume the caller already created these — state_save/the
@@ -182,17 +211,23 @@ final class EmulatorEngine {
                 state_load(e, base, bid, &why, why.count)
             }
         }
+        let now = Date()
+        anchorEmuSecs = e.pointee.emu_secs
         if result == STATE_LOADED {
-            // A paused Tama's clock is frozen on purpose — PlayViewModel
-            // keeps lastSavedAt pinned to "now" on every save while paused
-            // (see stopEngine()), so there's never a backlog to apply here;
-            // skipping the call outright is just the explicit version of
-            // that same intent, in case something else ever sets a stale
-            // lastSavedAt while paused.
-            if !isPaused, let lastSavedAt = savePaths.lastSavedAt {
-                catchUp(seconds: Date().timeIntervalSince(lastSavedAt), wallClockBudget: catchUpWallClockBudget)
+            // A paused Tama's clock is frozen on purpose: nothing is owed
+            // for the time it sat paused, so it's simply current as of now.
+            // Clamped to "now" either way -- a state can legitimately be a
+            // little ahead of real time (tap-and-hold fast-forward), which
+            // is carried as-is so the next stretch away absorbs it, but
+            // anything further ahead than that is a changed device clock,
+            // not something to wait out.
+            let caughtUpTo = isPaused ? now : (savePaths.wallTime(forEmuSecs: e.pointee.emu_secs) ?? now)
+            anchorWall = caughtUpTo.timeIntervalSince(now) > 3600 ? now : caughtUpTo
+            if !isPaused {
+                catchUp(wallClockBudget: catchUpWallClockBudget)
             }
         } else {
+            anchorWall = now
             cpu_reset(e)
         }
         applySettings()
@@ -221,6 +256,7 @@ final class EmulatorEngine {
     /// stopped (same precondition as save()).
     func resetCPU() {
         cpu_reset(emu)
+        reanchorToNow()
     }
 
     /// Jumps the firmware's own RTC registers straight to a wall-clock
@@ -239,6 +275,10 @@ final class EmulatorEngine {
         periph_write8(emu, 0x301910, bcd(second))
         periph_write8(emu, 0x301914, bcd(minute))
         periph_write8(emu, 0x301918, bcd(hour))
+        // The player just told us what time it is -- whatever was still
+        // owed from before is moot, and replaying it on the next resume
+        // would push the clock they just set ahead by that much.
+        reanchorToNow()
         return true
     }
 
@@ -260,19 +300,21 @@ final class EmulatorEngine {
         "4u-plain": 5220,     // confirmed 260→280 after earning 20
     ]
 
-    /// Adds to the points/wallet total for a device in `pointsByteOffset`;
-    /// a no-op (returns `nil`) for anything not yet mapped there. Call
+    /// Sets the points/wallet total for a device in `pointsByteOffset`;
+    /// a no-op (returns `nil`) for anything not yet mapped there. Clamped
+    /// to what the field can actually hold (0...65535) regardless of what
+    /// the caller asks for — the UI additionally limits entry to 5 digits
+    /// (0...99999), but the real ceiling is the 16-bit field itself. Call
     /// only while the engine's thread is stopped (same precondition as
     /// `save()`).
     @discardableResult
-    func addPoints(_ amount: Int) -> Int? {
+    func setPoints(_ value: Int) -> Int? {
         guard let byteOffset = Self.pointsByteOffset[device.id] else { return nil }
         let ptr = UnsafeMutableRawPointer(emu).advanced(by: byteOffset).assumingMemoryBound(to: UInt8.self)
-        let current = Int(ptr[0]) | (Int(ptr[1]) << 8)
-        let updated = max(0, min(65535, current + amount))
-        ptr[0] = UInt8(updated & 0xFF)
-        ptr[1] = UInt8((updated >> 8) & 0xFF)
-        return updated
+        let clamped = max(0, min(65535, value))
+        ptr[0] = UInt8(clamped & 0xFF)
+        ptr[1] = UInt8((clamped >> 8) & 0xFF)
+        return clamped
     }
 
     deinit {
@@ -343,6 +385,25 @@ final class EmulatorEngine {
     /// flash, the live flash image too. Call only after stop() has
     /// returned — never while the emulator thread might still be running.
     func save() {
+        // Flash first, snapshot second. The snapshot records a checksum of
+        // the flash it belongs with and is refused on the next load if the
+        // file on disk doesn't match (the Tama then restarts from its
+        // flash). Two files can't be written in one indivisible step, so
+        // if the app is killed between them, this order leaves the newest
+        // flash with an older snapshot -- a restart that still has the
+        // latest in-game save -- rather than the other way round.
+        //
+        // Also written whenever the file is simply missing, not only when
+        // the firmware has changed it: with no file, the next load falls
+        // back to the pristine firmware, which no snapshot matches.
+        if let rom = emu.pointee.rom,
+           emu.pointee.flash_dirty || !FileManager.default.fileExists(atPath: savePaths.liveFlashPath.path) {
+            let romSize = Int(emu.pointee.dev.rom_size)
+            let data = Data(bytes: rom, count: romSize)
+            if (try? data.write(to: savePaths.liveFlashPath, options: .atomic)) != nil {
+                emu.pointee.flash_dirty = false
+            }
+        }
         var why = [CChar](repeating: 0, count: 256)
         let saved = savePaths.stateBasePath.path.withCString { base in
             buildID.withCString { bid in
@@ -350,17 +411,14 @@ final class EmulatorEngine {
             }
         }
         if saved != 0 {
-            savePaths.lastSavedAt = Date().addingTimeInterval(-(catchUpBacklog + liveDriftBacklog))
-            // Folded into lastSavedAt above — zero it so a second save()
-            // on this same (still-running) engine instance, e.g. from
-            // restartTama()/prepareExportURL(), doesn't subtract it again.
-            liveDriftBacklog = 0
-        }
-        if emu.pointee.flash_dirty, let rom = emu.pointee.rom {
-            let romSize = Int(emu.pointee.dev.rom_size)
-            let data = Data(bytes: rom, count: romSize)
-            try? data.write(to: savePaths.liveFlashPath, options: .atomic)
-            emu.pointee.flash_dirty = false
+            // Both describe the same thing -- the real moment this exact
+            // state is caught up to -- derived from how far the core
+            // actually ran, never from "now". The anchor is what the next
+            // load trusts (see SavePaths.clockAnchor for why);
+            // lastSavedAt is kept in step for anything still reading it.
+            let caughtUpTo = stateWallTime
+            savePaths.clockAnchor = SavePaths.ClockAnchor(emuSecs: emu.pointee.emu_secs, wall: caughtUpTo)
+            savePaths.lastSavedAt = caughtUpTo
         }
     }
 
@@ -407,44 +465,37 @@ final class EmulatorEngine {
     /// millions of instructions) since BGAppRefreshTask has a strict
     /// execution budget — stopping early here just means less of the gap
     /// got caught up, not a crash or lost progress.
-    private func catchUp(seconds: TimeInterval, wallClockBudget: TimeInterval = 5.0) {
-        let requestedSeconds = max(seconds, 0)
-        let capSeconds = AppSettings.catchUpCapHours * 3600
-        let cappedSeconds = min(requestedSeconds, capSeconds)
-        guard cappedSeconds > 0 else {
-            // Nothing attempted this pass — e.g. catch-up is turned off, or
-            // there's genuinely nothing to catch up. Whatever gap exists
-            // stays owed in full, rather than being reset to zero.
-            catchUpBacklog = requestedSeconds
-            return
-        }
+    private func catchUp(wallClockBudget: TimeInterval = 5.0) {
+        // Whatever is owed right now, measured fresh -- not handed in by
+        // the caller -- so there's no stale figure to go wrong. Anything
+        // beyond the cap, or beyond what this pass's budget reaches, just
+        // stays owed for the next pass.
+        let cappedSeconds = min(owedSeconds, AppSettings.catchUpCapHours * 3600)
+        guard cappedSeconds > 0 else { return }
         let startSecs = emu.pointee.emu_secs
         let targetSecs = startSecs + cappedSeconds
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(wallClockBudget * 1_000_000_000)
-        var stepsSinceDeadlineCheck = 0
         // Most of a long gap is spent halted (device asleep, nothing to
         // do), where cpu_step would otherwise pace itself at a fixed 16
         // cycles per call — fine for live play, but during an unpaced
         // catch-up that per-call overhead (not actual work) dominates,
-        // and scales with the device's own clock speed: a faster osc3_hz
-        // needs proportionally more 16-cycle steps to cover the same
-        // wall-clock gap. cpu_step_catchup strides through halted time in
-        // bigger jumps instead — runLoop() keeps calling plain cpu_step(),
-        // so live play is untouched.
+        // and scales with the device's own clock speed. The 4096 here
+        // strides through halted time in bigger jumps instead — runLoop()
+        // keeps calling plain cpu_step(), so live play is untouched.
+        //
+        // The stepping itself runs in batches inside C (cpu_run_catchup)
+        // rather than one Swift→C round trip per instruction. It hands
+        // back control on every tone on/off edge, so checking the melody
+        // after each return sees exactly the transitions a per-step check
+        // would — primed once up front for a tone already sounding in the
+        // loaded state.
+        checkCallDetection(duringCatchUp: true)
         while emu.pointee.emu_secs < targetSecs && !emu.pointee.stopped {
-            let before = emu.pointee.cycles
-            cpu_step_catchup(emu, 4096)
-            let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
-            periph_tick(emu, delta)
+            _ = cpu_run_catchup(emu, targetSecs, 4096, 4096)
             checkCallDetection(duringCatchUp: true)
-            stepsSinceDeadlineCheck += 1
-            if stepsSinceDeadlineCheck >= 4096 {
-                stepsSinceDeadlineCheck = 0
-                if DispatchTime.now().uptimeNanoseconds >= deadline { break }
-            }
+            if DispatchTime.now().uptimeNanoseconds >= deadline { break }
+            if shouldAbort?() == true { break }
         }
-        let actuallyAdvanced = emu.pointee.emu_secs - startSecs
-        catchUpBacklog = max(0, requestedSeconds - actuallyAdvanced)
 
         // A long, unpaced catch-up can run millions of steps in one go —
         // far more than normal real-time play ever does between saves —
@@ -458,16 +509,16 @@ final class EmulatorEngine {
         // exact position but is far better than a permanently dead screen.
         if emu.pointee.stopped {
             cpu_reset(emu)
+            reanchorToNow()
         }
     }
 
-    /// Runs another budgeted pass against whatever `catchUpBacklog` is
-    /// still owed from a previous pass that ran out of wall-clock time —
-    /// call only before `start()`, never once the live thread is running
-    /// (both touch `emu` with no synchronization between them).
+    /// Runs another budgeted pass against whatever is still owed after a
+    /// previous pass ran out of wall-clock time — call only before
+    /// `start()`, never once the live thread is running (both touch `emu`
+    /// with no synchronization between them).
     func continueCatchUp(wallClockBudget: TimeInterval) {
-        guard catchUpBacklog > 0 else { return }
-        catchUp(seconds: catchUpBacklog, wallClockBudget: wallClockBudget)
+        catchUp(wallClockBudget: wallClockBudget)
     }
 
     private func runLoop() {
@@ -542,18 +593,15 @@ final class EmulatorEngine {
             if nextDeadlineNanos > nowNanos {
                 Thread.sleep(forTimeInterval: Double(nextDeadlineNanos - nowNanos) / 1_000_000_000)
             } else {
-                // Overran this frame's budget. A small overrun is normal
-                // scheduling jitter and self-corrects for free — the next
-                // iteration just starts immediately with no sleep, same as
-                // Android tolerates below its own tuned 250ms threshold.
-                // Only count anything bigger as real drift (Doze-equivalent
-                // suspension, thermal throttling, a genuine stall) for the
-                // next session-boundary catch-up pass to absorb instead of
-                // correcting it live.
-                let overrun = Double(nowNanos - nextDeadlineNanos) / 1_000_000_000
-                if overrun > 0.25 {
-                    liveDriftBacklog += overrun
-                }
+                // Overran this frame's budget — the next iteration just
+                // starts immediately with no sleep. Deliberately NOT
+                // corrected live by running extra cycles (that visibly
+                // speeds up animation; see the fixed 1/60 increment
+                // above). The real time lost here, however small or large,
+                // isn't lost track of: save() works out where this state
+                // stands from how far emu_secs actually advanced (see
+                // anchorWall), so the shortfall is simply still owed at
+                // the next session-boundary catch-up.
                 nextDeadlineNanos = nowNanos
             }
             nextDeadlineNanos += frameNanos

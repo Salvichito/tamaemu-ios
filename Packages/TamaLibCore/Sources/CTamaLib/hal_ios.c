@@ -95,9 +95,17 @@ static void s_sleep_until(timestamp_t ts)
 		return;
 	}
 
-	/* Signed delta so an already-past deadline (ts behind now) comes out
-	 * negative rather than wrapping to a huge unsigned gap. */
-	int64_t delta_us = (int64_t)ts - (int64_t)s_get_timestamp();
+	/* Signed 32-bit delta of the two wrapping 32-bit timestamps -- NOT a
+	 * 64-bit subtraction. timestamp_t is 32-bit microseconds, so it wraps
+	 * every ~71.6 minutes, and this clock keeps counting across saves
+	 * (ios_hal_load_state rebases it), so a live session crosses a wrap
+	 * regularly. Widening both to 64 bits first breaks exactly there: a
+	 * deadline just below the wrap against a "now" that has just wrapped
+	 * to a small number came out as a ~71-minute sleep, freezing the
+	 * stepping thread (and the Tama's clock) for that long. The 32-bit
+	 * difference is correct on both sides of a wrap, and still negative
+	 * for an already-past deadline. */
+	int32_t delta_us = (int32_t)(ts - s_get_timestamp());
 	if (delta_us > 0) {
 		struct timespec req;
 		req.tv_sec = delta_us / 1000000;
@@ -251,6 +259,8 @@ int ios_hal_start(const uint16_t *program, uint32_t program_words)
 	s_fast_forward = false;
 	s_ff_now = 0;
 	clock_gettime(CLOCK_MONOTONIC, &s_start_ts);
+	/* Never 0: TamaLib reads 0 as "don't pace at all". */
+	tamalib_set_speed(1);
 
 	tamalib_register_hal(&s_hal);
 	/* 0 = success, matching tamalib_init's own convention (ORs cpu_init's
@@ -264,9 +274,26 @@ void ios_hal_step(void)
 	s_step_count++;
 }
 
+void ios_hal_step_many(uint32_t count)
+{
+	for (uint32_t i = 0; i < count; i++) {
+		tamalib_step();
+	}
+	s_step_count += count;
+}
+
 void ios_hal_stop(void)
 {
+	tamalib_set_speed(1);
 	tamalib_release();
+}
+
+void ios_hal_set_speed(uint8_t multiplier)
+{
+	/* A single byte the stepping thread only ever reads (cpu.c's
+	 * speed_ratio), so no lock: it just starts dividing each step's wait
+	 * by the new value from the next step on. */
+	tamalib_set_speed(multiplier < 1 ? 1 : multiplier);
 }
 
 bool ios_hal_get_pixel(uint8_t x, uint8_t y)

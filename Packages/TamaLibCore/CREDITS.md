@@ -25,6 +25,19 @@ marked with an `// iOS port:` comment at the change site.
    retargets every use inside TamaLib itself — its own call sites, and `tamalib.h`'s
    `tamalib_reset()` macro — without editing a single call site.
 
+## `cpu.c`
+
+1. **`wait_for_cycles()` carries its division remainder (`ts_remainder`).** Upstream computes each
+   step's duration as `(cycles * ts_freq)/(cpu_frequency * speed_ratio)` in integer math and
+   discards the remainder every call. With microsecond timestamps and a 32768 Hz CPU that rounds
+   a 152.59µs step down to 152µs, so the emulated chip — and the Tama's own clock — ran about
+   0.39% fast (measured: ~5.5 minutes per day), live and during fast-forward catch-up alike. The
+   remainder is now carried into the next call, which makes the long-run rate exact.
+
+2. **`cpu_step()` looks opcodes up in a table (`op_lut`) instead of scanning `ops[]`.** Built once
+   from the same `ops[]` entries with the same first-match rule, so decoding is unchanged; it only
+   removes a linear search that dominated the cost of fast-forward catch-up.
+
 Everything else in `Sources/CTamaLib/` — `hal_types.h`, `ios_hal.h`, `hal_ios.c` — is new code
 written for this port (TamaLib's README calls this the required "abstraction layer between
 TamaLIB and your OS or SDK"), not upstream source, and carries no GPL obligation beyond the

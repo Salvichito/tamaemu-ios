@@ -14,6 +14,28 @@ func renderLCDSnapshot(image: CGImage?, side: CGFloat, scale: CGFloat = 3) -> CG
     return renderer.cgImage
 }
 
+/// The P1 screen as a square picture -- drawn at the size it has in the
+/// gallery (its icons are a fixed size, so the proportions only hold
+/// there) and unrounded, for the same reason as renderLCDSnapshot above.
+@MainActor
+func renderP1Snapshot(state: P1ScreenState, scale: CGFloat = 3) -> CGImage? {
+    let renderer = ImageRenderer(content: P1ScreenView(state: state, rounded: false).frame(width: 280, height: 280))
+    renderer.scale = scale
+    return renderer.cgImage
+}
+
+/// What ScreenRecorder needs from whichever Tama is on screen: a picture
+/// of its display whenever asked, and a way to listen in on its sound.
+@MainActor
+protocol ScreenRecordable: AnyObject {
+    var audioFormat: AVAudioFormat? { get }
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock)
+    func removeRecordingTap()
+    /// The display as it should appear in the video, or nil if there's
+    /// nothing to show yet.
+    func recordingFrame(side: CGFloat) -> CGImage?
+}
+
 /// Captures the LCD into an H.264/AAC video file for as long as the record
 /// button is held, with the Tama's own audio tapped straight off
 /// AudioOutput's mixer node — never the microphone, so no extra
@@ -48,11 +70,11 @@ final class ScreenRecorder: @unchecked Sendable {
     private var audioSampleCount: Int64 = 0
     private var audioSampleRate: Double = 44_100
     private var captureTimer: Timer?
-    private weak var viewModel: PlayViewModel?
+    private weak var viewModel: (any ScreenRecordable)?
 
     @discardableResult
     @MainActor
-    func start(viewModel: PlayViewModel) throws -> URL {
+    func start(viewModel: any ScreenRecordable) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("mp4")
@@ -115,8 +137,7 @@ final class ScreenRecorder: @unchecked Sendable {
     private func captureFrame() {
         guard let videoInput, videoInput.isReadyForMoreMediaData,
               let pool = pixelBufferAdaptor?.pixelBufferPool,
-              let lcdImage = viewModel?.lcdImage,
-              let image = renderLCDSnapshot(image: lcdImage, side: side)
+              let image = viewModel?.recordingFrame(side: side)
         else { return }
 
         var pixelBufferOut: CVPixelBuffer?

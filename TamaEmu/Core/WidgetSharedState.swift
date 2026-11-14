@@ -118,6 +118,18 @@ enum WidgetSharedState {
         set { sharedDefaults?.set(newValue, forKey: lcdEffectEnabledKey) }
     }
 
+    private static let isPremiumKey = "isPremium"
+
+    /// Mirrors PurchaseManager.isPremium into the App Group suite — the
+    /// widget extension is a separate process with no StoreKit entitlement
+    /// check of its own, so this is the only way it learns whether to show
+    /// the live LCD or a locked placeholder. Written by PurchaseManager on
+    /// every entitlement change (including at launch), read by both widgets.
+    static var isPremium: Bool {
+        get { sharedDefaults?.bool(forKey: isPremiumKey) ?? false }
+        set { sharedDefaults?.set(newValue, forKey: isPremiumKey) }
+    }
+
     /// Settings changes to lcdEffectEnabled don't touch the frame/timestamp
     /// `publish()` already handles, so they need their own nudge to reach
     /// the widget before its next natural refresh (which can be ~30min out).

@@ -724,3 +724,19 @@ void cpu_step_catchup(Emu *e, uint32_t halt_cycles)
 {
     cpu_step_impl(e, halt_cycles ? halt_cycles : 16);
 }
+
+/* iOS port: see emu.h. */
+uint32_t cpu_run_catchup(Emu *e, double target_secs, uint32_t halt_cycles, uint32_t max_steps)
+{
+    uint32_t n = 0;
+    bool tone = e->tone_on != 0;
+    if (!halt_cycles) halt_cycles = 16;
+    while (n < max_steps && e->emu_secs < target_secs && !e->stopped) {
+        uint64_t before = e->cycles;
+        cpu_step_impl(e, halt_cycles);
+        periph_tick(e, (uint32_t)(e->cycles - before));
+        n++;
+        if ((e->tone_on != 0) != tone) break;
+    }
+    return n;
+}

@@ -42,6 +42,16 @@ final class T7EmulatorEngine {
 
     private(set) var onFrame: ((T7ScreenState) -> Void)?
 
+    /// How many 1/60s frames the live loop has actually stepped since
+    /// start() -- i.e. how much emulated time really passed, as opposed
+    /// to how much real time did (a stalled or suspended loop steps
+    /// fewer). Written only by the stepping thread; read only after
+    /// stop() has joined it.
+    private var liveFramesStepped: UInt64 = 0
+    /// Emulated seconds advanced by live play so far. Only meaningful
+    /// after stop().
+    var liveSecondsAdvanced: TimeInterval { Double(liveFramesStepped) / 60 }
+
     private lazy var audioOutput = AudioOutput(
         toneProvider: {
             (ios_t7_tone_on(), Float(ios_t7_tone_freq_hz()))
@@ -82,6 +92,7 @@ final class T7EmulatorEngine {
         }
 
         lastButtonMask = 0
+        liveFramesStepped = 0
         stopLock.lock(); shouldStop = false; stopLock.unlock()
         let t = Thread { [weak self] in
             self?.runLoop()
@@ -152,6 +163,7 @@ final class T7EmulatorEngine {
             }
 
             _ = ios_t7_step_frame()
+            liveFramesStepped += 1
 
             pixels.withUnsafeMutableBufferPointer { p in
                 icons.withUnsafeMutableBufferPointer { i in
@@ -192,19 +204,26 @@ extension T7EmulatorEngine {
     /// ran out first. EEPROM is returned alongside state (not just state)
     /// because the catch-up itself can write new save data (stat changes,
     /// growth) that needs persisting too, not only CPU/RAM progress.
+    ///
+    /// `advancedSeconds` is how much emulated time it actually got
+    /// through -- callers move `lastSavedAt` forward by exactly that, so
+    /// whatever the budget didn't reach stays owed instead of being
+    /// forgotten (see V1EmulatorEngine.catchUp's own doc comment).
+    /// `shouldAbort` is polled between batches of frames.
     static func catchUp(
         romData: Data,
         eepromData: Data?,
         from stateData: Data,
         backlogSeconds: TimeInterval,
-        wallClockBudget: TimeInterval
-    ) -> (state: Data, eeprom: Data?) {
-        guard backlogSeconds > 1 else { return (stateData, eepromData) }
+        wallClockBudget: TimeInterval,
+        shouldAbort: (() -> Bool)? = nil
+    ) -> (state: Data, eeprom: Data?, advancedSeconds: TimeInterval) {
+        guard backlogSeconds >= 1.0 / 60 else { return (stateData, eepromData, 0) }
 
         let started = romData.withUnsafeBytes { raw in
             ios_t7_start(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(romData.count))
         }
-        guard started else { return (stateData, eepromData) }
+        guard started else { return (stateData, eepromData, 0) }
         defer { ios_t7_stop() }
 
         if let eepromData {
@@ -215,14 +234,20 @@ extension T7EmulatorEngine {
         let loaded = stateData.withUnsafeBytes { raw in
             ios_t7_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(stateData.count))
         }
-        guard loaded else { return (stateData, eepromData) }
+        guard loaded else { return (stateData, eepromData, 0) }
 
-        let deadline = Date().addingTimeInterval(wallClockBudget)
-        let targetFrames = Int((backlogSeconds * 60).rounded())
+        let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(max(0, wallClockBudget) * 1_000_000_000)
+        // Rounded down: a leftover fraction of a frame stays owed and is
+        // picked up next time, rather than being rounded away each pass.
+        let targetFrames = Int(backlogSeconds * 60)
         var frame = 0
-        while frame < targetFrames, Date() < deadline {
+        while frame < targetFrames {
             _ = ios_t7_step_frame()
             frame += 1
+            if frame % 16 == 0,
+               DispatchTime.now().uptimeNanoseconds >= deadline || shouldAbort?() == true {
+                break
+            }
         }
 
         let neededState = ios_t7_save_state(nil, 0)
@@ -230,7 +255,7 @@ extension T7EmulatorEngine {
         let writtenState = stateBuffer.withUnsafeMutableBufferPointer { buf in
             ios_t7_save_state(buf.baseAddress, UInt32(buf.count))
         }
-        guard writtenState > 0 else { return (stateData, eepromData) }
+        guard writtenState > 0 else { return (stateData, eepromData, 0) }
 
         let neededEeprom = ios_t7_eeprom_save(nil, 0)
         var eepromBuffer = [UInt8](repeating: 0, count: Int(neededEeprom))
@@ -240,7 +265,8 @@ extension T7EmulatorEngine {
 
         return (
             Data(stateBuffer[0..<Int(writtenState)]),
-            writtenEeprom > 0 ? Data(eepromBuffer[0..<Int(writtenEeprom)]) : eepromData
+            writtenEeprom > 0 ? Data(eepromBuffer[0..<Int(writtenEeprom)]) : eepromData,
+            Double(frame) / 60
         )
     }
 }

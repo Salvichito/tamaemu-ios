@@ -16,6 +16,10 @@ struct TamaEntry: TimelineEntry {
     /// TamaWidgetView can show its own neglect badge without a second
     /// provider.
     let appClosedAt: Date?
+    /// Mirrored from PurchaseManager via WidgetSharedState — widgets are a
+    /// Premium feature, so a free user sees a locked placeholder instead of
+    /// the live LCD regardless of how this instance is configured.
+    let isPremium: Bool
 }
 
 /// Pure viewer — runs no simulation of its own. Just reads whatever the
@@ -23,7 +27,7 @@ struct TamaEntry: TimelineEntry {
 /// container for whichever Tama this widget instance is configured to.
 struct TamaProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> TamaEntry {
-        TamaEntry(date: Date(), image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil)
+        TamaEntry(date: Date(), image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil, isPremium: WidgetSharedState.isPremium)
     }
 
     func snapshot(for configuration: SelectTamaIntent, in context: Context) async -> TamaEntry {
@@ -56,8 +60,9 @@ struct TamaProvider: AppIntentTimelineProvider {
     }
 
     private func currentEntry(for configuration: SelectTamaIntent, at date: Date) -> TamaEntry {
+        let isPremium = WidgetSharedState.isPremium
         guard let id = configuration.tama?.id, let device = DeviceCatalog.find(name: id) else {
-            return TamaEntry(date: date, image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil)
+            return TamaEntry(date: date, image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil, isPremium: isPremium)
         }
         var image: UIImage?
         if let path = WidgetSharedState.latestFramePath(for: device), let data = try? Data(contentsOf: path) {
@@ -68,7 +73,8 @@ struct TamaProvider: AppIntentTimelineProvider {
             image: image,
             deviceTitle: WidgetSharedState.deviceTitle(for: device),
             isConfigured: true,
-            appClosedAt: WidgetSharedState.appClosedAt
+            appClosedAt: WidgetSharedState.appClosedAt,
+            isPremium: isPremium
         )
     }
 }

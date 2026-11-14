@@ -713,9 +713,27 @@ static void rtc_tick(Emu *e, uint32_t cycles)
     e->emu_secs += secs;
     if ((double)(long long)was != (double)(long long)e->emu_secs) fflush(stderr);
     if (e->rtc_mult > 1) secs *= e->rtc_mult;   /* --rtc-mult: accelerate game time */
-    if (!(IOB(0x301908) & 2) && !(IOB(0x30190C) & 1)) {     /* running, not held */
+    /* iOS port: "hold" (0x30190C bit 0) only freezes the visible counter
+     * registers so the firmware can read seconds/minutes/hours without one
+     * rolling over mid-read -- the real chip keeps time underneath and
+     * applies the carry on release. This used to skip accumulating
+     * altogether while held, so every hold lost exactly its own duration.
+     * Firmware that holds on every clock read (the 4U does, constantly)
+     * fell steadily behind real time -- measured ~5.9s per emulated hour,
+     * equal to the total time spent held. Now time keeps accumulating
+     * while held and the pending seconds are counted the moment hold is
+     * released. Like the real chip, at most one pending second survives a
+     * hold -- so a hold left on for a long time (e.g. while the player is
+     * on a set-the-clock screen) can't dump its whole duration onto the
+     * time that was just set. A genuinely stopped RTC (0x301908 bit 1)
+     * still doesn't advance. */
+    if (!(IOB(0x301908) & 2)) {                             /* running */
         e->rtc_sec_frac += secs;
-        while (e->rtc_sec_frac >= 1.0) { e->rtc_sec_frac -= 1.0; rtc_count_second(e); }
+        if (!(IOB(0x30190C) & 1)) {                         /* not held */
+            while (e->rtc_sec_frac >= 1.0) { e->rtc_sec_frac -= 1.0; rtc_count_second(e); }
+        } else if (e->rtc_sec_frac >= 2.0) {
+            e->rtc_sec_frac -= (double)((long long)e->rtc_sec_frac - 1);
+        }
     }
     /* cyclic interrupt: RTCT[1:0] @0x301904 D[3:2]: 0=1/64s 1=1s 2=1min 3=1h */
     static const double period[4] = {1.0 / 64, 1.0, 60.0, 3600.0};

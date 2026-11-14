@@ -7,6 +7,9 @@ struct TamaNeglectEntry: TimelineEntry {
     /// WidgetSharedState.recordAppClosed(). nil if it's never happened yet
     /// (fresh install, or the App Group container isn't available).
     let appClosedAt: Date?
+    /// Mirrored from PurchaseManager via WidgetSharedState — see
+    /// TamaEntry.isPremium.
+    let isPremium: Bool
 }
 
 /// Lock screen only — no per-Tama configuration, since the timer is about
@@ -15,11 +18,11 @@ struct TamaNeglectEntry: TimelineEntry {
 /// as a single plain entry rather than something to configure per instance.
 struct TamaNeglectProvider: TimelineProvider {
     func placeholder(in context: Context) -> TamaNeglectEntry {
-        TamaNeglectEntry(date: Date(), appClosedAt: nil)
+        TamaNeglectEntry(date: Date(), appClosedAt: nil, isPremium: WidgetSharedState.isPremium)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TamaNeglectEntry) -> Void) {
-        completion(TamaNeglectEntry(date: Date(), appClosedAt: WidgetSharedState.appClosedAt))
+        completion(TamaNeglectEntry(date: Date(), appClosedAt: WidgetSharedState.appClosedAt, isPremium: WidgetSharedState.isPremium))
     }
 
     /// Text(date, style: .relative) was the obvious choice here, but it
@@ -35,16 +38,17 @@ struct TamaNeglectProvider: TimelineProvider {
     /// long gap.
     func getTimeline(in context: Context, completion: @escaping (Timeline<TamaNeglectEntry>) -> Void) {
         let now = Date()
+        let isPremium = WidgetSharedState.isPremium
         guard let appClosedAt = WidgetSharedState.appClosedAt else {
-            completion(Timeline(entries: [TamaNeglectEntry(date: now, appClosedAt: nil)], policy: .atEnd))
+            completion(Timeline(entries: [TamaNeglectEntry(date: now, appClosedAt: nil, isPremium: isPremium)], policy: .atEnd))
             return
         }
         let elapsedMinutesNow = Int(now.timeIntervalSince(appClosedAt) / 60)
         let horizonMinutes = 180
-        var entries = [TamaNeglectEntry(date: now, appClosedAt: appClosedAt)]
+        var entries = [TamaNeglectEntry(date: now, appClosedAt: appClosedAt, isPremium: isPremium)]
         for minute in 1...horizonMinutes {
             let boundary = appClosedAt.addingTimeInterval(Double(elapsedMinutesNow + minute) * 60)
-            entries.append(TamaNeglectEntry(date: boundary, appClosedAt: appClosedAt))
+            entries.append(TamaNeglectEntry(date: boundary, appClosedAt: appClosedAt, isPremium: isPremium))
         }
         completion(Timeline(entries: entries, policy: .atEnd))
     }
@@ -76,22 +80,31 @@ struct TamaNeglectWidgetView: View {
             // flat tint with no color variation, so text sitting on top of
             // the glyph's solid body (it's not transparent there) would be
             // unreadable rather than just smaller.
-            VStack(spacing: 0) {
-                Image("WidgetEggGlyph")
-                    .resizable()
-                    .renderingMode(.template)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: geo.size.height * 0.72)
-                Text(label)
-                    .font(.system(size: geo.size.height * 0.22, weight: .bold))
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                    // VStack already centers its children, but this pins
-                    // the text to the center explicitly regardless of how
-                    // many digits it ends up being ("1m" vs "47h 12m")
-                    // rather than leaving it to a natural-width row that
-                    // could drift.
-                    .frame(maxWidth: .infinity, alignment: .center)
+            Group {
+                if entry.isPremium {
+                    VStack(spacing: 0) {
+                        Image("WidgetEggGlyph")
+                            .resizable()
+                            .renderingMode(.template)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: geo.size.height * 0.72)
+                        Text(label)
+                            .font(.system(size: geo.size.height * 0.22, weight: .bold))
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
+                            // VStack already centers its children, but this pins
+                            // the text to the center explicitly regardless of how
+                            // many digits it ends up being ("1m" vs "47h 12m")
+                            // rather than leaving it to a natural-width row that
+                            // could drift.
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                } else {
+                    Image(systemName: "lock.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: geo.size.height * 0.5)
+                }
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }

@@ -4,7 +4,7 @@ import Foundation
 
 /// A P1-era (TamaLib) screen snapshot: 32x16 1-bit pixels plus 8 fixed
 /// status icons. Row-major, matching `ios_hal_get_frame`'s layout.
-struct P1ScreenState {
+struct P1ScreenState: Equatable {
     var bits: [Bool]
     var icons: [Bool]
 
@@ -70,6 +70,43 @@ final class V1EmulatorEngine {
         }
     )
 
+    /// Hold-to-fast-forward bookkeeping. While it's on, the Tama's own
+    /// clock runs ahead of real time by (multiplier - 1) seconds for every
+    /// real second held -- `fastForwardExtraSeconds` is that running
+    /// total, which whoever saves this engine's state must add to the
+    /// save's "caught up to" stamp (see V1PlayViewModel.stopEngine()).
+    /// Main thread only.
+    private static let fastForwardMultiplier: UInt8 = 2
+    private var fastForwardBeganAt: DispatchTime?
+    private(set) var fastForwardExtraSeconds: TimeInterval = 0
+
+    /// Twice real speed while on. Only meaningful on a running engine.
+    func setFastForward(_ on: Bool) {
+        guard thread != nil else { return }
+        if on {
+            guard fastForwardBeganAt == nil else { return }
+            fastForwardBeganAt = .now()
+            ios_hal_set_speed(Self.fastForwardMultiplier)
+        } else {
+            guard let began = fastForwardBeganAt else { return }
+            ios_hal_set_speed(1)
+            fastForwardBeganAt = nil
+            let held = Double(DispatchTime.now().uptimeNanoseconds - began.uptimeNanoseconds) / 1_000_000_000
+            fastForwardExtraSeconds += held * Double(Self.fastForwardMultiplier - 1)
+        }
+    }
+
+    /// For ScreenRecorder -- same pass-throughs the CTama engine has.
+    var audioFormat: AVAudioFormat { audioOutput.outputFormat }
+
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock) {
+        audioOutput.installRecordingTap(format: format, bufferSize: bufferSize, block: block)
+    }
+
+    func removeRecordingTap() {
+        audioOutput.removeRecordingTap()
+    }
+
     init(onFrame: @escaping (P1ScreenState) -> Void, onCallDetected: (() -> Void)? = nil) {
         self.onFrame = onFrame
         self.onCallDetected = onCallDetected
@@ -99,6 +136,8 @@ final class V1EmulatorEngine {
         }
 
         lastButtonMask = 0
+        fastForwardBeganAt = nil
+        fastForwardExtraSeconds = 0
         stopLock.lock(); shouldStop = false; stopLock.unlock()
         let t = Thread { [weak self] in
             self?.runLoop()
@@ -129,6 +168,9 @@ final class V1EmulatorEngine {
 
     func stop() {
         guard thread != nil else { return }
+        // Back to normal speed first, so the time spent fast-forwarding
+        // is fully counted before anyone reads fastForwardExtraSeconds.
+        setFastForward(false)
         stopLock.lock(); shouldStop = true; stopLock.unlock()
         thread = nil
         stoppedSemaphore.wait()
@@ -236,19 +278,33 @@ extension V1EmulatorEngine {
     /// CTama catch-up uses); pass a real closure only for a headless pass
     /// that exists specifically to warn the player before they open the
     /// app (BackgroundRefresh).
+    ///
+    /// Returns how many emulated seconds it actually advanced alongside
+    /// the new state -- measured from the core's own clock, not assumed
+    /// from what was asked for. Callers must move this Tama's
+    /// `lastSavedAt` forward by exactly that much and no more: every
+    /// caller used to stamp it "now" regardless, so whenever the budget
+    /// ran out first (a long night on a real phone, or a background pass
+    /// sharing ~25s between several Tamas at background CPU priority) the
+    /// part that hadn't been emulated yet was silently forgotten and the
+    /// clock stayed that far behind for good. `shouldAbort` is polled
+    /// between batches of steps; returning true stops the pass early.
     static func catchUp(
         romWords: [UInt16],
         from state: Data,
         backlogSeconds: TimeInterval,
         wallClockBudget: TimeInterval,
+        shouldAbort: (() -> Bool)? = nil,
         onCallDetected: (() -> Void)? = nil
-    ) -> Data {
-        guard backlogSeconds > 1 else { return state }
+    ) -> (state: Data, advancedSeconds: TimeInterval) {
+        guard backlogSeconds > 0 else { return (state, 0) }
 
-        let hopSeconds: TimeInterval = 50
-        let deadline = Date().addingTimeInterval(wallClockBudget)
-        var remaining = backlogSeconds
+        // Well inside the ~71 minutes one hop can represent (see above).
+        let hopSeconds: TimeInterval = 600
+        let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(max(0, wallClockBudget) * 1_000_000_000)
+        var advancedUs: UInt64 = 0
         var currentState = state
+        var outOfTime = false
         // Persists across hops (each hop tears down and reloads the HAL
         // session), same reason the live engine's own lastAttentionOn
         // isn't reset per-call -- nil until the first read primes it, so a
@@ -256,7 +312,10 @@ extension V1EmulatorEngine {
         // as a new edge.
         var lastAttentionOn: Bool?
 
-        while remaining > 1, Date() < deadline {
+        while !outOfTime {
+            let remaining = backlogSeconds - Double(advancedUs) / 1_000_000
+            // Less than one instruction's worth left -- done.
+            guard remaining > 0.001 else { break }
             let hop = min(remaining, hopSeconds)
 
             let started = romWords.withUnsafeBufferPointer { buf in
@@ -274,17 +333,35 @@ extension V1EmulatorEngine {
 
             let startUs = ios_hal_elapsed_us()
             let targetDeltaUs = UInt32(hop * 1_000_000)
+            var batchesSinceCheck = 0
             ios_hal_set_fast_forward(true)
-            while (ios_hal_elapsed_us() &- startUs) < targetDeltaUs, Date() < deadline {
-                ios_hal_step()
+            // Stepped in small batches inside C rather than one call per
+            // instruction from here -- the per-call overhead was several
+            // times the cost of the instruction itself. A batch is ~5ms of
+            // emulated time, so overshooting the target by part of one is
+            // harmless: what actually ran is measured below, not assumed.
+            while (ios_hal_elapsed_us() &- startUs) < targetDeltaUs {
+                ios_hal_step_many(32)
                 if onCallDetected != nil {
+                    // The attention icon stays lit for as long as the Tama
+                    // is calling, far longer than one batch, so sampling it
+                    // per batch can't miss a call.
                     let attentionOn = ios_hal_get_icon(7)
                     if let last = lastAttentionOn, attentionOn && !last {
                         onCallDetected?()
                     }
                     lastAttentionOn = attentionOn
                 }
+                batchesSinceCheck += 1
+                if batchesSinceCheck >= 64 {
+                    batchesSinceCheck = 0
+                    if DispatchTime.now().uptimeNanoseconds >= deadline || shouldAbort?() == true {
+                        outOfTime = true
+                        break
+                    }
+                }
             }
+            let hopAdvancedUs = ios_hal_elapsed_us() &- startUs
             ios_hal_set_fast_forward(false)
 
             let size = Int(ios_hal_state_size())
@@ -296,10 +373,36 @@ extension V1EmulatorEngine {
             guard written > 0 else { break }
 
             currentState = Data(buffer[0..<Int(written)])
-            remaining -= hop
+            advancedUs += UInt64(hopAdvancedUs)
         }
 
-        return currentState
+        return (currentState, Double(advancedUs) / 1_000_000)
+    }
+
+    /// The screen a saved state was showing, without running it -- for a
+    /// paused Tama, which has no live engine to publish frames. Boots the
+    /// core, loads the state, reads the display and tears it down again,
+    /// so the caller must hold the V1 EngineGate, same as catchUp().
+    static func peekScreen(romWords: [UInt16], state: Data) -> P1ScreenState? {
+        let started = romWords.withUnsafeBufferPointer { buf in
+            ios_hal_start(buf.baseAddress, UInt32(buf.count))
+        }
+        guard started == 0 else { return nil }
+        defer { ios_hal_stop() }
+        let loaded = state.withUnsafeBytes { raw in
+            ios_hal_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(state.count))
+        }
+        guard loaded else { return nil }
+
+        var bitsBuf = [UInt8](repeating: 0, count: 64)
+        var iconsByte: UInt8 = 0
+        bitsBuf.withUnsafeMutableBufferPointer { buf in
+            ios_hal_get_frame(buf.baseAddress, &iconsByte)
+        }
+        return P1ScreenState(
+            bits: (0..<(32 * 16)).map { (bitsBuf[$0 / 8] & (0x80 >> ($0 % 8))) != 0 },
+            icons: (0..<8).map { (iconsByte & (1 << $0)) != 0 }
+        )
     }
 
     /// romData parsing, factored out of start(romData:) so catchUp(_:)

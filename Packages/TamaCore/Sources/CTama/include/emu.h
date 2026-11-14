@@ -506,6 +506,18 @@ void cpu_step(Emu *e);         /* one instruction (ext prefixes folded in) */
  * overflow clamp. Doesn't touch Emu's layout, so save-file compatibility
  * (state.c checks sizeof(Emu)) is unaffected. */
 void cpu_step_catchup(Emu *e, uint32_t halt_cycles);
+/* iOS port: runs cpu_step_catchup + periph_tick back to back, entirely in
+ * C, until emu_secs reaches target_secs, max_steps have run, the core
+ * stops, or the piezo tone switches on/off -- whichever comes first.
+ * Returns the number of steps run. Exists because the catch-up loop used
+ * to cross from Swift into C twice per emulated instruction and run its
+ * call-detection check in between, which cost several times more than the
+ * instruction itself; that mattered most on the 4U, whose firmware does
+ * far more work per idle second than the others. Returning on every tone
+ * edge is what keeps call detection exact: the caller checks the melody
+ * right after each return, so it still sees every on/off transition at
+ * the step it happened. */
+uint32_t cpu_run_catchup(Emu *e, double target_secs, uint32_t halt_cycles, uint32_t max_steps);
 
 static inline bool state_session_eligible(bool interactive, bool linkrom,
                                           bool net_host, bool net_join,

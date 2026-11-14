@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import TamaCore
+import UIKit
 
 /// The handful of lifecycle calls GalleryViewModel needs to make without
 /// caring which core backs a given device — everything else about
@@ -38,7 +39,13 @@ final class GalleryViewModel {
         ownedDevices = Self.restoreOrder(of: ActiveDeviceLookup.allImported())
         selectedPage = ownedDevices.first?.id
         WidgetSharedState.publishOwnedDevices(ownedDevices)
-        if let first = ownedDevices.first {
+        // Not when iOS launched the app in the background just to run a
+        // BackgroundRefresh pass: a live engine (thread, audio) started
+        // here would run unseen alongside that pass, and nothing would
+        // ever stop it — scenePhase never "changes to" .background when
+        // it starts out there. TamaGalleryView's scenePhase handler
+        // starts this page as soon as the app actually comes forward.
+        if let first = ownedDevices.first, UIApplication.shared.applicationState != .background {
             pageDidAppear(first)
         }
     }
@@ -83,6 +90,16 @@ final class GalleryViewModel {
     /// above do.
     private func cachedEngine(for id: TamaDevice.ID) -> EngineLifecycle? {
         (viewModels[id] as EngineLifecycle?) ?? (v1ViewModels[id] as EngineLifecycle?) ?? (t7ViewModels[id] as EngineLifecycle?)
+    }
+
+    /// Whichever kind of view-model backs this device, as far as the
+    /// backup/restore screen is concerned.
+    func backupHost(for device: TamaDevice) -> SaveBackupHost {
+        switch device.family {
+        case .ctama: return viewModel(for: device)
+        case .v1: return v1ViewModel(for: device)
+        case .t7: return t7ViewModel(for: device)
+        }
     }
 
     func device(withID id: TamaDevice.ID) -> TamaDevice? {

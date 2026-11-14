@@ -14,11 +14,15 @@ struct TamaGalleryView: View {
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
     @State private var showingSetClockConfirm = false
+    @State private var showingSetPointsPrompt = false
+    @State private var pointsInputText = ""
     @State private var toast: String?
     @State private var isRecording = false
     @State private var activeRecorder: ScreenRecorder?
     @State private var recordingStartDate: Date?
     @State private var showingPaywall = false
+    @State private var showingBackups = false
+    @State private var showingP1ScreenStyle = false
 
     /// Ambient Background is a premium feature — forced off for free users
     /// regardless of their own stored preference, which is left untouched
@@ -59,6 +63,12 @@ struct TamaGalleryView: View {
     private var selectedViewModel: PlayViewModel? {
         guard let device = selectedDevice, device.family == .ctama else { return nil }
         return gallery.viewModel(for: device)
+    }
+
+    /// Same idea for a P1-era page, which gets its own (shorter) toolbar.
+    private var selectedV1ViewModel: V1PlayViewModel? {
+        guard let device = selectedDevice, device.family == .v1 else { return nil }
+        return gallery.v1ViewModel(for: device)
     }
 
     var body: some View {
@@ -145,7 +155,11 @@ struct TamaGalleryView: View {
     /// same renderLCDSnapshot ScreenRecorder samples once per video frame
     /// — then saves it to Photos.
     private func saveScreenshot(of viewModel: PlayViewModel) {
-        guard let cgImage = renderLCDSnapshot(image: viewModel.lcdImage, side: 512) else {
+        saveScreenshot(renderLCDSnapshot(image: viewModel.lcdImage, side: 512))
+    }
+
+    private func saveScreenshot(_ cgImage: CGImage?) {
+        guard let cgImage else {
             toast = "Couldn't capture the screen."
             return
         }
@@ -168,7 +182,7 @@ struct TamaGalleryView: View {
     /// The video button is a toggle, not a hold: tap once to start, tap
     /// again to stop — matched to it being its own dedicated button now,
     /// rather than sharing the camera button via tap-vs-hold.
-    private func toggleRecording(for viewModel: PlayViewModel) {
+    private func toggleRecording(for viewModel: any ScreenRecordable) {
         if isRecording {
             stopRecording()
         } else {
@@ -176,7 +190,7 @@ struct TamaGalleryView: View {
         }
     }
 
-    private func startRecording(for viewModel: PlayViewModel) {
+    private func startRecording(for viewModel: any ScreenRecordable) {
         guard !isRecording else { return }
         let recorder = ScreenRecorder()
         do {
@@ -230,12 +244,80 @@ struct TamaGalleryView: View {
         }
     }
 
-    /// A V1 page's whole toolbar: just enough to add/rearrange/delete
-    /// Tamas without being stranded on this page, since it has no
-    /// PlayViewModel for the pause/settings/screenshot/recording/
-    /// translation/set-clock items below to hook into — those are all
-    /// still CTama-only, undecided whether (or how) they'd apply to this
-    /// family at all.
+    /// A P1-era page's toolbar: pause in the ⋯ menu, camera and video at
+    /// the bottom — the same buttons, gated the same way, as a color
+    /// Tama's, plus Screen Style (P1ScreenStyleView). No Settings, clock
+    /// sync or translation: none of those exist for this family (a P1 screen has no text to translate).
+    @ToolbarContentBuilder
+    private func v1ToolbarContent(viewModel: V1PlayViewModel) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    viewModel.togglePause()
+                } label: {
+                    Label(
+                        viewModel.isPaused ? "Resume" : "Pause",
+                        systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
+                    )
+                }
+                Button {
+                    requestAddTama()
+                } label: {
+                    Label("Add a Tama", systemImage: "plus")
+                }
+                Button {
+                    gallery.showingReorder = true
+                } label: {
+                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                }
+                Button {
+                    showingP1ScreenStyle = true
+                } label: {
+                    Label("Screen Style", systemImage: "paintpalette")
+                }
+                Button {
+                    showingBackups = true
+                } label: {
+                    Label("Backups", systemImage: "clock.arrow.circlepath")
+                }
+                Button(role: .destructive) {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+        }
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                if purchases.isPremium {
+                    saveScreenshot(viewModel.screenshot())
+                } else {
+                    showingPaywall = true
+                }
+            } label: {
+                Image(systemName: "camera")
+            }
+        }
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                if purchases.isPremium {
+                    toggleRecording(for: viewModel)
+                } else {
+                    showingPaywall = true
+                }
+            } label: {
+                Image(systemName: isRecording ? "stop.circle.fill" : "video")
+                    .foregroundStyle(isRecording ? .red : .primary)
+            }
+        }
+    }
+
+    /// A Tama-Go/Friends page's whole toolbar: just enough to
+    /// add/rearrange/delete Tamas without being stranded on this page,
+    /// since it has no view model for the pause/settings/screenshot/
+    /// recording/translation/set-clock items to hook into.
     @ToolbarContentBuilder
     private func minimalToolbarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
@@ -249,6 +331,11 @@ struct TamaGalleryView: View {
                     gallery.showingReorder = true
                 } label: {
                     Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                }
+                Button {
+                    showingBackups = true
+                } label: {
+                    Label("Backups", systemImage: "clock.arrow.circlepath")
                 }
                 Button(role: .destructive) {
                     showingDeleteConfirm = true
@@ -301,16 +388,15 @@ struct TamaGalleryView: View {
                 if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
                     Button {
                         if purchases.isPremium {
-                            viewModel.restartTamaClock { engine in
-                                _ = engine.addPoints(1000)
-                            }
+                            pointsInputText = ""
+                            showingSetPointsPrompt = true
                         } else {
                             showingPaywall = true
                         }
                     } label: {
                         Label(
-                            purchases.isPremium ? "Add 1000 Points" : "Add 1000 Points (Premium)",
-                            systemImage: purchases.isPremium ? "plus.circle" : "star.fill"
+                            purchases.isPremium ? "Set Points…" : "Set Points… (Premium)",
+                            systemImage: purchases.isPremium ? "number.circle" : "star.fill"
                         )
                     }
                 }
@@ -431,6 +517,42 @@ struct TamaGalleryView: View {
                 } message: {
                     Text("This jumps straight to the current time, unlike normal catch-up which ages through every second in between.")
                 }
+                .alert("Set Points", isPresented: $showingSetPointsPrompt) {
+                    TextField("e.g. 5000", text: $pointsInputText)
+                        .keyboardType(.numberPad)
+                        .onChange(of: pointsInputText) { _, newValue in
+                            let filtered = String(newValue.filter(\.isNumber).prefix(5))
+                            if filtered != newValue { pointsInputText = filtered }
+                        }
+                    Button("Set") {
+                        if let value = Int(pointsInputText), let viewModel = selectedViewModel {
+                            viewModel.restartTamaClock { engine in
+                                _ = engine.setPoints(value)
+                            }
+                        }
+                    }
+                    .disabled(pointsInputText.isEmpty)
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Up to 5 digits (max 99999). This replaces the current total.")
+                }
+                .sheet(isPresented: $showingP1ScreenStyle) {
+                    P1ScreenStyleView()
+                }
+                .sheet(isPresented: $showingBackups) {
+                    if let device = selectedDevice {
+                        NavigationStack {
+                            BackupListView(device: device, host: gallery.backupHost(for: device)) {
+                                showingBackups = false
+                            }
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("Done") { showingBackups = false }
+                                }
+                            }
+                        }
+                    }
+                }
                 .sheet(isPresented: $gallery.showingReorder) {
                     ReorderTamasView(gallery: gallery)
                 }
@@ -517,6 +639,8 @@ struct TamaGalleryView: View {
                 if let viewModel = selectedViewModel {
                     topToolbarContent(viewModel: viewModel)
                     bottomToolbarContent(viewModel: viewModel)
+                } else if let viewModel = selectedV1ViewModel {
+                    v1ToolbarContent(viewModel: viewModel)
                 } else if selectedDevice != nil {
                     minimalToolbarContent()
                 }

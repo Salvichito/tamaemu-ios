@@ -34,6 +34,34 @@ statically-linked package under the same GPLv3 terms:
   itself a C port of [tamago](https://github.com/asterick/tamago) by asterick
   (BSD). See [`Packages/T7EmuCore/CREDITS.md`](Packages/T7EmuCore/CREDITS.md).
 
+## Bundled artwork
+
+The eight menu icons on the P1-era screen
+([`TamaEmu/Resources/Assets.xcassets/P1Icon*.imageset`](TamaEmu/Resources/Assets.xcassets/))
+are from [Tabler Icons](https://github.com/tabler/tabler-icons) (filled set),
+Copyright (c) 2020-2024 Paweł Kuna, used under the MIT License:
+
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+No device artwork ships with the app. The P1-era screen's background and
+icons can be replaced with the user's own images from the Screen Style menu.
+
 ## What this repository does not grant rights to
 
 - **Game firmware/ROM images** are not included, linked, or distributed by

@@ -19,6 +19,11 @@ int ios_hal_start(const uint16_t *program, uint32_t program_words);
  * itself (via sleep_until), same as a real device's clock. */
 void ios_hal_step(void);
 
+/* Runs `count` steps back to back. For fast-forward catch-up, where the
+ * cost of crossing from Swift into C once per instruction was several
+ * times the cost of the instruction itself. */
+void ios_hal_step_many(uint32_t count);
+
 void ios_hal_stop(void);
 
 bool ios_hal_get_pixel(uint8_t x, uint8_t y);
@@ -38,6 +43,13 @@ void ios_hal_get_frame(uint8_t *out_bits_64, uint8_t *out_icons);
  * toggle on/off at any time; timestamps stay continuous across the
  * switch. */
 void ios_hal_set_fast_forward(bool enabled);
+
+/* Live-play speed multiplier (1 = real chip speed, 2 = twice as fast, ...),
+ * for the app's hold-to-fast-forward. Still paced against the real clock,
+ * unlike ios_hal_set_fast_forward() above, which doesn't pace at all --
+ * the two must not be combined. Reset to 1 by ios_hal_start() and
+ * ios_hal_stop(), so a catch-up pass can never inherit it. */
+void ios_hal_set_speed(uint8_t multiplier);
 
 /* btn: 0=A (left), 1=B (middle), 2=C (right) -- matches hw.h's button_t
  * ordinals (BTN_LEFT/BTN_MIDDLE/BTN_RIGHT), which the real P1 wires to its

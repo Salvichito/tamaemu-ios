@@ -1,34 +1,37 @@
+import PhotosUI
 import SwiftUI
+import UIKit
 
-/// The P1-era screen: icon artwork and a decorative background
-/// pattern, with everything -- icons and the pixel
-/// matrix alike -- sitting directly on the background, no separate boxed
-/// panel for either. Square overall footprint -- same size and
-/// proportions as every other Tamagotchi in the gallery (LCDView forces
-/// the same `.aspectRatio(1, contentMode: .fit)`).
+/// The P1-era screen: icons and the pixel matrix sit directly on a
+/// background, no separate boxed panel for either. Square overall
+/// footprint -- same size and proportions as every other Tamagotchi in
+/// the gallery (LCDView forces the same `.aspectRatio(1, contentMode: .fit)`).
+///
+/// Nothing branded ships in the app: the default look is a plain
+/// gradient and Tabler Icons (MIT, see NOTICE.md). Users can supply their own background image
+/// and their own icon sheet from the page's menu (see P1ScreenStyleView
+/// and P1CustomArt).
 struct P1ScreenView: View {
     let state: P1ScreenState
+    /// False for screenshots and video, which can't carry transparent
+    /// corners -- see renderP1Snapshot.
+    var rounded: Bool = true
 
     private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
     private static let cornerRadius: CGFloat = 16
     private static let iconSize: CGFloat = 36
-    /// The real device's background is a printed paper sheet physically
-    /// behind the glass, not emulated data -- "P1BackgroundHearts" is the
-    /// other pattern supplied alongside this one, swap freely. The icon
-    /// positions below are measured against this specific image's own
-    /// star layout (see iconPositions), so swapping backgrounds means
-    /// re-measuring those too, not just this name.
-    private static let backgroundAssetName = "P1BackgroundStars"
+    /// A custom sheet's slot is 128px with a 96px safe area, so the whole
+    /// slot is drawn this much larger to keep the artwork inside the safe
+    /// area the same visual size as a default icon.
+    private static let customSlotSize: CGFloat = iconSize * 128 / 96
 
-    /// TamaLib's own icon index order (confirmed against jcrona/tamatool's
-    /// reference art and the user's own real P1 -- see the
-    /// integration-research memory). Index 7 (attention) lights up on its
-    /// own; it's not a selectable menu item, but still just an icon here.
-    /// Custom icon shapes, not
-    /// SF Symbols -- the real "game" icon is a ball and bat, not a
-    /// controller; the real "scolding" icon is a biting mouth, not a
-    /// speech bubble.
-    private static let iconAssetNames = [
+    /// TamaLib's own icon index order (confirmed against jcrona/tamatool
+    /// and the user's own real P1 -- see the integration-research
+    /// memory). Index 7 (attention) lights up on its own; it's not a
+    /// selectable menu item, but still just an icon here. Same order as
+    /// the slots of a custom icon sheet. The artwork is from Tabler Icons'
+    /// filled set (MIT), bundled as template SVGs.
+    private static let defaultIconAssets = [
         "P1IconFood",      // 0 food
         "P1IconLight",     // 1 light
         "P1IconGame",      // 2 game
@@ -40,19 +43,11 @@ struct P1ScreenView: View {
     ]
 
     /// Each icon's center, as a fraction of the square's own width/height
-    /// -- measured directly off P1BackgroundStars.imageset's actual pixel
-    /// data (a connected-component scan found each star blob's centroid),
-    /// not eyeballed, so the icons land squarely on top of their stars
-    /// rather than just floating somewhere near them.
+    /// -- an even 4-over-4 layout that doesn't depend on any particular
+    /// background image.
     private static let iconPositions: [(x: CGFloat, y: CGFloat)] = [
-        (0.164, 0.140), // 0 food
-        (0.393, 0.143), // 1 light
-        (0.591, 0.141), // 2 game
-        (0.814, 0.141), // 3 medicine
-        (0.169, 0.856), // 4 bathroom
-        (0.386, 0.853), // 5 status
-        (0.604, 0.851), // 6 training
-        (0.837, 0.859)  // 7 attention
+        (0.17, 0.14), (0.39, 0.14), (0.61, 0.14), (0.83, 0.14),
+        (0.17, 0.86), (0.39, 0.86), (0.61, 0.86), (0.83, 0.86)
     ]
 
     var body: some View {
@@ -67,27 +62,47 @@ struct P1ScreenView: View {
 
     private func screenContent(side: CGFloat) -> some View {
         ZStack {
-            Image(Self.backgroundAssetName)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: side, height: side)
+            if let background = P1CustomArt.shared.background {
+                Image(uiImage: background)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: side, height: side)
+            } else {
+                LinearGradient(
+                    colors: [Color(red: 0.86, green: 0.89, blue: 0.80), Color(red: 0.74, green: 0.79, blue: 0.69)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
 
             pixelGrid
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
                 .frame(width: side)
 
             ForEach(0..<8, id: \.self) { i in
-                Image(Self.iconAssetNames[i])
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: Self.iconSize, height: Self.iconSize)
-                    .foregroundStyle(onColor)
+                icon(i)
                     .opacity(state.icons[i] ? 1.0 : 0.35)
                     .position(x: Self.iconPositions[i].x * side, y: Self.iconPositions[i].y * side)
             }
         }
         .frame(width: side, height: side)
-        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: rounded ? Self.cornerRadius : 0, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func icon(_ i: Int) -> some View {
+        if let icons = P1CustomArt.shared.icons {
+            Image(uiImage: icons[i])
+                .resizable()
+                .scaledToFit()
+                .frame(width: Self.customSlotSize, height: Self.customSlotSize)
+        } else {
+            Image(Self.defaultIconAssets[i])
+                .resizable()
+                .scaledToFit()
+                .frame(width: Self.iconSize, height: Self.iconSize)
+                .foregroundStyle(onColor)
+        }
     }
 
     private var pixelGrid: some View {
@@ -156,4 +171,238 @@ struct P1ScreenView: View {
 #Preview {
     P1ScreenView(state: .blank)
         .padding()
+}
+
+// MARK: - User-supplied artwork
+
+/// The user's own background image and icon sheet for the P1 screen,
+/// picked from their photo library in P1ScreenStyleView. Kept as two PNGs in
+/// Application Support and loaded once; P1ScreenView reads them straight
+/// off `shared`, so the play screen, screenshots and recordings all pick
+/// up a change immediately.
+///
+/// An icon sheet is one image holding 8 equal slots, 4 across and 2
+/// down, in P1ScreenView's icon order (food, light, game, medicine /
+/// bathroom, status, training, attention).
+@MainActor
+@Observable
+final class P1CustomArt {
+    static let shared = P1CustomArt()
+
+    private(set) var background: UIImage?
+    private(set) var icons: [UIImage]?
+
+    enum ImportError: LocalizedError {
+        case unreadable
+        case wrongSheetShape
+
+        var errorDescription: String? {
+            switch self {
+            case .unreadable:
+                return "That image couldn't be opened."
+            case .wrongSheetShape:
+                return "An icon sheet needs to be twice as wide as it is tall: 8 equal slots, 4 across and 2 down."
+            }
+        }
+    }
+
+    private static let maxDimension: CGFloat = 1024
+
+    private static var directory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return base.appendingPathComponent("P1CustomArt", isDirectory: true)
+    }
+    private static var backgroundURL: URL { directory.appendingPathComponent("background.png") }
+    private static var iconSheetURL: URL { directory.appendingPathComponent("icons.png") }
+
+    private init() {
+        background = UIImage(contentsOfFile: Self.backgroundURL.path)
+        if let sheet = UIImage(contentsOfFile: Self.iconSheetURL.path) {
+            icons = Self.slice(sheet)
+        }
+    }
+
+    /// Center-crops to a square, since the screen is square.
+    func setBackground(from data: Data) throws {
+        guard let image = UIImage(data: data), image.size.width > 0, image.size.height > 0 else {
+            throw ImportError.unreadable
+        }
+        let side = min(image.size.width * image.scale, image.size.height * image.scale, Self.maxDimension)
+        let fill = max(side / image.size.width, side / image.size.height)
+        let drawn = CGSize(width: image.size.width * fill, height: image.size.height * fill)
+        let square = Self.render(size: CGSize(width: side, height: side), opaque: true) {
+            image.draw(in: CGRect(
+                x: (side - drawn.width) / 2, y: (side - drawn.height) / 2,
+                width: drawn.width, height: drawn.height
+            ))
+        }
+        try Self.write(square, to: Self.backgroundURL)
+        background = square
+    }
+
+    func setIconSheet(from data: Data) throws {
+        guard let image = UIImage(data: data), image.size.height > 0 else { throw ImportError.unreadable }
+        let ratio = image.size.width / image.size.height
+        guard abs(ratio - 2) < 0.1 else { throw ImportError.wrongSheetShape }
+        let width = min(image.size.width * image.scale, Self.maxDimension).rounded()
+        // A multiple of 8 so every slot is a whole number of pixels.
+        let size = CGSize(width: (width / 8).rounded(.down) * 8, height: (width / 8).rounded(.down) * 4)
+        var sheet = Self.render(size: size, opaque: false) {
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        if !Self.hasTransparency(image) {
+            sheet = Self.inkOnly(sheet) ?? sheet
+        }
+        guard let sliced = Self.slice(sheet) else { throw ImportError.unreadable }
+        try Self.write(sheet, to: Self.iconSheetURL)
+        icons = sliced
+    }
+
+    func resetBackground() {
+        try? FileManager.default.removeItem(at: Self.backgroundURL)
+        background = nil
+    }
+
+    func resetIcons() {
+        try? FileManager.default.removeItem(at: Self.iconSheetURL)
+        icons = nil
+    }
+
+    // MARK: Helpers
+
+    private static func render(size: CGSize, opaque: Bool, _ draw: () -> Void) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = opaque
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in draw() }
+    }
+
+    private static func write(_ image: UIImage, to url: URL) throws {
+        guard let data = image.pngData() else { throw ImportError.unreadable }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try data.write(to: url, options: .atomic)
+    }
+
+    private static func slice(_ sheet: UIImage) -> [UIImage]? {
+        guard let cg = sheet.cgImage else { return nil }
+        let w = cg.width / 4, h = cg.height / 2
+        guard w > 0, h > 0 else { return nil }
+        var result: [UIImage] = []
+        for i in 0..<8 {
+            guard let slot = cg.cropping(to: CGRect(x: (i % 4) * w, y: (i / 4) * h, width: w, height: h)) else {
+                return nil
+            }
+            result.append(UIImage(cgImage: slot))
+        }
+        return result
+    }
+
+    private static func hasTransparency(_ image: UIImage) -> Bool {
+        switch image.cgImage?.alphaInfo {
+        case .none?, .noneSkipFirst?, .noneSkipLast?, nil: return false
+        default: return true
+        }
+    }
+
+    /// For a sheet saved without transparency (dark icons on a light
+    /// page, e.g. a JPEG): keeps the dark ink and drops the page, so the
+    /// icons don't show up as eight solid boxes.
+    private static func inkOnly(_ image: UIImage) -> UIImage? {
+        guard let cg = image.cgImage else { return nil }
+        let w = cg.width, h = cg.height
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let context = CGContext(
+            data: &pixels, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            let luminance = (Int(pixels[i]) * 299 + Int(pixels[i + 1]) * 587 + Int(pixels[i + 2]) * 114) / 1000
+            // Premultiplied black ink: color stays 0, only alpha varies.
+            pixels[i] = 0
+            pixels[i + 1] = 0
+            pixels[i + 2] = 0
+            pixels[i + 3] = UInt8(255 - luminance)
+        }
+        return context.makeImage().map { UIImage(cgImage: $0) }
+    }
+}
+
+// MARK: - Screen Style sheet
+
+/// "Screen Style" in a P1 page's menu: pick or reset the background
+/// image and the icon sheet. This family has no Settings screen of its
+/// own, so this is a small sheet rather than a Settings section.
+struct P1ScreenStyleView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var backgroundPick: PhotosPickerItem?
+    @State private var iconSheetPick: PhotosPickerItem?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    PhotosPicker(selection: $backgroundPick, matching: .images) {
+                        Label("Choose Background", systemImage: "photo")
+                    }
+                    if P1CustomArt.shared.background != nil {
+                        Button("Reset Background", role: .destructive) { P1CustomArt.shared.resetBackground() }
+                    }
+                } header: {
+                    Text("Background")
+                } footer: {
+                    Text("Any image from your photo library. It's cropped to a square.")
+                }
+                Section {
+                    PhotosPicker(selection: $iconSheetPick, matching: .images) {
+                        Label("Choose Icon Sheet", systemImage: "square.grid.2x2")
+                    }
+                    if P1CustomArt.shared.icons != nil {
+                        Button("Reset Icons", role: .destructive) { P1CustomArt.shared.resetIcons() }
+                    }
+                } header: {
+                    Text("Icons")
+                } footer: {
+                    Text("A single image with 8 equal slots, 4 across and 2 down, in this order: food, light, game, medicine, then bathroom, status, training, attention. A transparent PNG works best.")
+                }
+            }
+            .navigationTitle("Screen Style")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .onChange(of: backgroundPick) { _, item in
+                load(item) { try P1CustomArt.shared.setBackground(from: $0) }
+                backgroundPick = nil
+            }
+            .onChange(of: iconSheetPick) { _, item in
+                load(item) { try P1CustomArt.shared.setIconSheet(from: $0) }
+                iconSheetPick = nil
+            }
+            .alert(
+                errorMessage ?? "",
+                isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+            ) {
+                Button("OK") { errorMessage = nil }
+            }
+        }
+    }
+
+    private func load(_ item: PhotosPickerItem?, apply: @escaping @MainActor (Data) throws -> Void) {
+        guard let item else { return }
+        Task { @MainActor in
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    throw P1CustomArt.ImportError.unreadable
+                }
+                try apply(data)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
 }

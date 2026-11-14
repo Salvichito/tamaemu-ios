@@ -209,6 +209,7 @@ static timestamp_t ref_ts;
 static bool_t cpu_halted = 0;
 static u32_t cpu_frequency = OSC1_FREQUENCY; // in hz
 static u32_t scaled_cycle_accumulator = 0;
+static u32_t ts_remainder = 0; /* iOS port: see wait_for_cycles() */
 
 
 static state_t cpu_state = {
@@ -1713,7 +1714,20 @@ static timestamp_t wait_for_cycles(timestamp_t since, u8_t cycles) {
 		return g_hal->get_timestamp();
 	}
 
-	deadline = since + (cycles * ts_freq)/(cpu_frequency * speed_ratio);
+	/* iOS port: upstream computes (cycles * ts_freq)/(cpu_frequency *
+	 * speed_ratio) with plain integer division and throws the remainder
+	 * away on every single call. At ts_freq = 1 MHz and a 32768 Hz CPU, a
+	 * 5-cycle step is 152.59us but gets scheduled as 152us -- so the chip
+	 * (and the Tama's own clock, which counts cycles) ran ~0.39% faster
+	 * than the timestamps it's paced against: measured ~5.5 minutes per
+	 * day ahead, both live and during fast-forward catch-up. Carrying the
+	 * remainder into the next call makes the long-run rate exact. */
+	{
+		u32_t den = cpu_frequency * speed_ratio;
+		u32_t num = cycles * ts_freq + ts_remainder;
+		deadline = since + num / den;
+		ts_remainder = num % den;
+	}
 	g_hal->sleep_until(deadline);
 
 	return deadline;
@@ -1935,6 +1949,26 @@ void cpu_release(void)
 {
 }
 
+/* iOS port: see the lookup in cpu_step(). */
+static u8_t op_lut[4096];
+static bool_t op_lut_built = 0;
+
+static void build_op_lut(void)
+{
+	u32_t op;
+	u8_t i;
+
+	for (op = 0; op < 4096; op++) {
+		for (i = 0; ops[i].log != NULL; i++) {
+			if ((op & ops[i].mask) == ops[i].code) {
+				break;
+			}
+		}
+		op_lut[op] = i;
+	}
+	op_lut_built = 1;
+}
+
 int cpu_step(void)
 {
 	u12_t op;
@@ -1945,12 +1979,18 @@ int cpu_step(void)
 	if (!cpu_halted) {
 		op = g_program[pc];
 
-		/* Lookup the OP code */
-		for (i = 0; ops[i].log != NULL; i++) {
-			if ((op & ops[i].mask) == ops[i].code) {
-				break;
-			}
+		/* Lookup the OP code.
+		 * iOS port: upstream scans the whole ops[] table linearly on every
+		 * instruction, which was most of the cost of a step -- fine at the
+		 * real chip's speed, but it capped fast-forward catch-up at roughly
+		 * 9 emulated hours per 10 real seconds. The table below gives the
+		 * identical answer (same first-match index, same "not found"
+		 * terminator index) from one array read; every op mask is within
+		 * the 12-bit opcode, so indexing by the low 12 bits loses nothing. */
+		if (!op_lut_built) {
+			build_op_lut();
 		}
+		i = op_lut[op & 0xFFF];
 
 		if (ops[i].log == NULL) {
 			g_hal->log(LOG_ERROR, "Unknown op-code 0x%X (pc = 0x%04X)\n", op, pc);
