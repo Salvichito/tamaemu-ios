@@ -488,8 +488,7 @@ struct TamaGalleryView: View {
                         SettingsView(
                             device: device,
                             viewModel: viewModel,
-                            onDelete: { gallery.removeDevice(device) },
-                            onDeviceImported: { gallery.deviceImported($0) }
+                            onDelete: { gallery.removeDevice(device) }
                         )
                     }
                 }

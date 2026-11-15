@@ -317,6 +317,98 @@ final class PlayViewModel: SaveBackupHost {
         startEngine()
     }
 
+    // MARK: - Downloads (DLC)
+
+    /// Whether this kind of Tama has download slots at all.
+    var supportsDownloads: Bool {
+        DownloadStore.isSupported(deviceID: selectedDevice.id)
+    }
+
+    /// Downloads go straight into the running Tama's memory so it doesn't
+    /// have to restart, which needs it loaded -- not paused, not still
+    /// loading.
+    var canChangeDownloads: Bool { engine != nil }
+
+    /// Every download slot on this Tama and what's in it.
+    func downloadCategories() -> [DownloadCategory] {
+        let id = selectedDevice.id
+        if engine != nil {
+            var result: [DownloadCategory] = []
+            pauseEngine { engine in
+                result = engine.readFlash { DownloadStore.categories(deviceID: id, image: $0) }
+            }
+            return result
+        }
+        // Paused (or not loaded yet): what's on disk is current, since
+        // stopping saves.
+        let paths = SavePaths(device: selectedDevice)
+        let url = liveSaveURL ?? paths.importedROMPath
+        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return [] }
+        return data.withUnsafeBytes {
+            DownloadStore.categories(deviceID: id, image: $0.bindMemory(to: UInt8.self))
+        }
+    }
+
+    /// Installs download files (.jpg/.bin) picked by the user. Each file
+    /// gets its own result; one bad file doesn't stop the others.
+    func installDownloads(from urls: [URL]) -> [DownloadInstallResult] {
+        guard engine != nil else { return [] }
+        // Copy everything into the app first: the picked files are only
+        // readable through their security scope, and the installer opens
+        // them by plain path.
+        let fm = FileManager.default
+        let folder = fm.temporaryDirectory.appendingPathComponent("DownloadImport", isDirectory: true)
+        try? fm.removeItem(at: folder)
+        defer { try? fm.removeItem(at: folder) }
+        var local: [URL] = []
+        var unreadable: [DownloadInstallResult] = []
+        for (i, url) in urls.enumerated() {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let dir = folder.appendingPathComponent(String(i), isDirectory: true)
+            let copy = dir.appendingPathComponent(url.lastPathComponent)
+            do {
+                try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+                try fm.copyItem(at: url, to: copy)
+                local.append(copy)
+            } catch {
+                unreadable.append(DownloadInstallResult(
+                    fileName: url.lastPathComponent, itemName: "", categoryLabel: nil,
+                    failure: "The file couldn't be read."
+                ))
+            }
+        }
+        guard !local.isEmpty else { return unreadable }
+
+        let id = selectedDevice.id
+        let paths = SavePaths(device: selectedDevice)
+        var results: [DownloadInstallResult] = []
+        pauseEngine { engine in
+            // A way back to exactly how the Tama was before this.
+            engine.save()
+            paths.makeBackup(reason: .beforeDownloads)
+            results = engine.editFlash { DownloadStore.install(deviceID: id, image: $0, files: local) }
+        }
+        return results + unreadable
+    }
+
+    /// Erases one download slot. Returns false if nothing was changed.
+    @discardableResult
+    func removeDownload(_ slot: DownloadSlot) -> Bool {
+        guard engine != nil else { return false }
+        let id = selectedDevice.id
+        let paths = SavePaths(device: selectedDevice)
+        var removed = false
+        pauseEngine { engine in
+            engine.save()
+            paths.makeBackup(reason: .beforeDownloads)
+            removed = engine.editFlash {
+                DownloadStore.free(deviceID: id, image: $0, kind: slot.kind, index: slot.index)
+            }
+        }
+        return removed
+    }
+
     // MARK: - Backups
 
     func backupNow() {

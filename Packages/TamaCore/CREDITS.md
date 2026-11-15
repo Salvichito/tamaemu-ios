@@ -1,7 +1,8 @@
 # Credits and core changes
 
 The emulator core in `Sources/CTama/` (`cpu.c`, `mem.c`, `lcd.c`, `periph.c`, `device.c`,
-`state.c`, `savepath.c`, `link.c`, `pn512.c`, `nfcpeer.c`, `disasm.c`, `tamasave.c`, and the
+`state.c`, `savepath.c`, `link.c`, `pn512.c`, `nfcpeer.c`, `disasm.c`, `tamasave.c`, `dlc.c`,
+`dlc_names_4u.c`, and the
 headers in `Sources/CTama/include/`) was written by
 **[maragotchi](https://github.com/maragotchi/tamaemu)** and is used here under the same
 licence, GNU GPL-3.0 (see `LICENSE`).
@@ -95,6 +96,19 @@ and marked with a `// iOS port:` comment at the change site.
 
 See `EmulatorEngine.swift`'s `runLoop()` in the iOS app for the cycle-ceiling
 fix mentioned above.
+
+## Download installer (`dlc.c`, `dlc_names_4u.c`, `include/dlc.h`)
+
+These three files are upstream's download ("DLC") installer, taken from its `tools/`
+directory **unmodified**. Upstream's `tools/dlc_scan.c` (scanning a folder on disk into a
+library, for the desktop launcher) is not included.
+
+`dlc_ios.c` and `include/dlc_ios.h` are **new files written for this port**, not upstream's.
+They add an in-memory install path built only from `dlc.h`'s public functions: upstream's
+own `dlc_inject()` edits a save file while the emulator is closed, which makes the Tama
+restart afterwards; the iOS app instead writes into the stopped engine's flash buffer (see
+`EmulatorEngine.editFlash`), so the Tama carries on where it was. Their functions take the
+device by name because Swift can't import `DlcDevice`.
 
 Nothing else in the core is modified. `main.c` and `panel.c` from the upstream project are
 not part of this port at all — they are the SDL desktop front end, replaced here by Swift

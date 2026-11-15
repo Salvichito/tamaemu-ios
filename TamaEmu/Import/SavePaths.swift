@@ -320,7 +320,7 @@ struct SavePaths {
 /// `SavePaths.makeBackup(reason:)`.
 struct SaveBackup: Identifiable, Hashable {
     enum Reason: String {
-        case automatic, manual, beforeImport, beforeRestart, beforeRestore
+        case automatic, manual, beforeImport, beforeRestart, beforeRestore, beforeDownloads
 
         var label: String {
             switch self {
@@ -329,6 +329,7 @@ struct SaveBackup: Identifiable, Hashable {
             case .beforeImport: return "Before importing a save"
             case .beforeRestart: return "Before a restart"
             case .beforeRestore: return "Before restoring a backup"
+            case .beforeDownloads: return "Before changing downloads"
             }
         }
     }

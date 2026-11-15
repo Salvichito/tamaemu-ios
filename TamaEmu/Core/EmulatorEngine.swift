@@ -381,6 +381,25 @@ final class EmulatorEngine {
         audioOutput.removeRecordingTap()
     }
 
+    /// Read-only look at the Tama's flash image (firmware + everything it
+    /// has stored, downloads included). Call only after stop() has
+    /// returned.
+    func readFlash<T>(_ body: (UnsafeBufferPointer<UInt8>) -> T) -> T {
+        body(UnsafeBufferPointer(start: emu.pointee.rom, count: Int(emu.pointee.dev.rom_size)))
+    }
+
+    /// Lets `body` change the flash image in place -- the same bytes the
+    /// firmware programs when it stores something itself -- and marks it
+    /// to be written out by the next save(), which also re-stamps the
+    /// snapshot so the two keep matching. The CPU/RAM state is untouched,
+    /// so the Tama carries on exactly where it was. Call only after stop()
+    /// has returned.
+    func editFlash<T>(_ body: (UnsafeMutableBufferPointer<UInt8>) -> T) -> T {
+        let result = body(UnsafeMutableBufferPointer(start: emu.pointee.rom, count: Int(emu.pointee.dev.rom_size)))
+        emu.pointee.flash_dirty = true
+        return result
+    }
+
     /// Persists the full snapshot and, if the firmware has written to its
     /// flash, the live flash image too. Call only after stop() has
     /// returned — never while the emulator thread might still be running.

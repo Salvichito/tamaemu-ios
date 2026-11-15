@@ -9,7 +9,6 @@ struct SettingsView: View {
     let device: TamaDevice
     let viewModel: PlayViewModel
     var onDelete: () -> Void
-    var onDeviceImported: (TamaDevice) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(PurchaseManager.self) private var purchases
 
@@ -28,7 +27,6 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.reminderIntervalHours) private var reminderIntervalHours = 8.0
     @AppStorage(AppSettings.Keys.liveTranslationUsesCloud) private var liveTranslationUsesCloud = false
 
-    @State private var showingImportSheet = false
     @State private var showingSaveImporter = false
     @State private var showingSaveExporter = false
     @State private var exportURL: URL?
@@ -42,13 +40,11 @@ struct SettingsView: View {
     init(
         device: TamaDevice,
         viewModel: PlayViewModel,
-        onDelete: @escaping () -> Void,
-        onDeviceImported: @escaping (TamaDevice) -> Void
+        onDelete: @escaping () -> Void
     ) {
         self.device = device
         self.viewModel = viewModel
         self.onDelete = onDelete
-        self.onDeviceImported = onDeviceImported
         // Speed and stay-awake are per-device — the key itself depends on
         // `device`, so the usual static-key @AppStorage shorthand can't
         // express it; this underscore-prefixed form is the standard way to
@@ -73,20 +69,6 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                }
-            }
-            .sheet(isPresented: $showingImportSheet) {
-                NavigationStack {
-                    FirmwareImportView(devices: DeviceCatalog.all()) { importedDevice, url in
-                        showingImportSheet = false
-                        onDeviceImported(importedDevice)
-                    }
-                    .navigationTitle("Import firmware")
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { showingImportSheet = false }
-                        }
-                    }
                 }
             }
             .fileImporter(isPresented: $showingSaveImporter, allowedContentTypes: [.data]) { result in
@@ -191,6 +173,11 @@ struct SettingsView: View {
             NavigationLink("Backups") {
                 BackupListView(device: device, host: viewModel) { dismiss() }
             }
+            if viewModel.supportsDownloads {
+                NavigationLink("Downloads") {
+                    DownloadsView(device: device, viewModel: viewModel)
+                }
+            }
             Button("Restart (soft reset)…") { showingRestartConfirm = true }
             Button("Remove this device's data…", role: .destructive) {
                 showingRemoveConfirm = true
@@ -198,13 +185,7 @@ struct SettingsView: View {
         } header: {
             Text("Save")
         } footer: {
-            Text("A backup of this Tama is kept automatically, about once an hour while you play. Add more Tamas from the \"+\" button in the gallery, or re-import this one's firmware below.")
-        }
-
-        Section {
-            Button("Import additional firmware…") { showingImportSheet = true }
-        } header: {
-            Text("Firmware")
+            Text("A backup of this Tama is kept automatically, about once an hour while you play. Add more Tamas from the gallery's \"⋯\" menu.")
         }
     }
 
