@@ -518,6 +518,17 @@ void cpu_step_catchup(Emu *e, uint32_t halt_cycles);
  * right after each return, so it still sees every on/off transition at
  * the step it happened. */
 uint32_t cpu_run_catchup(Emu *e, double target_secs, uint32_t halt_cycles, uint32_t max_steps);
+/* iOS port: live play's version of the same idea -- one real-time frame's
+ * worth of cpu_step + periph_tick, entirely in C, until emu_secs reaches
+ * target_secs, cycles reaches cycle_ceiling, the core stops, or the piezo
+ * tone switches on/off. The live loop used to do this one instruction at
+ * a time from Swift; in a Debug build (which is what gets installed from
+ * Xcode) that Swift bookkeeping is unoptimized and cost more than the
+ * emulation itself -- enough that an iPad mini (A17 Pro) couldn't finish
+ * a frame in 1/60 s and the whole Tama ran in slow motion. The caller
+ * loops on this and checks the melody after each return, exactly like
+ * the catch-up loop does. */
+void cpu_run_frame(Emu *e, double target_secs, uint64_t cycle_ceiling);
 
 static inline bool state_session_eligible(bool interactive, bool linkrom,
                                           bool net_host, bool net_join,

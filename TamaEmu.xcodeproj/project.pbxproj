@@ -15,6 +15,7 @@
 		0CDD0E4D7369487386B4B401 /* ButtonPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2267519E09184C139C7BAC4C /* ButtonPad.swift */; };
 		105C8B5E80F65564F54A08A6 /* BackgroundRefreshCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AC396784A069C76A1E76F5 /* BackgroundRefreshCursor.swift */; };
 		11FF116C1CABA951E7704A81 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB4C3E1034DD2DB0A41D7C6 /* KeychainStore.swift */; };
+		1FB4361F27FC0E81D609693D /* NearbyLinkSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A958E0CD980C3FF23A48260 /* NearbyLinkSession.swift */; };
 		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
 		2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
@@ -56,6 +57,7 @@
 		C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9228514E9DDD678D810B062 /* PlayViewModel.swift */; };
 		C67CCAE93C1A0FF7D205485C /* ScreenImagePrep.swift in Sources */ = {isa = PBXBuildFile; fileRef = B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */; };
 		C919374E85E040D38477FC99 /* TamaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */; };
+		CD57721953FDAB7D692E113D /* NearbyLinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 786034F34616E49A26C874C5 /* NearbyLinkView.swift */; };
 		CFCC6A6FD42DD0017938FBD0 /* DevicePauseState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0393AF338C3B68A9C5F26F /* DevicePauseState.swift */; };
 		D2E38B4854F84C59B566484F /* AudioOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B094FAC77A244A49BB27D76A /* AudioOutput.swift */; };
 		D57313C8EEDE13289B664DB7 /* T7ScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68590EC05C8F0DC1D4C3BE24 /* T7ScreenView.swift */; };
@@ -63,6 +65,7 @@
 		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
 		DBDEB5A1D000D35A0A87316E /* T7EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51134BD9CBB7FA2AC0B5BD6C /* T7EmulatorEngine.swift */; };
 		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
+		E49CB9524210D840D9C46A28 /* LinkPort.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73A464D9A5B4C551857E6F9 /* LinkPort.swift */; };
 		E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7594ABE9067A97A1A2D888F3 /* TamaCore */; };
 		EF5191F516084C0781B33906 /* InputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736990A9EB7F43B291B3E53F /* InputController.swift */; };
 		EFC5C2D0EEC7269360784458 /* TamaNeglectWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0E0DD6673484D7CEF5EB7A /* TamaNeglectWidget.swift */; };
@@ -101,6 +104,7 @@
 		04981D1305DB4733ACBC657E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenGlow.swift; path = ScreenGlow.swift; sourceTree = "<group>"; };
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
+		0A958E0CD980C3FF23A48260 /* NearbyLinkSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NearbyLinkSession.swift; sourceTree = "<group>"; };
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
 		1122334455667788990AABBC /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		14B814DDD09245609E359714 /* TamaEmu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaEmu.entitlements; sourceTree = "<group>"; };
@@ -131,6 +135,7 @@
 		6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetView.swift; sourceTree = "<group>"; };
 		736990A9EB7F43B291B3E53F /* InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputController.swift; sourceTree = "<group>"; };
 		76E2ABE30C3A16622D447D9B /* T7PlayViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = T7PlayViewModel.swift; sourceTree = "<group>"; };
+		786034F34616E49A26C874C5 /* NearbyLinkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NearbyLinkView.swift; sourceTree = "<group>"; };
 		7B76611C89874CD080A593F7 /* FirmwareImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareImportView.swift; sourceTree = "<group>"; };
 		84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRecorder.swift; sourceTree = "<group>"; };
 		8B463E74FCC99EE8258DD71F /* PaywallView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
@@ -146,6 +151,7 @@
 		B094FAC77A244A49BB27D76A /* AudioOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutput.swift; sourceTree = "<group>"; };
 		B13BA0BC3698C849674338E2 /* TamaEmu.storekit */ = {isa = PBXFileReference; includeInIndex = 1; path = TamaEmu.storekit; sourceTree = "<group>"; };
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B73A464D9A5B4C551857E6F9 /* LinkPort.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LinkPort.swift; sourceTree = "<group>"; };
 		B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenImagePrep.swift; sourceTree = "<group>"; };
 		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
 		C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotificationScheduler.swift; sourceTree = "<group>"; };
@@ -237,6 +243,8 @@
 				42D45A04487E1B1C19010476 /* V1EmulatorEngine.swift */,
 				51134BD9CBB7FA2AC0B5BD6C /* T7EmulatorEngine.swift */,
 				1BBD0D1B0503923459126E75 /* PurchaseManager.swift */,
+				0A958E0CD980C3FF23A48260 /* NearbyLinkSession.swift */,
+				B73A464D9A5B4C551857E6F9 /* LinkPort.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -318,6 +326,7 @@
 				D07A735B64EEDCE8C20FB0B1 /* T7PageView.swift */,
 				68590EC05C8F0DC1D4C3BE24 /* T7ScreenView.swift */,
 				8B463E74FCC99EE8258DD71F /* PaywallView.swift */,
+				786034F34616E49A26C874C5 /* NearbyLinkView.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -489,6 +498,9 @@
 				05A30627DECD7987DCFE1431 /* PurchaseManager.swift in Sources */,
 				A3D4EAF7B72EA340385B50F1 /* PaywallView.swift in Sources */,
 				64F11463E45E8FBC33D469E5 /* DownloadsView.swift in Sources */,
+				E49CB9524210D840D9C46A28 /* LinkPort.swift in Sources */,
+				1FB4361F27FC0E81D609693D /* NearbyLinkSession.swift in Sources */,
+				CD57721953FDAB7D692E113D /* NearbyLinkView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

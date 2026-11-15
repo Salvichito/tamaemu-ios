@@ -42,7 +42,6 @@ struct T7PageView: View {
                 onRelease: { viewModel.releaseButton($0) }
             )
             .disabled(viewModel.isLoading)
-            .opacity(viewModel.isLoading ? 0.4 : 1)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)

@@ -59,6 +59,110 @@ final class EmulatorEngine {
         return fastForwardMultiplier
     }
 
+    // MARK: - Connecting to another Tama
+
+    /// Set from the main thread (PlayViewModel), read once per frame by
+    /// runLoop() on the emulator thread -- same pattern as fastForwardLock.
+    private let linkLock = NSLock()
+    private var requestedLinkPort: LinkPort?
+    /// Emulator thread only (and stop()/deinit, once that thread is gone):
+    /// the port the core's link is currently wired to.
+    private var attachedLinkPort: LinkPort?
+
+    /// Wires this Tama's infrared to `port` (nil unplugs it). Takes effect
+    /// at the start of the next frame. Safe to call at any time, including
+    /// before start().
+    ///
+    /// The core already has a complete model of the infrared hardware and
+    /// a shared "bus" between Tamas (link.c); it is simply never given a
+    /// partner unless this is called. Here the bus has two seats: seat 0
+    /// is this Tama, seat 1 stands in for the remote one -- whatever this
+    /// Tama sends lands in seat 1's inbox and is shipped out through the
+    /// port, and whatever the port delivers is "sent" from seat 1 so it
+    /// lands in this Tama's inbox. No sockets, no core changes.
+    func setLinkPort(_ port: LinkPort?) {
+        linkLock.lock(); requestedLinkPort = port; linkLock.unlock()
+    }
+
+    private func currentRequestedLinkPort() -> LinkPort? {
+        linkLock.lock(); defer { linkLock.unlock() }
+        return requestedLinkPort
+    }
+
+    /// Brings the core's link in step with what was last requested.
+    private func syncLink(to port: LinkPort?) {
+        guard port !== attachedLinkPort else { return }
+        if let port {
+            if emu.pointee.link == nil {
+                let link = UnsafeMutablePointer<Link>.allocate(capacity: 1)
+                memset(link, 0, MemoryLayout<Link>.size)
+                emu.pointee.link = link
+                emu.pointee.core_id = 0
+            }
+            // Also on a change of partner: nothing of the previous
+            // conversation may leak into the new one.
+            link_reset(emu.pointee.link)
+            attachedLinkPort = port
+        } else {
+            detachLink()
+        }
+    }
+
+    private func detachLink() {
+        if let link = emu.pointee.link {
+            emu.pointee.link = nil
+            link.deallocate()
+        }
+        attachedLinkPort = nil
+    }
+
+    /// How long a Tama in the middle of a conversation will hold still for
+    /// the other one before dropping it and carrying on alone. Long enough
+    /// to ride out a bad wireless hiccup; a friend who paused or closed
+    /// the app freezes this Tama for at most this long, once.
+    private static let linkWaitLimitNanos: UInt64 = 500_000_000
+
+    /// Before this frame's CPU stepping: take the other Tama's next frame
+    /// and hand it to the core -- waiting for it if it hasn't arrived yet
+    /// (see LinkPort for why the two step together). Returns false if a
+    /// stop was requested while waiting.
+    private func deliverLinkInput() -> Bool {
+        guard let port = attachedLinkPort, let link = emu.pointee.link else { return true }
+        let started = DispatchTime.now().uptimeNanoseconds
+        while true {
+            switch port.nextStep() {
+            case .run(let data):
+                for byte in data {
+                    link_tx(link, 1, byte)
+                }
+                return true
+            case .wait:
+                stopLock.lock(); let stop = shouldStop; stopLock.unlock()
+                if stop { return false }
+                if DispatchTime.now().uptimeNanoseconds &- started > Self.linkWaitLimitNanos {
+                    port.giveUpWaiting()
+                    return true
+                }
+                Thread.sleep(forTimeInterval: 0.002)
+            }
+        }
+    }
+
+    /// After this frame's CPU stepping: hand the port whatever this Tama
+    /// transmitted (usually nothing; the port decides what, if anything,
+    /// goes out). The core emits whole events only, so a frame's worth is
+    /// always a whole number of them.
+    private func collectLinkOutput() {
+        guard let port = attachedLinkPort, let link = emu.pointee.link else { return }
+        var out = Data()
+        while true {
+            let byte = link_rx(link, 1)
+            if byte < 0 { break }
+            out.append(UInt8(truncatingIfNeeded: byte))
+        }
+        port.finishFrame(out)
+    }
+
     /// Where this Tama's clock stands against real time, as one fixed
     /// point: "when the core's own emulated-time counter (`emu_secs`) read
     /// `anchorEmuSecs`, the real wall-clock time was `anchorWall`". From
@@ -318,6 +422,9 @@ final class EmulatorEngine {
     }
 
     deinit {
+        if let link = emu.pointee.link {
+            link.deallocate()
+        }
         if let rom = emu.pointee.rom {
             rom.deallocate()
         }
@@ -363,9 +470,13 @@ final class EmulatorEngine {
     func stop() {
         guard thread != nil else { return }
         stopLock.lock(); shouldStop = true; stopLock.unlock()
-        _ = stoppedSemaphore.wait(timeout: .now() + 1.0)
+        let exited = stoppedSemaphore.wait(timeout: .now() + 1.0) == .success
         thread = nil
         audioOutput.stop()
+        // Unplugged before anything saves: the snapshot is a copy of the
+        // whole core, and a pointer to this session's link has no business
+        // in it. Only once the thread is really gone -- it is the one user.
+        if exited { detachLink() }
     }
 
     /// Pass-throughs for ScreenRecorder — see AudioOutput's own doc
@@ -460,9 +571,9 @@ final class EmulatorEngine {
         return pixels
     }
 
-    /// Call once right after every `cpu_step`, from any loop (normal
-    /// real-time or catch-up) — the melody edge that signals a call can
-    /// happen at any point in either. `duringCatchUp` controls whether a
+    /// Call after every batch of steps (each batch returns on a tone
+    /// edge), from any loop (normal real-time or catch-up) — the melody
+    /// edge that signals a call can happen at any point in either. `duringCatchUp` controls whether a
     /// detection here is allowed to notify — see `notifyOnCatchUpCalls`.
     private func checkCallDetection(duringCatchUp: Bool = false) {
         let detected = callDetector.checkToneEdge(
@@ -595,13 +706,20 @@ final class EmulatorEngine {
             // fires relative to wall-clock time, only how many of this
             // frame's instructions get to react to it.
             periph_buttons(emu, input.currentMask())
+            syncLink(to: currentRequestedLinkPort())
+            if !deliverLinkInput() { break }
+            // The stepping runs in batches inside C (cpu_run_frame), not
+            // one instruction at a time from here: per-instruction
+            // bookkeeping in Swift cost more than the emulation itself in
+            // Debug builds and made slower devices miss the 60Hz deadline
+            // (everything in slow motion). It hands back control on every
+            // tone on/off edge, so the melody check after each return sees
+            // exactly the transitions a per-step check would.
             while emu.pointee.emu_secs < targetSecs && emu.pointee.cycles < cycleCeiling && !emu.pointee.stopped {
-                let before = emu.pointee.cycles
-                cpu_step(emu)
-                let delta = UInt32(truncatingIfNeeded: emu.pointee.cycles &- before)
-                periph_tick(emu, delta)
+                cpu_run_frame(emu, targetSecs, cycleCeiling)
                 checkCallDetection()
             }
+            collectLinkOutput()
 
             pixels.withUnsafeMutableBufferPointer { buf in
                 lcd_render(emu, buf.baseAddress, &w, &h)

@@ -49,6 +49,14 @@ final class PlayViewModel: SaveBackupHost {
     /// (background, swipe away) always comes back at normal speed.
     private(set) var isFastForwarding = false
 
+    /// Who this Tama is currently connected to (NearbyLinkSession), for
+    /// the badge on its page -- nil when not connected.
+    private(set) var linkPeerName: String?
+    /// Kept here rather than only on the engine: the engine is rebuilt
+    /// every time this page comes back on screen, and the connection
+    /// should survive that.
+    private var linkPort: LinkPort?
+
     private var engine: EmulatorEngine?
     private var displayTimer: Timer?
     /// Bumped by stopEngine() and every startEngine() call — a load that
@@ -158,6 +166,15 @@ final class PlayViewModel: SaveBackupHost {
     func resumeIfNeeded() {
         guard engine == nil, !isPaused else { return }
         startEngine()
+    }
+
+    /// Plugs this Tama's infrared into a connection to another Tama, or
+    /// unplugs it (nil). Takes effect right away if the Tama is running,
+    /// otherwise the next time it starts.
+    func setLink(port: LinkPort?, peerName: String?) {
+        linkPort = port
+        linkPeerName = port == nil ? nil : peerName
+        engine?.setLinkPort(port)
     }
 
     /// Tap-and-hold on the Tama's screen. A no-op while paused or loading
@@ -539,6 +556,7 @@ final class PlayViewModel: SaveBackupHost {
                         // happens to notice a pixel change.
                         self.setLCDImage(image)
                     }
+                    newEngine.setLinkPort(self.linkPort)
                     newEngine.start()
                     self.engine = newEngine
                     // The live engine keeps the gate from here; stopEngine()

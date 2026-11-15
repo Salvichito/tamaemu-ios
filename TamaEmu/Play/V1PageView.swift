@@ -78,7 +78,6 @@ struct V1PageView: View {
                 onRelease: { viewModel.releaseButton($0) }
             )
             .disabled(viewModel.isLoading || viewModel.isPaused)
-            .opacity(viewModel.isLoading || viewModel.isPaused ? 0.4 : 1)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)

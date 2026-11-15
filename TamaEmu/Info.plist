@@ -26,6 +26,13 @@
 	<string>4</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_tamaemu-link._tcp</string>
+		<string>_tamaemu-link._udp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>TamaEmu uses this to find another phone nearby so your Tama can connect with a friend's.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>TamaEmu uses this to save screenshots of your Tama's screen to your photo library.</string>
 	<key>UIBackgroundModes</key>

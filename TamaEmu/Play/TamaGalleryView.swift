@@ -23,6 +23,10 @@ struct TamaGalleryView: View {
     @State private var showingPaywall = false
     @State private var showingBackups = false
     @State private var showingP1ScreenStyle = false
+    /// One connection to another phone at a time, for the whole gallery --
+    /// it outlives the sheet that sets it up (see NearbyLinkView).
+    @State private var nearbyLink = NearbyLinkSession()
+    @State private var showingNearbyLink = false
 
     /// Ambient Background is a premium feature — forced off for free users
     /// regardless of their own stored preference, which is left untouched
@@ -385,6 +389,16 @@ struct TamaGalleryView: View {
                 } label: {
                     Label("Sync Clock to Now", systemImage: "clock.arrow.2.circlepath")
                 }
+                if NearbyLinkSession.supports(viewModel.selectedDevice) {
+                    Button {
+                        showingNearbyLink = true
+                    } label: {
+                        Label(
+                            viewModel.linkPeerName == nil ? "Connect Nearby…" : "Nearby Connection…",
+                            systemImage: "antenna.radiowaves.left.and.right"
+                        )
+                    }
+                }
                 if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
                     Button {
                         if purchases.isPremium {
@@ -538,6 +552,20 @@ struct TamaGalleryView: View {
                 .sheet(isPresented: $showingP1ScreenStyle) {
                     P1ScreenStyleView()
                 }
+                .sheet(isPresented: $showingNearbyLink) {
+                    if let device = selectedDevice {
+                        NearbyLinkView(session: nearbyLink, device: device) { linkedDevice, port, peerName in
+                            gallery.viewModel(for: linkedDevice).setLink(port: port, peerName: peerName)
+                        }
+                    }
+                }
+                // A connected Tama that gets deleted takes its connection
+                // with it.
+                .onChange(of: gallery.ownedDevices.map(\.id)) { _, ids in
+                    if let linked = nearbyLink.device, !ids.contains(linked.id) {
+                        nearbyLink.end()
+                    }
+                }
                 .sheet(isPresented: $showingBackups) {
                     if let device = selectedDevice {
                         NavigationStack {
@@ -603,7 +631,12 @@ struct TamaGalleryView: View {
             .scrollContentBackground(effectiveAmbientBackgroundEnabled ? .hidden : .visible)
             .background {
                 if effectiveAmbientBackgroundEnabled {
-                    BlurredLCDBackground(image: selectedViewModel?.lcdImage)
+                    // Its own view on purpose: reading `lcdImage` right
+                    // here made this whole gallery body — toolbar and the
+                    // open ⋯ menu included — rebuild on every LCD frame
+                    // change, which is what made the menu pulse and drop
+                    // taps while the Tama was animating.
+                    LiveAmbientBackground(viewModel: selectedViewModel)
                 }
             }
             // Shows while recording regardless of which page is visible —
@@ -644,6 +677,16 @@ struct TamaGalleryView: View {
                     minimalToolbarContent()
                 }
             }
+    }
+}
+
+/// The only place the gallery reads the live LCD frame, so a frame change
+/// re-renders just this backdrop and nothing else on the screen.
+private struct LiveAmbientBackground: View {
+    let viewModel: PlayViewModel?
+
+    var body: some View {
+        BlurredLCDBackground(image: viewModel?.lcdImage)
     }
 }
 

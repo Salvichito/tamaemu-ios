@@ -87,6 +87,16 @@ final class PurchaseManager {
     }
 
     private func updateEntitlement() async {
+        #if DEBUG
+        // Debug builds only (compiled out of Release): lets a Simulator
+        // run, which has no StoreKit purchase to restore, show the Premium
+        // look for visual checks. Off unless explicitly set:
+        //   xcrun simctl spawn booted defaults write com.fluorescente.TamaEmu debugPremium -bool YES
+        if UserDefaults.standard.bool(forKey: "debugPremium") {
+            setPremium(true)
+            return
+        }
+        #endif
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
             if transaction.productID == Self.premiumProductID {

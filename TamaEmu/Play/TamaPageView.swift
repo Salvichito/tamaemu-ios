@@ -45,9 +45,7 @@ struct TamaPageView: View {
     private var pageContent: some View {
         VStack(spacing: 16) {
             ZStack {
-                LCDView(image: viewModel.lcdImage)
-                    .frame(maxWidth: 280)
-                    .screenGlow(color: viewModel.lcdGlowColor)
+                LiveLCD(viewModel: viewModel)
 
                 if viewModel.isPaused {
                     VStack(spacing: 6) {
@@ -119,12 +117,21 @@ struct TamaPageView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if let peerName = viewModel.linkPeerName {
+                Label("Connected to \(peerName)", systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.green.opacity(0.85), in: Capsule())
+                    .transition(.opacity)
+            }
+
             ButtonPad(
                 onPress: { viewModel.pressButton($0) },
                 onRelease: { viewModel.releaseButton($0) }
             )
             .disabled(viewModel.isLoading || viewModel.isPaused)
-            .opacity(viewModel.isLoading || viewModel.isPaused ? 0.4 : 1)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
@@ -172,5 +179,19 @@ struct TamaPageView: View {
         } else if !wasHeldForPaywall {
             viewModel.togglePause()
         }
+    }
+}
+
+/// The live screen, split out so the per-frame `lcdImage`/`lcdGlowColor`
+/// reads re-render only this view. Read inline in the page body, every LCD
+/// frame change also re-rendered the A/B/C buttons next to it, and their
+/// Liquid Glass visibly flickered from being rebuilt that often.
+private struct LiveLCD: View {
+    let viewModel: PlayViewModel
+
+    var body: some View {
+        LCDView(image: viewModel.lcdImage)
+            .frame(maxWidth: 280)
+            .screenGlow(color: viewModel.lcdGlowColor)
     }
 }
