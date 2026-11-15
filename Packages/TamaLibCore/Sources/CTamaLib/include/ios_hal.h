@@ -13,7 +13,15 @@
 /* program is TamaLib's own 12-bit-word ROM format (one unsigned short per
  * word, upper nibble unused), program_words its length. Returns 0 on
  * success, matching tamalib_init's own convention. */
-int ios_hal_start(const uint16_t *program, uint32_t program_words);
+int ios_hal_start(const uint16_t *program, uint32_t program_words, int model);
+
+/* Which toy the ROM is, for the parts of the hardware the ROM alone doesn't
+ * say: LCD wiring, LCD orientation, and how keys and beeps reach the chip.
+ * The per-model behaviour comes from Paramix Studio's V1Emu (see CREDITS.md). */
+#define IOS_HAL_MODEL_P1                0 /* P1, P2, Angel, Morino, Mothra */
+#define IOS_HAL_MODEL_ICON_PER_SEGMENT  1 /* Umino, Genjintch, Tamaotch */
+#define IOS_HAL_MODEL_YASASHII          2
+#define IOS_HAL_MODEL_DIGIMON           3
 
 /* One emulated instruction. Paced to real time internally by TamaLib
  * itself (via sleep_until), same as a real device's clock. */

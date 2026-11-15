@@ -49,4 +49,13 @@ void hw_set_button(button_t btn, btn_state_t state);
 void hw_set_buzzer_freq(u4_t freq);
 void hw_enable_buzzer(bool_t en);
 
+/* iOS port: see hw.c. */
+void hw_buzzer_shot(bool_t on);
+
+#define HW_MODEL_P1                 0 /* P1, P2, Angel, Morino, Mothra: upstream wiring */
+#define HW_MODEL_ICON_PER_SEGMENT   1 /* Umino, Genjintch, Tamaotch */
+#define HW_MODEL_DIRECT             2 /* Yasashii */
+#define HW_MODEL_DIGIMON            3 /* Digimon V1/V2/V3 */
+void hw_set_model(u8_t model);
+
 #endif /* _HW_H_ */

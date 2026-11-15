@@ -38,6 +38,34 @@ marked with an `// iOS port:` comment at the change site.
    from the same `ops[]` entries with the same first-match rule, so decoding is unchanged; it only
    removes a linear search that dominated the cost of fast-forward catch-up.
 
+3. **`cpu_step()` initialises `i` to `0xFF`.** Upstream leaves it unset on a step where the CPU is
+   halted, then tests it to decide whether to take pending interrupts; when the leftover value
+   happened to be 0 (PSET) or 58 (EI) a halted CPU never woke. Fix from Paramix Studio's V1Emu
+   (see below).
+
+4. **`cpu_kmask_fix` and the one-shot buzzer (`bz_shot`).** Upstream writes the K00-K03 interrupt
+   mask into the serial slot, so key interrupts never arrive, and ignores the one-shot buzzer
+   (0xF75 bit 3). The Digimon ROMs depend on both. `cpu_kmask_fix` is switched on for the Digimon
+   only, so every Tamagotchi ROM keeps upstream's behaviour. Both from V1Emu.
+
+## `hw.c` / `include/hw.h`
+
+1. **Per-model LCD wiring (`hw_set_model`, `HW_MODEL_*`).** Upstream wires every ROM like a P1.
+   Added: the Digimon's column and icon segments, Yasashii's direct segment-to-column layout, and
+   the one-segment-per-icon layout of Umino, Genjintch and Tamaotch. From V1Emu.
+
+2. **`hw_buzzer_shot()`**, and `hw_enable_buzzer()` now sounds the buzzer while either the normal
+   output or a one-shot is on. From V1Emu.
+
+## Changes taken from Paramix Studio's V1Emu
+
+The changes marked "From V1Emu" above are ported from **V1Emu** by **mameise**, the modified copy
+of TamaLib in [mameise/Paramix-Studio](https://github.com/mameise/Paramix-Studio) (`v1/src/core/`),
+licensed GPL-3.0-or-later. They were re-applied by hand onto this port's copy of the core (keeping
+upstream's `hw_*` names) rather than vendoring that copy whole. The ROM fingerprints the app uses
+to recognise each dump (`DeviceCatalog.swift`) and the LCD orientation of the Digimon and Yasashii
+(`hal_ios.c`) come from the same project. None of V1Emu's per-toy icon artwork is used.
+
 Everything else in `Sources/CTamaLib/` — `hal_types.h`, `ios_hal.h`, `hal_ios.c` — is new code
 written for this port (TamaLib's README calls this the required "abstraction layer between
 TamaLIB and your OS or SDK"), not upstream source, and carries no GPL obligation beyond the

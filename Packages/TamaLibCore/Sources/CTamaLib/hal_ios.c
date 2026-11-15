@@ -23,6 +23,7 @@
 
 static bool s_lcd[IOS_HAL_LCD_HEIGHT][IOS_HAL_LCD_WIDTH];
 static bool s_icons[IOS_HAL_ICON_COUNT];
+static int s_model;
 static bool s_tone_on;
 static uint32_t s_tone_freq_dhz;
 
@@ -196,6 +197,12 @@ static void s_update_screen(void)
 static void s_set_lcd_matrix(u8_t x, u8_t y, bool_t val)
 {
 	if (x < IOS_HAL_LCD_WIDTH && y < IOS_HAL_LCD_HEIGHT) {
+		/* These toys' LCD sits the other way round (per Paramix Studio's
+		 * V1Emu, checked there against every known ROM). */
+		if (s_model == IOS_HAL_MODEL_DIGIMON || s_model == IOS_HAL_MODEL_YASASHII) {
+			x = IOS_HAL_LCD_WIDTH - 1 - x;
+			y = IOS_HAL_LCD_HEIGHT - 1 - y;
+		}
 		s_lcd[y][x] = val ? true : false;
 	}
 }
@@ -203,6 +210,11 @@ static void s_set_lcd_matrix(u8_t x, u8_t y, bool_t val)
 static void s_set_lcd_icon(u8_t icon, bool_t val)
 {
 	if (icon < IOS_HAL_ICON_COUNT) {
+		/* Turned LCD: the icons run the other way too. The Digimon's are
+		 * already numbered by place in hw.c. */
+		if (s_model == IOS_HAL_MODEL_YASASHII) {
+			icon = IOS_HAL_ICON_COUNT - 1 - icon;
+		}
 		s_icons[icon] = val ? true : false;
 	}
 }
@@ -241,7 +253,7 @@ static hal_t s_hal = {
 	.handler = s_handler,
 };
 
-int ios_hal_start(const uint16_t *program, uint32_t program_words)
+int ios_hal_start(const uint16_t *program, uint32_t program_words, int model)
 {
 	/* TamaLib's own program buffer spans a fixed MEMORY_SIZE (4096 words);
 	 * sizing/padding it is the caller's job, same as every upstream front
@@ -261,6 +273,15 @@ int ios_hal_start(const uint16_t *program, uint32_t program_words)
 	clock_gettime(CLOCK_MONOTONIC, &s_start_ts);
 	/* Never 0: TamaLib reads 0 as "don't pace at all". */
 	tamalib_set_speed(1);
+
+	/* Per-model wiring (see hw.c / cpu.c). Set before tamalib_init() so the
+	 * very first LCD writes already use it. */
+	s_model = model;
+	hw_set_model(model == IOS_HAL_MODEL_ICON_PER_SEGMENT ? HW_MODEL_ICON_PER_SEGMENT
+	           : model == IOS_HAL_MODEL_YASASHII ? HW_MODEL_DIRECT
+	           : model == IOS_HAL_MODEL_DIGIMON ? HW_MODEL_DIGIMON
+	           : HW_MODEL_P1);
+	cpu_kmask_fix = (model == IOS_HAL_MODEL_DIGIMON);
 
 	tamalib_register_hal(&s_hal);
 	/* 0 = success, matching tamalib_init's own convention (ORs cpu_init's

@@ -211,6 +211,21 @@ static u32_t cpu_frequency = OSC1_FREQUENCY; // in hz
 static u32_t scaled_cycle_accumulator = 0;
 static u32_t ts_remainder = 0; /* iOS port: see wait_for_cycles() */
 
+/* iOS port, both from Paramix Studio's V1Emu (mameise, GPL-3.0-or-later).
+ * See CREDITS.md.
+ *
+ * cpu_kmask_fix: upstream writes the K00-K03 interrupt mask into the serial
+ * slot (and the serial mask into K10-K13), so key interrupts never come. The
+ * Digimon takes its keys only from that interrupt. 1 = the masks go where
+ * they belong; set for the Digimon only, 0 = upstream behaviour (every
+ * Tamagotchi), so nothing changes for ROMs that already worked.
+ *
+ * bz_shot: the one-shot buzzer (0xF75 bit 3; bit 2: 125 ms, else 31.25 ms),
+ * which upstream ignored. Ends after its time in OSC1 ticks (32768 Hz). */
+int cpu_kmask_fix = 0;
+static u32_t bz_shot_end = 0;
+static u8_t bz_shot = 0;
+
 
 static state_t cpu_state = {
 	.pc = &pc,
@@ -514,13 +529,22 @@ static void set_io(u12_t n, u4_t v)
 		case REG_SERIAL_INT_MASKS:
 			/* Serial interface interrupt masks */
 			/* Assume all INT disabled */
-			interrupts[INT_K10_K13_SLOT].mask_reg = v;
+			/* iOS port: see cpu_kmask_fix. */
+			if (cpu_kmask_fix) {
+				interrupts[INT_SERIAL_SLOT].mask_reg = v;
+			} else {
+				interrupts[INT_K10_K13_SLOT].mask_reg = v;
+			}
 			break;
 
 		case REG_K00_K03_INT_MASKS:
 			/* Input (K00-K03) interrupt masks */
 			/* Assume all INT disabled */
-			interrupts[INT_SERIAL_SLOT].mask_reg = v;
+			if (cpu_kmask_fix) {
+				interrupts[INT_K00_K03_SLOT].mask_reg = v;
+			} else {
+				interrupts[INT_SERIAL_SLOT].mask_reg = v;
+			}
 			break;
 
 		case REG_K10_K13_INT_MASKS:
@@ -602,6 +626,12 @@ static void set_io(u12_t n, u4_t v)
 
 		case REG_BUZZER_CTRL2:
 			/* Buzzer config 2 */
+			/* iOS port: one-shot buzzer, see bz_shot. */
+			if (v & 0x8) {
+				bz_shot = 1;
+				bz_shot_end = tick_counter + ((v & 0x4) ? 4096u : 1024u);
+				hw_buzzer_shot(1);
+			}
 			break;
 
 		case REG_CLK_WD_TIMER_CTRL:
@@ -1904,10 +1934,18 @@ static void handle_timers(void)
 			}
 		} while (tick_counter - prog_timer_timestamp >= TIMER_256HZ_PERIOD);
 	}
+
+	/* iOS port: end of a one-shot beep, see bz_shot. */
+	if (bz_shot && (int)(tick_counter - bz_shot_end) >= 0) {
+		bz_shot = 0;
+		hw_buzzer_shot(0);
+	}
 }
 
 void cpu_reset(void)
 {
+	bz_shot = 0;
+
 	u13_t i;
 
 	/* Registers and variables init */
@@ -1972,7 +2010,12 @@ static void build_op_lut(void)
 int cpu_step(void)
 {
 	u12_t op;
-	u8_t i;
+	/* iOS port (fix from Paramix Studio's V1Emu, mameise): upstream left `i`
+	 * unset on a step where the CPU is halted, then tested it below to decide
+	 * whether to take pending interrupts. When the leftover value happened to
+	 * be 0 (PSET) or 58 (EI), interrupts were never taken and a halted CPU
+	 * never woke. 0xFF is no real op index. See CREDITS.md. */
+	u8_t i = 0xFF;
 	breakpoint_t *bp = g_breakpoints;
 	static u8_t previous_cycles = 0;
 

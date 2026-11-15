@@ -30,6 +30,9 @@
 #define cpu_step tlib_cpu_step
 #define cpu_reset tlib_cpu_reset
 
+/* iOS port: see cpu.c. */
+extern int cpu_kmask_fix;
+
 #include "hal.h"
 
 #define MEMORY_SIZE				4096 // 4096 x 4 bits

@@ -27,6 +27,8 @@ statically-linked package under the same GPLv3 terms:
 - [`Packages/TamaLibCore/`](Packages/TamaLibCore/) vendors
   [TamaLib](https://github.com/jcrona/tamalib) by Jean-Christophe Rona (P1,
   P2, Angel, Morino, Digimon V1/V2), under its own license, GPL-2.0-or-later.
+  With per-model fixes ported from V1Emu by mameise
+  ([mameise/Paramix-Studio](https://github.com/mameise/Paramix-Studio), GPL-3.0-or-later).
   See [`Packages/TamaLibCore/CREDITS.md`](Packages/TamaLibCore/CREDITS.md).
 - [`Packages/T7EmuCore/`](Packages/T7EmuCore/) vendors T7Emu by mameise, from
   [mameise/Paramix-Studio](https://github.com/mameise/Paramix-Studio) (Tama-Go,

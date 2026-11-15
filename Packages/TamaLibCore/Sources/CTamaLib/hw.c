@@ -30,8 +30,13 @@ static u8_t seg_pos[MEM_DISPLAY1_SIZE/2] = {0, 1, 2, 3, 4, 5, 6, 7, 32, 8, 9, 10
 static u8_t seg_pos[MEM_DISPLAY1_SIZE/2] = {0, 1, 2, 3, 4, 5, 6, 7, 32, 8, 9, 10, 11, 12 ,13 ,14, 15, 33, 34, 35, 31, 30, 29, 28, 27, 26, 25, 24, 36, 23, 22, 21, 20, 19, 18, 17, 16, 37, 38, 39};
 #endif
 
+static bool_t bz_out, bz_shot_on;
+
 bool_t hw_init(void)
 {
+	bz_out = 0;
+	bz_shot_on = 0;
+
 	/* Buttons/Tap sensor are active LOW */
 	cpu_set_input_pin(PIN_K00, PIN_STATE_HIGH);
 	cpu_set_input_pin(PIN_K01, PIN_STATE_HIGH);
@@ -45,8 +50,70 @@ void hw_release(void)
 {
 }
 
+/* iOS port: per-model LCD wiring, from Paramix Studio's V1Emu (mameise,
+ * GPL-3.0-or-later). Upstream wires every ROM like a P1; these toys differ.
+ * Chosen by the front end before the core starts (hw_set_model). See
+ * CREDITS.md.
+ *
+ * - Digimon: segments 1..8, 12..27 and 29..36 are the 32 columns, and the
+ *   icons have their own segments.
+ * - Direct (Yasashii): segment n is column n.
+ * - Icon-per-segment (Umino, Genjintch, Tamaotch): each menu icon is lit by
+ *   one segment -- top 8, 17, 18, 19 (com 0-7) = icons 0-3, bottom 39, 38,
+ *   37, 28 (com 8-15) = icons 4-7 -- not by the P1's combinations. */
+static const u8_t seg_pos_digi[40] = {40, 0, 1, 2, 3, 4, 5, 6, 7, 41, 42, 43, 8, 9, 10, 11, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 44, 23, 22, 21, 20, 19, 18, 17, 16, 45, 46, 47};
+static u8_t hw_model = HW_MODEL_P1;
+static unsigned short icon_coms[ICON_NUM];
+
+void hw_set_model(u8_t model)
+{
+	u8_t i;
+
+	hw_model = model;
+	for (i = 0; i < ICON_NUM; i++) {
+		icon_coms[i] = 0;
+	}
+}
+
 void hw_set_lcd_pin(u8_t seg, u8_t com, u8_t val)
 {
+	if (hw_model == HW_MODEL_DIRECT) {
+		if (seg < LCD_WIDTH) {
+			g_hal->set_lcd_matrix(seg, com, val);
+		}
+		return;
+	}
+
+	if (hw_model == HW_MODEL_ICON_PER_SEGMENT && seg < MEM_DISPLAY1_SIZE/2 && seg_pos[seg] >= LCD_WIDTH) {
+		int i = com < 8 ? (seg == 8 ? 0 : seg == 17 ? 1 : seg == 18 ? 2 : seg == 19 ? 3 : -1)
+		                : (seg == 39 ? 4 : seg == 38 ? 5 : seg == 37 ? 6 : seg == 28 ? 7 : -1);
+		if (i >= 0 && com < 16) {
+			if (val) {
+				icon_coms[i] |= (unsigned short)(1u << com);
+			} else {
+				icon_coms[i] &= (unsigned short)~(1u << com);
+			}
+			g_hal->set_lcd_icon((u8_t) i, icon_coms[i] != 0);
+		}
+		return;
+	}
+
+	if (hw_model == HW_MODEL_DIGIMON) {
+		if (seg < 40 && seg_pos_digi[seg] < LCD_WIDTH) {
+			g_hal->set_lcd_matrix(seg_pos_digi[seg], com, val);
+		} else if (com == 15 && (seg == 28 || (seg >= 37 && seg <= 39))) {
+			/* status, food, training, battle */
+			g_hal->set_lcd_icon(seg == 28 ? 0 : seg - 36, val);
+		} else if (com == 0 && seg >= 9 && seg <= 11) {
+			/* clean, light, heal */
+			g_hal->set_lcd_icon(15 - seg, val);
+		} else if (com == 0 && seg == 0) {
+			/* call */
+			g_hal->set_lcd_icon(7, val);
+		}
+		return;
+	}
+
 	//printf("   hw_set_lcd_pin: seg = %u, com = %u, val = %u\n", seg, com, val);
 	if (seg_pos[seg] < LCD_WIDTH) {
 		g_hal->set_lcd_matrix(seg_pos[seg], com, val);
@@ -144,7 +211,17 @@ void hw_set_buzzer_freq(u4_t freq)
 	}
 }
 
+/* iOS port: the one-shot buzzer, from Paramix Studio's V1Emu (mameise). The
+ * Digimon beeps only with it; upstream ignored it. The buzzer sounds while
+ * either the normal output or a one-shot is on. See CREDITS.md. */
 void hw_enable_buzzer(bool_t en)
 {
-	g_hal->play_frequency(en);
+	bz_out = en;
+	g_hal->play_frequency(bz_out || bz_shot_on);
+}
+
+void hw_buzzer_shot(bool_t on)
+{
+	bz_shot_on = on;
+	g_hal->play_frequency(bz_out || bz_shot_on);
 }

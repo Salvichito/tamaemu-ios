@@ -1,6 +1,7 @@
 import AVFoundation
 import CTamaLib
 import Foundation
+import TamaCore
 
 /// A P1-era (TamaLib) screen snapshot: 32x16 1-bit pixels plus 8 fixed
 /// status icons. Row-major, matching `ios_hal_get_frame`'s layout.
@@ -125,7 +126,7 @@ final class V1EmulatorEngine {
 
         romWords = Self.parseROM(romData)
         let started = romWords.withUnsafeBufferPointer { buf in
-            ios_hal_start(buf.baseAddress, UInt32(buf.count))
+            ios_hal_start(buf.baseAddress, UInt32(buf.count), V1EmulatorEngine.model(for: romWords))
         }
         guard started == 0 else { return false }
 
@@ -319,7 +320,7 @@ extension V1EmulatorEngine {
             let hop = min(remaining, hopSeconds)
 
             let started = romWords.withUnsafeBufferPointer { buf in
-                ios_hal_start(buf.baseAddress, UInt32(buf.count))
+                ios_hal_start(buf.baseAddress, UInt32(buf.count), V1EmulatorEngine.model(for: romWords))
             }
             guard started == 0 else { break }
 
@@ -385,7 +386,7 @@ extension V1EmulatorEngine {
     /// so the caller must hold the V1 EngineGate, same as catchUp().
     static func peekScreen(romWords: [UInt16], state: Data) -> P1ScreenState? {
         let started = romWords.withUnsafeBufferPointer { buf in
-            ios_hal_start(buf.baseAddress, UInt32(buf.count))
+            ios_hal_start(buf.baseAddress, UInt32(buf.count), V1EmulatorEngine.model(for: romWords))
         }
         guard started == 0 else { return nil }
         defer { ios_hal_stop() }
@@ -403,6 +404,22 @@ extension V1EmulatorEngine {
             bits: (0..<(32 * 16)).map { (bitsBuf[$0 / 8] & (0x80 >> ($0 % 8))) != 0 },
             icons: (0..<8).map { (iconsByte & (1 << $0)) != 0 }
         )
+    }
+
+    /// Which toy a ROM is, for the hardware the ROM alone doesn't describe
+    /// (LCD wiring and orientation, how keys and beeps reach the chip) --
+    /// see IOS_HAL_MODEL_* in ios_hal.h. Decided from the ROM's own content,
+    /// not from the TamaDevice, so every path that boots the core (live,
+    /// catch-up, peek) agrees without having to be told. An unknown dump
+    /// gets the plain P1 wiring, which is what this core always used.
+    static func model(for romWords: [UInt16]) -> Int32 {
+        let bytes = romWords.lazy.flatMap { [UInt8($0 >> 8), UInt8($0 & 0xFF)] }
+        switch DeviceCatalog.v1DeviceID(forROM: bytes) {
+        case "umino", "genjintch", "tamaotch": return IOS_HAL_MODEL_ICON_PER_SEGMENT
+        case "yasashii": return IOS_HAL_MODEL_YASASHII
+        case "digimon-v1", "digimon-v2", "digimon-v3": return IOS_HAL_MODEL_DIGIMON
+        default: return IOS_HAL_MODEL_P1
+        }
     }
 
     /// romData parsing, factored out of start(romData:) so catchUp(_:)

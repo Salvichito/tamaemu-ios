@@ -10,7 +10,7 @@ final class SmokeTests: XCTestCase {
     func testCoreStepsWithoutCrashing() {
         let program = [UInt16](repeating: 0, count: 4096)
         let started = program.withUnsafeBufferPointer { buf in
-            ios_hal_start(buf.baseAddress, UInt32(buf.count))
+            ios_hal_start(buf.baseAddress, UInt32(buf.count), IOS_HAL_MODEL_P1)
         }
         XCTAssertEqual(started, 0, "tamalib_init should report success")
 

@@ -43,6 +43,40 @@ private let v1Devices: [TamaDevice] = [
     // user. The title is what needed fixing: this core plays both P1 and
     // P2 ROMs (same chip generation, same romSize), so "(P1)" overclaimed.
     TamaDevice(id: "p1", title: "Tamagotchi (Original)", romSize: 12288, family: .v1),
+    // The same core's bigger chip (E0C6S48): 16 KB ROMs. They all share one
+    // size, so the import tells them apart by content -- see
+    // `v1DeviceID(forROM:)` below.
+    TamaDevice(id: "angel", title: "Tamagotchi Angel", romSize: 16384, family: .v1),
+    TamaDevice(id: "morino", title: "Tamagotchi Morino", romSize: 16384, family: .v1),
+    TamaDevice(id: "umino", title: "Tamagotchi Umino", romSize: 16384, family: .v1),
+    TamaDevice(id: "genjintch", title: "Genjintch", romSize: 16384, family: .v1),
+    TamaDevice(id: "tamaotch", title: "Tamaotch", romSize: 16384, family: .v1),
+    TamaDevice(id: "mothra", title: "Mothra Tamagotchi", romSize: 16384, family: .v1),
+    TamaDevice(id: "yasashii", title: "Yasashii Tamagotchi", romSize: 16384, family: .v1),
+    TamaDevice(id: "digimon-v1", title: "Digital Monster Ver. 1", romSize: 16384, family: .v1),
+    TamaDevice(id: "digimon-v2", title: "Digital Monster Ver. 2", romSize: 16384, family: .v1),
+    TamaDevice(id: "digimon-v3", title: "Digital Monster Ver. 3", romSize: 16384, family: .v1),
+]
+
+/// Known `.v1` ROM dumps by content fingerprint (`DeviceCatalog.romFingerprint`)
+/// -> the device id that plays them. The fingerprints for every ROM but
+/// Mothra's are the ones Paramix Studio's own ROM detection uses
+/// (mameise/Paramix-Studio, `V1_NAMES` in src/emu.js), so a dump it
+/// recognises is recognised here too.
+private let v1ROMFingerprints: [UInt32: String] = [
+    0x1A03E02A: "p1",        // P1 (Japanese)
+    0xEF932FA1: "p1",        // P1 (English)
+    0xF0A58E57: "p1",        // P2
+    0xD1BF093B: "angel",
+    0x4E0B9922: "morino",
+    0x0809B7FA: "umino",
+    0x02E0C792: "genjintch",
+    0x5E1091E3: "tamaotch",
+    0x9EBAAAF8: "mothra",
+    0xDFEA1952: "yasashii",
+    0x58200E73: "digimon-v1",
+    0x55DF2A89: "digimon-v2",
+    0xD32D442C: "digimon-v3",
 ]
 
 /// Same reasoning as `v1Devices` -- T7Emu (via T7EmuCore) speaks neither
@@ -89,6 +123,23 @@ public enum DeviceCatalog {
         }
         guard let p = device_find(name) else { return nil }
         return TamaDevice(profile: p)
+    }
+
+    /// 32-bit FNV-1a over the raw ROM bytes -- cheap, and the same
+    /// fingerprint Paramix Studio uses for these ROMs.
+    public static func romFingerprint<Bytes: Sequence>(_ bytes: Bytes) -> UInt32 where Bytes.Element == UInt8 {
+        var hash: UInt32 = 2166136261
+        for byte in bytes {
+            hash = (hash ^ UInt32(byte)) &* 16777619
+        }
+        return hash
+    }
+
+    /// The `.v1` device a ROM dump is known to be, or nil for a dump this
+    /// catalog has no fingerprint for (the user then picks by hand, same
+    /// as any other ambiguous size).
+    public static func v1DeviceID(forROM bytes: some Sequence<UInt8>) -> String? {
+        v1ROMFingerprints[romFingerprint(bytes)]
     }
 
     public static func defaultDevice() -> TamaDevice {

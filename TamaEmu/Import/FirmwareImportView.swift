@@ -98,7 +98,16 @@ struct FirmwareImportView: View {
             errorMessage = "Could not read the selected file."
             return
         }
-        let candidates = DeviceDetector.candidates(forFileSize: size, in: devices)
+        var candidates = DeviceDetector.candidates(forFileSize: size, in: devices)
+        // The first-generation toys' ROMs all share a size, but each known
+        // dump has a fingerprint -- so the user isn't asked to tell ten
+        // look-alike files apart by hand.
+        if candidates.count > 1, candidates.allSatisfy({ $0.family == .v1 }),
+           let data = try? Data(contentsOf: url),
+           let id = DeviceCatalog.v1DeviceID(forROM: data),
+           let match = candidates.first(where: { $0.id == id }) {
+            candidates = [match]
+        }
         errorMessage = nil
         switch candidates.count {
         case 0:
