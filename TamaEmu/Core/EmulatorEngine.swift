@@ -344,14 +344,6 @@ final class EmulatorEngine {
     func applySettings() {
         emu.pointee.rtc_mult = Int32(AppSettings.speedMultiplier(for: device))
         emu.pointee.stay_awake = AppSettings.stayAwake(for: device)
-        // Guarded on `thread != nil`, not called unconditionally: this is
-        // also called from init() for headless engines (BackgroundRefresh)
-        // that never call start() — touching `audioOutput` there would
-        // force-construct an AVAudioEngine that's never otherwise needed,
-        // against the whole point of that path staying lightweight.
-        if thread != nil {
-            audioOutput.applySessionCategory()
-        }
     }
 
     /// Soft reset: same ROM/flash/RAM, just CPU state and the program
@@ -458,8 +450,13 @@ final class EmulatorEngine {
         // just checking the profiler's core-time numbers look better.
         t.qualityOfService = .userInitiated
         thread = t
-        t.start()
+        // Before the thread, not after: `audioOutput` is a lazy var and
+        // the thread's run loop calls audioOutput.tick() straight away.
+        // Started the other way round, both threads raced to create it,
+        // each got its own copy, and the one that was started here was
+        // the one thrown away — no sound at all.
         audioOutput.start()
+        t.start()
     }
 
     /// Signals the emulator thread to stop and blocks until it actually has
@@ -720,6 +717,7 @@ final class EmulatorEngine {
                 checkCallDetection()
             }
             collectLinkOutput()
+            audioOutput.tick(buttonsDown: input.currentMask() != 0)
 
             pixels.withUnsafeMutableBufferPointer { buf in
                 lcd_render(emu, buf.baseAddress, &w, &h)

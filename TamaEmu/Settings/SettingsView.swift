@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.volume) private var volume = 0.6
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(AppSettings.Keys.ignoreSilentSwitch) private var ignoreSilentSwitch = false
+    @AppStorage(AppSettings.Keys.pauseOtherAudio) private var pauseOtherAudio = false
     @AppStorage private var speedMultiplier: Int
     @AppStorage private var stayAwake: Bool
     @AppStorage(AppSettings.Keys.catchUpCapHours) private var catchUpCapHours = 24.0
@@ -200,14 +201,21 @@ struct SettingsView: View {
                 Image(systemName: "speaker.wave.3.fill")
             }
             Toggle("Haptics", isOn: $hapticsEnabled)
-            Toggle("Play in Silent Mode", isOn: Binding(
-                get: { ignoreSilentSwitch },
-                set: { ignoreSilentSwitch = $0; viewModel.refreshSettings() }
+            Toggle("Respect Silent Mode", isOn: Binding(
+                get: { !ignoreSilentSwitch },
+                set: { ignoreSilentSwitch = !$0; AudioOutput.applySessionCategory() }
             ))
+            Picker("Other Audio", selection: Binding(
+                get: { pauseOtherAudio },
+                set: { pauseOtherAudio = $0; AudioOutput.applySessionCategory() }
+            )) {
+                Text("Mix").tag(false)
+                Text("Pause").tag(true)
+            }
         } header: {
             Text("Sound & Haptics")
         } footer: {
-            Text("Overrides the phone's silent switch so the Tama's sound plays anyway — like any game, this also pauses whatever else might be playing while it's on.")
+            Text("The slider sets the Tama's own volume, from silent up to as loud as your device's volume allows. Respect Silent Mode mutes the Tama when your device is silenced. Other Audio chooses whether music and podcasts keep playing alongside the Tama or pause while it's open.")
         }
 
         Section {

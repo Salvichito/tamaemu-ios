@@ -101,8 +101,13 @@ final class T7EmulatorEngine {
         t.name = "T7EmulatorEngine"
         t.qualityOfService = .userInitiated
         thread = t
-        t.start()
+        // Before the thread, not after: `audioOutput` is a lazy var and
+        // the thread's run loop calls audioOutput.tick() straight away.
+        // Started the other way round, both threads raced to create it,
+        // each got its own copy, and the one that was started here was
+        // the one thrown away — no sound at all.
         audioOutput.start()
+        t.start()
         return true
     }
 
@@ -164,6 +169,7 @@ final class T7EmulatorEngine {
 
             _ = ios_t7_step_frame()
             liveFramesStepped += 1
+            audioOutput.tick(buttonsDown: mask != 0)
 
             pixels.withUnsafeMutableBufferPointer { p in
                 icons.withUnsafeMutableBufferPointer { i in

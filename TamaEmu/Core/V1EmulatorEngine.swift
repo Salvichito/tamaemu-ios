@@ -147,8 +147,13 @@ final class V1EmulatorEngine {
         t.name = "V1EmulatorEngine"
         t.qualityOfService = .userInitiated
         thread = t
-        t.start()
+        // Before the thread, not after: `audioOutput` is a lazy var and
+        // the thread's run loop calls audioOutput.tick() straight away.
+        // Started the other way round, both threads raced to create it,
+        // each got its own copy, and the one that was started here was
+        // the one thrown away — no sound at all.
         audioOutput.start()
+        t.start()
         return true
     }
 
@@ -182,6 +187,7 @@ final class V1EmulatorEngine {
     private func runLoop() {
         var bitsBuf = [UInt8](repeating: 0, count: 64)
         var lastPublish = Date.distantPast
+        var audioTickCounter: UInt32 = 0
 
         while true {
             stopLock.lock(); let stop = shouldStop; stopLock.unlock()
@@ -210,6 +216,12 @@ final class V1EmulatorEngine {
                     ios_hal_set_button(Int32(bit), (mask & (1 << bit)) != 0)
                 }
                 lastButtonMask = mask
+            }
+            // This loop runs once per emulated instruction, far more often
+            // than the sound engine needs to hear from it.
+            audioTickCounter &+= 1
+            if audioTickCounter & 63 == 0 {
+                audioOutput.tick(buttonsDown: mask != 0)
             }
 
             let now = Date()

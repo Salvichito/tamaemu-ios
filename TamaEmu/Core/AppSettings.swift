@@ -21,6 +21,7 @@ enum AppSettings {
         static let appearanceMode = "settings.appearanceMode"
         static let sharpPixels = "settings.sharpPixels"
         static let ignoreSilentSwitch = "settings.ignoreSilentSwitch"
+        static let pauseOtherAudio = "settings.pauseOtherAudio"
         static let ambientBackgroundEnabled = "settings.ambientBackgroundEnabled"
         static let reminderNotificationsEnabled = "settings.reminderNotificationsEnabled"
         static let reminderIntervalHours = "settings.reminderIntervalHours"
@@ -165,14 +166,21 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: Keys.reminderIntervalHours) }
     }
 
-    /// Off by default: the Tama stays a "toy" that respects the phone's
-    /// silent switch, matching the original product default. On, it plays
-    /// through the ring/silent switch — the AVAudioSession category this
-    /// drives also means it'll duck/pause other audio apps while active,
-    /// same as any game that offers this option.
+    /// Off by default: the Tama respects the phone's silent switch.
+    /// Settings shows this inverted, as "Respect Silent Mode" (on by
+    /// default); the stored key keeps its original meaning so existing
+    /// installs carry their choice over untouched.
     static var ignoreSilentSwitch: Bool {
         get { UserDefaults.standard.bool(forKey: Keys.ignoreSilentSwitch) }
         set { UserDefaults.standard.set(newValue, forKey: Keys.ignoreSilentSwitch) }
+    }
+
+    /// Off by default: the Tama's sound plays over music, podcasts and
+    /// the like. On, opening the app pauses them, and leaving it lets
+    /// them resume.
+    static var pauseOtherAudio: Bool {
+        get { UserDefaults.standard.bool(forKey: Keys.pauseOtherAudio) }
+        set { UserDefaults.standard.set(newValue, forKey: Keys.pauseOtherAudio) }
     }
 }
 
