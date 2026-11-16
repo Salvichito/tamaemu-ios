@@ -114,7 +114,7 @@ struct NearbyLinkView: View {
                 Text("Nearby")
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Ask your friend to open Connect Nearby on their \(device.title) too, then tap their name here.")
+                    Text("Ask your friend to open Connect Nearby on their Tama too, then tap their name here.")
                     if let notice = session.notice {
                         Text(notice).foregroundStyle(.orange)
                     }
@@ -166,9 +166,10 @@ struct NearbyLinkView: View {
             }
 
             Section("What to do now") {
-                step(1, "Close this sheet. On both Tamas, press A until the heart icon lights up, then press B.")
-                step(2, "Both choose the first option in the list with B.")
-                step(3, "When both screens show two hearts, one of you presses B.")
+                let steps = Self.steps(for: linkedDevice.id, with: session.peerDeviceID)
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, text in
+                    step(index + 1, text)
+                }
             }
 
             Section {
@@ -177,6 +178,46 @@ struct NearbyLinkView: View {
                     dismiss()
                 }
             }
+        }
+    }
+
+    /// What to press on this Tama, given what is on the other end. Each
+    /// model's connection menu is laid out differently, and the newer
+    /// ones ask who the partner is; these follow the menus as they
+    /// actually appear on each firmware.
+    static func steps(for deviceID: String, with peerDeviceID: String?) -> [String] {
+        let open = "Close this sheet. On both Tamas, press A until the heart icon lights up, then press B."
+        let start = "When both screens show two hearts, one of you presses B."
+        switch deviceID {
+        case "id":
+            return [open, "Choose たまごっちiD, the first option, with B.", start]
+        case "idl":
+            if peerDeviceID == "id" {
+                return [open, "Press A once to move to たまごっちiD, then press B.", start]
+            }
+            return [
+                open,
+                "Choose たまごっちiDL, the first option, with B.",
+                "Choose あそぶ (Play), the first option, with B.",
+                start,
+            ]
+        case "ps":
+            if peerDeviceID == "idl" {
+                return [
+                    open,
+                    "Press A once to move to たまごっちiDL, then press B.",
+                    "Choose あそぶ (Play), the first option, with B.",
+                    start,
+                ]
+            }
+            return [
+                open,
+                "Choose たまごっちP's, then あそぶ (Play): the first option both times.",
+                "One of you chooses あそびにいく (Go visit). The other chooses ともだちをよぶ (Invite), then ふたりであそぶ (Two players), then a game.",
+                "Whoever invited presses B when their screen asks for it.",
+            ]
+        default:
+            return [open, "Both choose the first option in the list with B.", start]
         }
     }
 

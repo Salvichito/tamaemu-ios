@@ -48,6 +48,10 @@ final class NearbyLinkSession: NSObject {
     /// The Tama this session is for -- fixed from startSearching() until
     /// end().
     private(set) var device: TamaDevice?
+    /// The model on the other end of the live connection, when known (it
+    /// isn't if the other phone invited us before we had spotted it).
+    private(set) var peerDeviceID: String?
+    private var knownPeerDevices: [MCPeerID: String] = [:]
 
     var isConnected: Bool {
         if case .connected = phase { return true }
@@ -57,17 +61,38 @@ final class NearbyLinkSession: NSObject {
     /// Models that have been shown to connect. Everything else keeps the
     /// feature hidden rather than offering something untested.
     static func supports(_ device: TamaDevice) -> Bool {
-        linkGroup(for: device.id) != nil
+        linkablePairs.contains { $0.contains(family(of: device.id)) }
     }
 
-    /// Two Tamas can talk when they are in the same group. The regular and
-    /// the Hexagontchi Plus Color are the same toy in different shells.
-    private static func linkGroup(for deviceID: String) -> String? {
-        switch deviceID {
-        case "plus-color", "plus-color-hexa": return "plus-color"
-        default: return nil
-        }
+    /// Whether these two models can talk to each other.
+    static func canLink(_ deviceID: String, _ otherDeviceID: String) -> Bool {
+        linkablePairs.contains([family(of: deviceID), family(of: otherDeviceID)])
     }
+
+    /// The regular and the Hexagontchi Plus Color are the same toy in
+    /// different shells.
+    private static func family(of deviceID: String) -> String {
+        deviceID == "plus-color-hexa" ? "plus-color" : deviceID
+    }
+
+    /// Every pairing that has actually been seen to complete an exchange
+    /// between two emulated Tamas. A set of one means "with its own kind".
+    ///
+    /// Deliberately missing:
+    /// - Plus Color with iD or iD L. The real toys could, but the newer
+    ///   one falls back to the Plus Color's older kind of signal for it,
+    ///   and the core does not emulate that on the iD side: the iD neither
+    ///   hears the Plus Color nor sends anything.
+    /// - iD Lovely Melody: not tried.
+    /// - 4U and 4U+: they connect by NFC touch, not infrared.
+    private static let linkablePairs: [Set<String>] = [
+        ["plus-color"],
+        ["id"],
+        ["idl"],
+        ["ps"],
+        ["id", "idl"],
+        ["idl", "ps"],
+    ]
 
     /// Bonjour service name; also listed in Info.plist (NSBonjourServices),
     /// which iOS requires before it lets the app look for it.
@@ -164,6 +189,8 @@ final class NearbyLinkSession: NSObject {
         session = nil
         portBox.swap(nil)?.setSendHandler(nil)
         peers = []
+        knownPeerDevices = [:]
+        peerDeviceID = nil
         phase = .idle
         if wasConnected { onLinkChange?(nil, nil) }
         onLinkChange = nil
@@ -192,6 +219,7 @@ final class NearbyLinkSession: NSObject {
             try? session.send(message, toPeers: [peerID], with: .reliable)
         }
         portBox.swap(port)
+        peerDeviceID = knownPeerDevices[peerID]
         phase = .connected(name: peerID.displayName)
         onLinkChange?(port, peerID.displayName)
     }
@@ -212,8 +240,8 @@ final class NearbyLinkSession: NSObject {
     private func didFind(_ peerID: MCPeerID, info: [String: String]?) {
         guard let device, peerID != myPeerID else { return }
         let theirDevice = info?["dev"] ?? ""
-        let compatible = Self.linkGroup(for: theirDevice) != nil
-            && Self.linkGroup(for: theirDevice) == Self.linkGroup(for: device.id)
+        let compatible = Self.canLink(device.id, theirDevice)
+        knownPeerDevices[peerID] = theirDevice
         let peer = Peer(
             id: peerID,
             name: peerID.displayName,
