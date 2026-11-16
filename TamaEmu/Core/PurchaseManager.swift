@@ -87,6 +87,16 @@ final class PurchaseManager {
     }
 
     private func updateEntitlement() async {
+        #if SIDELOAD
+        // Sideload builds (the IPA on GitHub / the AltStore source) have
+        // everything unlocked: a re-signed app can't reach the App Store
+        // to buy anything, and the source is GPLv3 anyway. Never set in
+        // the Xcode project — only passed on the command line when
+        // building that IPA:
+        //   SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) SIDELOAD'
+        setPremium(true)
+        return
+        #endif
         #if DEBUG
         // Debug builds only (compiled out of Release): lets a Simulator
         // run, which has no StoreKit purchase to restore, show the Premium
