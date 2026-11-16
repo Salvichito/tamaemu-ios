@@ -95,14 +95,14 @@ static const DeviceProfile devices[] = {
         .sleep_flag = 0x00001440u,
         .wake_press_lost = true,
         .ttbr_reset = 0x02400000u,
-        /* iOS port: animation/tempo (cycle-counted firmware loops, paced by
-         * osc3_hz - see CREDITS.md) felt noticeably slow at the 30MHz
-         * datasheet value; pitch (computed from register ratios, not cycle
-         * count) was already correct there. Raised osc3_hz 20% as a first
-         * cut, not yet validated against real hardware, and added tone_hz
-         * to hold pitch at its previously-correct value. */
-        .osc3_hz    = 36000000.0,
-        .tone_hz    = 30000000.0,
+        /* Datasheet value. The iOS port ran this at 36MHz for a while
+         * (with tone_hz holding pitch) because play felt slow - but that
+         * slowness was the old per-instruction Swift loop missing its
+         * 60Hz deadline in Debug builds, not the clock. At 30MHz the
+         * start-up jingle steps at 0.248s a note, the same as the P's
+         * (0.247s) and as the Plus Color would at its own datasheet
+         * clock; at 36MHz it was 0.207s. */
+        .osc3_hz    = 30000000.0,
     },
     /* Keep "4u-plain": saved settings already use "4u" for the 4U+. */
     {
@@ -125,10 +125,8 @@ static const DeviceProfile devices[] = {
         .sleep_flag = 0x00001534u,
         .wake_press_lost = true,
         .ttbr_reset = 0x02400000u,
-        /* iOS port: see the "4u" entry above - same clock architecture,
-         * same fix. */
-        .osc3_hz    = 36000000.0,
-        .tone_hz    = 30000000.0,
+        /* Datasheet value - see the "4u" entry above. */
+        .osc3_hz    = 30000000.0,
     },
     /* Plus Color uses GPIO IR instead of the UART. */
     {
