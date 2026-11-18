@@ -27,6 +27,9 @@ struct TamaGalleryView: View {
     /// it outlives the sheet that sets it up (see NearbyLinkView).
     @State private var nearbyLink = NearbyLinkSession()
     @State private var showingNearbyLink = false
+    /// The built-in Tomomix pet, still a prototype: opened full screen
+    /// from the ⋯ menu, outside the gallery of emulated Tamas.
+    @State private var showingTomomix = false
 
     /// Ambient Background is a premium feature — forced off for free users
     /// regardless of their own stored preference, which is left untouched
@@ -113,6 +116,8 @@ struct TamaGalleryView: View {
                 // screen widget's timer is about leaving the app entirely.
                 WidgetSharedState.recordAppClosed()
             case .active:
+                // Tomomix covers the gallery: keep the Tama under it stopped.
+                guard !showingTomomix else { break }
                 gallery.pageDidAppear(current)
                 ReminderNotificationScheduler.cancel()
             default:
@@ -270,6 +275,11 @@ struct TamaGalleryView: View {
                     Label("Add a Tama", systemImage: "plus")
                 }
                 Button {
+                    showingTomomix = true
+                } label: {
+                    Label("Tomomix (Prototype)", systemImage: "sparkles")
+                }
+                Button {
                     gallery.showingReorder = true
                 } label: {
                     Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
@@ -332,6 +342,11 @@ struct TamaGalleryView: View {
                     Label("Add a Tama", systemImage: "plus")
                 }
                 Button {
+                    showingTomomix = true
+                } label: {
+                    Label("Tomomix (Prototype)", systemImage: "sparkles")
+                }
+                Button {
                     gallery.showingReorder = true
                 } label: {
                     Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
@@ -378,6 +393,11 @@ struct TamaGalleryView: View {
                     requestAddTama()
                 } label: {
                     Label("Add a Tama", systemImage: "plus")
+                }
+                Button {
+                    showingTomomix = true
+                } label: {
+                    Label("Tomomix (Prototype)", systemImage: "sparkles")
                 }
                 Button {
                     gallery.showingReorder = true
@@ -584,6 +604,15 @@ struct TamaGalleryView: View {
                 }
                 .sheet(isPresented: $gallery.showingReorder) {
                     ReorderTamasView(gallery: gallery)
+                }
+                .fullScreenCover(isPresented: $showingTomomix) {
+                    TomomixView()
+                }
+                .onChange(of: showingTomomix) { _, showing in
+                    // Only one thing plays at a time: pause the Tama on
+                    // screen while Tomomix is open, resume it after.
+                    guard let device = selectedDevice else { return }
+                    if showing { gallery.pageDidDisappear(device) } else { gallery.pageDidAppear(device) }
                 }
                 .sheet(isPresented: $showingPaywall) {
                     PaywallView()
