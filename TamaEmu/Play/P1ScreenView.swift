@@ -1,3 +1,4 @@
+import CTamaLib
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -13,6 +14,13 @@ import UIKit
 /// and P1CustomArt).
 struct P1ScreenView: View {
     let state: P1ScreenState
+    /// Which first-gen model this is (a `TamaDevice.id`, e.g. "p1",
+    /// "angel"): picks its icon profile and its own custom art.
+    let deviceID: String
+    /// For a model whose icons are real buttons (the Yasashii's lit care
+    /// buttons): called with true on touch-down and false on release.
+    /// nil draws them inert, as in screenshots and recordings.
+    var onButton: ((InputController.Button, Bool) -> Void)?
     /// False for screenshots and video, which can't carry transparent
     /// corners -- see renderP1Snapshot.
     var rounded: Bool = true
@@ -20,35 +28,12 @@ struct P1ScreenView: View {
     private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
     private static let cornerRadius: CGFloat = 16
     private static let iconSize: CGFloat = 36
+    /// The Yasashii's care buttons: a disc around the same-size icon.
+    private static let lampSize: CGFloat = 58
     /// A custom sheet's slot is 128px with a 96px safe area, so the whole
     /// slot is drawn this much larger to keep the artwork inside the safe
     /// area the same visual size as a default icon.
     private static let customSlotSize: CGFloat = iconSize * 128 / 96
-
-    /// TamaLib's own icon index order (confirmed against jcrona/tamatool
-    /// and the user's own real P1 -- see the integration-research
-    /// memory). Index 7 (attention) lights up on its own; it's not a
-    /// selectable menu item, but still just an icon here. Same order as
-    /// the slots of a custom icon sheet. The artwork is from Tabler Icons'
-    /// filled set (MIT), bundled as template SVGs.
-    private static let defaultIconAssets = [
-        "P1IconFood",      // 0 food
-        "P1IconLight",     // 1 light
-        "P1IconGame",      // 2 game
-        "P1IconMedicine",  // 3 medicine
-        "P1IconBathroom",  // 4 poop cleaning
-        "P1IconStatus",    // 5 stats
-        "P1IconTraining",  // 6 scolding
-        "P1IconAttention"  // 7 attention
-    ]
-
-    /// Each icon's center, as a fraction of the square's own width/height
-    /// -- an even 4-over-4 layout that doesn't depend on any particular
-    /// background image.
-    private static let iconPositions: [(x: CGFloat, y: CGFloat)] = [
-        (0.17, 0.14), (0.39, 0.14), (0.61, 0.14), (0.83, 0.14),
-        (0.17, 0.86), (0.39, 0.86), (0.61, 0.86), (0.83, 0.86)
-    ]
 
     var body: some View {
         GeometryReader { geo in
@@ -62,7 +47,7 @@ struct P1ScreenView: View {
 
     private func screenContent(side: CGFloat) -> some View {
         ZStack {
-            if let background = P1CustomArt.shared.background {
+            if let background = P1CustomArt.shared.background(for: deviceID) {
                 Image(uiImage: background)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -79,10 +64,22 @@ struct P1ScreenView: View {
                 .aspectRatio(32.0 / 16.0, contentMode: .fit)
                 .frame(width: side)
 
-            ForEach(0..<8, id: \.self) { i in
-                icon(i)
-                    .opacity(state.icons[i] ? 1.0 : 0.35)
-                    .position(x: Self.iconPositions[i].x * side, y: Self.iconPositions[i].y * side)
+            let profile = V1IconProfile.forDevice(deviceID)
+            ForEach(profile.slots.indices, id: \.self) { i in
+                let slot = profile.slots[i]
+                if let button = slot.button {
+                    LampButton(
+                        lit: state.lamps & slot.lamp != 0,
+                        size: Self.lampSize,
+                        icon: icon(sheetSlot: i, asset: slot.asset),
+                        onChange: onButton.map { handler in { handler(button, $0) } }
+                    )
+                    .position(x: slot.x * side, y: slot.y * side)
+                } else {
+                    icon(sheetSlot: i, asset: slot.asset)
+                        .opacity(state.icons[slot.light] ? 1.0 : 0.35)
+                        .position(x: slot.x * side, y: slot.y * side)
+                }
             }
         }
         .frame(width: side, height: side)
@@ -90,14 +87,14 @@ struct P1ScreenView: View {
     }
 
     @ViewBuilder
-    private func icon(_ i: Int) -> some View {
-        if let icons = P1CustomArt.shared.icons {
+    private func icon(sheetSlot i: Int, asset: String) -> some View {
+        if let icons = P1CustomArt.shared.icons(for: deviceID), i < icons.count {
             Image(uiImage: icons[i])
                 .resizable()
                 .scaledToFit()
                 .frame(width: Self.customSlotSize, height: Self.customSlotSize)
         } else {
-            Image(Self.defaultIconAssets[i])
+            Image(asset)
                 .resizable()
                 .scaledToFit()
                 .frame(width: Self.iconSize, height: Self.iconSize)
@@ -168,29 +165,284 @@ struct P1ScreenView: View {
     }
 }
 
+/// One of the Yasashii's lit care buttons: a disc that glows warm while
+/// the toy lights it, with the icon on top. Pressable when `onChange` is
+/// given (true on touch-down, false on release), inert otherwise.
+private struct LampButton<Icon: View>: View {
+    let lit: Bool
+    let size: CGFloat
+    let icon: Icon
+    let onChange: ((Bool) -> Void)?
+
+    @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
+    @State private var isPressed = false
+
+    private static var glow: Color { Color(red: 1.0, green: 0.82, blue: 0.35) }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(lit ? Self.glow : Color.white.opacity(0.28))
+                .shadow(color: lit ? Self.glow.opacity(0.9) : .clear, radius: lit ? 10 : 0)
+            Circle()
+                .strokeBorder(Color.black.opacity(lit ? 0.25 : 0.15), lineWidth: 1)
+            icon
+                .opacity(lit ? 1.0 : 0.55)
+        }
+        .frame(width: size, height: size)
+        .contentShape(Circle())
+        .scaleEffect(isPressed ? 0.9 : 1)
+        .animation(.easeOut(duration: 0.08), value: isPressed)
+        .sensoryFeedback(trigger: isPressed) { _, new in
+            hapticsEnabled && new ? .impact(weight: .light) : nil
+        }
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    guard let onChange, !isPressed else { return }
+                    isPressed = true
+                    onChange(true)
+                }
+                .onEnded { _ in
+                    guard let onChange, isPressed else { return }
+                    isPressed = false
+                    onChange(false)
+                },
+            including: onChange == nil ? .none : .all
+        )
+    }
+}
+
 #Preview {
-    P1ScreenView(state: .blank)
+    P1ScreenView(state: .blank, deviceID: "p1")
         .padding()
+}
+
+// MARK: - Per-model icon profiles
+
+/// What the 8 icon lights mean on one first-gen model, and where each is
+/// drawn. The core only reports "light n is on" -- the real icons are
+/// printed on each toy's screen glass, not stored in its ROM -- so this
+/// table is the app's own knowledge of each model.
+///
+/// A custom icon sheet's slots follow `slots` in order (slot 0 = the
+/// first entry), so each model's sheet can have its own order.
+struct V1IconProfile {
+    struct Slot {
+        /// The core's light index (`P1ScreenState.icons`), 0-7.
+        let light: Int
+        /// What the icon means, shown in Screen Style.
+        let label: String
+        /// The bundled placeholder glyph (Tabler Icons, MIT).
+        let asset: String
+        /// Center, as a fraction of the square screen's width/height.
+        let x: CGFloat
+        let y: CGFloat
+        /// Yasashii: the IOS_HAL_LAMP_* bit that lights this slot instead
+        /// of `light`, and the button it presses.
+        var lamp: UInt8 = 0
+        var button: InputController.Button?
+    }
+
+    let slots: [Slot]
+
+    /// The P1/P2 set, in TamaLib's own light order (confirmed against
+    /// jcrona/tamatool and the user's own real P1). Light 7 (attention)
+    /// lights up on its own; it isn't a menu item. An even 4-over-4 layout
+    /// that doesn't depend on any particular background image.
+    static let original = V1IconProfile(slots: [
+        Slot(light: 0, label: "food", asset: "P1IconFood", x: 0.17, y: 0.14),
+        Slot(light: 1, label: "light", asset: "P1IconLight", x: 0.39, y: 0.14),
+        Slot(light: 2, label: "game", asset: "P1IconGame", x: 0.61, y: 0.14),
+        Slot(light: 3, label: "medicine", asset: "P1IconMedicine", x: 0.83, y: 0.14),
+        Slot(light: 4, label: "bathroom", asset: "P1IconBathroom", x: 0.17, y: 0.86),
+        Slot(light: 5, label: "status", asset: "P1IconStatus", x: 0.39, y: 0.86),
+        Slot(light: 6, label: "training", asset: "P1IconTraining", x: 0.61, y: 0.86),
+        Slot(light: 7, label: "attention", asset: "P1IconAttention", x: 0.83, y: 0.86)
+    ])
+
+    /// Tamagotchi Angel. Order and positions: the measured A cycle below
+    /// (lights 0-6, 7 = attention) on the P1's wiring (0-3 top row, 4-7
+    /// bottom row), matching the English manual's icon order (mimitchi.com
+    /// "tainst") and a fan summary that also gives the rows. Placeholder
+    /// glyphs only -- not the real toy's art (spoon, shooting star, bell,
+    /// bow and arrow, haloed face).
+    static let angel = V1IconProfile(slots: [
+        Slot(light: 0, label: "status", asset: "P1IconStatus", x: 0.17, y: 0.14),
+        Slot(light: 1, label: "food", asset: "P1IconFood", x: 0.39, y: 0.14),
+        Slot(light: 2, label: "game", asset: "P1IconGame", x: 0.61, y: 0.14),
+        Slot(light: 3, label: "bathroom", asset: "P1IconBathroom", x: 0.83, y: 0.14),
+        Slot(light: 4, label: "praise", asset: "P1IconPraise", x: 0.17, y: 0.86),
+        Slot(light: 5, label: "medicine", asset: "P1IconMedicine", x: 0.39, y: 0.86),
+        Slot(light: 6, label: "light", asset: "P1IconLight", x: 0.61, y: 0.86),
+        Slot(light: 7, label: "attention", asset: "P1IconAttention", x: 0.83, y: 0.86)
+    ])
+
+    /// Lights 0-3 across the top row and 4-7 across the bottom, left to
+    /// right -- how every model measured so far is wired.
+    private static func grid(_ icons: [(label: String, asset: String)]) -> V1IconProfile {
+        let xs: [CGFloat] = [0.17, 0.39, 0.61, 0.83]
+        return V1IconProfile(slots: icons.enumerated().map { i, icon in
+            Slot(light: i, label: icon.label, asset: icon.asset, x: xs[i % 4], y: i < 4 ? 0.14 : 0.86)
+        })
+    }
+
+    /// Tamagotchi Ocean (Umi de Hakken). Measured: A cycles lights 0-6,
+    /// matching mimitchi.com's "Tamagotchi Ocean: The Icons" numbering
+    /// (1-8, top to bottom, left to right).
+    static let umino = grid([
+        ("status", "P1IconStatus"), ("food", "P1IconFood"),
+        ("game", "P1IconGame"), ("bathroom", "P1IconBathroom"),
+        ("calling box", "P1IconCall"), ("medicine", "P1IconMedicine"),
+        ("light", "P1IconLight"), ("attention", "P1IconAttention")
+    ])
+
+    /// The Japanese manuals' labelled screen diagrams (scans collected
+    /// 2026-11-18 in the user's research folder, vintage-care-icons) are
+    /// the source for Morino, Mothra and Tamaotch below; the Digimon
+    /// layout is from a contemporary Japanese guidebook diagram. None of
+    /// these four could be measured: the headless runner hasn't got them
+    /// past their eggs, so the light numbering relies on the core's wiring
+    /// (lights 0-3 top row, 4-7 bottom, left to right, as on every model
+    /// measured).
+
+    /// Mori de Hakken (Morino / Forest). "? box" (predator response) and
+    /// attention light on their own; the ? box is auto-selected when you
+    /// press A during an attack.
+    static let morino = grid([
+        ("status", "P1IconStatus"), ("food", "P1IconFood"),
+        ("game", "P1IconGame"), ("toilet", "P1IconBathroom"),
+        ("? box", "P1IconPredator"), ("first aid", "P1IconMedicine"),
+        ("lights", "P1IconLight"), ("attention", "P1IconAttention")
+    ])
+
+    /// Mothra Tamagotchi. Discipline raises its "justice" meter.
+    static let mothra = grid([
+        ("status", "P1IconStatus"), ("food", "P1IconFood"),
+        ("game", "P1IconGame"), ("toilet", "P1IconBathroom"),
+        ("discipline", "P1IconTraining"), ("treatment", "P1IconMedicine"),
+        ("lights", "P1IconLight"), ("attention", "P1IconAttention")
+    ])
+
+    /// Tamaotch (玉緒っち). All eight are selectable: no attention icon,
+    /// it calls with text on the pixel screen instead.
+    static let tamaotch = grid([
+        ("status", "P1IconStatus"), ("rest break", "P1IconFood"),
+        ("slots", "P1IconGame"), ("rehearsal", "P1IconRehearsal"),
+        ("toilet", "P1IconBathroom"), ("medicine", "P1IconMedicine"),
+        ("lights", "P1IconLight"), ("discipline", "P1IconTraining")
+    ])
+
+    /// Digital Monster Ver. 1-3. Call (bottom right) lights on its own.
+    static let digimon = grid([
+        ("status", "P1IconStatus"), ("food", "P1IconFood"),
+        ("training", "P1IconTraining"), ("battle", "P1IconBattle"),
+        ("toilet", "P1IconBathroom"), ("lights", "P1IconLight"),
+        ("treatment", "P1IconMedicine"), ("call", "P1IconAttention")
+    ])
+
+    /// Genjintch: measured A cycle 0-6 + attention, same as the P1. The
+    /// only icon difference found in sources: praise replaces the P1's
+    /// discipline icon. Assumed in the P1's slot -- not confirmed.
+    static let genjintch = grid([
+        ("food", "P1IconFood"), ("light", "P1IconLight"),
+        ("game", "P1IconGame"), ("medicine", "P1IconMedicine"),
+        ("bathroom", "P1IconBathroom"), ("status", "P1IconStatus"),
+        ("praise", "P1IconPraise"), ("attention", "P1IconAttention")
+    ])
+
+    /// Yasashii: no screen icons at all. Per its manual, six lit care
+    /// buttons sit around the LCD -- meal, happiness, affection above it;
+    /// toilet, lights, status below -- with small select/cancel buttons
+    /// underneath (those go on the button pad as B and C). Drawn here as
+    /// real buttons where the other models' icons go. Button pins and
+    /// lamps measured headless 2026-11-18, see IOS_HAL_LAMP_* in
+    /// ios_hal.h (affection, toilet and status lamps inferred).
+    static let yasashii: V1IconProfile = {
+        let xs: [CGFloat] = [0.22, 0.5, 0.78]
+        let buttons: [(String, String, UInt8, InputController.Button)] = [
+            ("meal", "P1IconFood", UInt8(IOS_HAL_LAMP_MEAL), .k13),
+            ("happiness", "P1IconHappiness", UInt8(IOS_HAL_LAMP_HAPPINESS), .k12),
+            ("affection", "P1IconAffection", UInt8(IOS_HAL_LAMP_AFFECTION), .k11),
+            ("toilet", "P1IconBathroom", UInt8(IOS_HAL_LAMP_TOILET), .k10),
+            ("lights", "P1IconLight", UInt8(IOS_HAL_LAMP_LIGHTS), .tap),
+            ("status", "P1IconStatus", UInt8(IOS_HAL_LAMP_STATUS), .a)
+        ]
+        return V1IconProfile(slots: buttons.enumerated().map { i, b in
+            Slot(light: 0, label: b.0, asset: b.1, x: xs[i % 3], y: i < 3 ? 0.13 : 0.87, lamp: b.2, button: b.3)
+        })
+    }()
+
+    /// The two small buttons under the Yasashii's care buttons, in place
+    /// of A/B/C: select (B pin) and cancel (C pin).
+    static func padButtons(for deviceID: String) -> [InputController.Button] {
+        deviceID == "yasashii" ? [.b, .c] : [.a, .b, .c]
+    }
+
+    /// True when this model's icons are buttons (see `onButton`).
+    var hasButtons: Bool { slots.contains { $0.button != nil } }
+    ///
+    /// Measured headless (2026-11-18, set the clock with B, A, C, wait
+    /// 10 min, then press A repeatedly):
+    /// - P1, P2: A steps lights 0-6 then none; 7 lights on its own.
+    /// - Angel, Genjintch: same 0-6 cycle, with 7 lit while calling.
+    /// - Umino: 0-6 too (light 1 repeated once, likely press timing).
+    /// - Morino, Mothra, Tamaotch, Yasashii, Digimon 1-3: still eggs after
+    ///   30 min with every start-up sequence tried.
+    private static let byDevice: [String: V1IconProfile] = [
+        "p1": original,
+        "angel": angel,
+        "morino": morino,
+        "umino": umino,
+        "genjintch": genjintch,
+        "tamaotch": tamaotch,
+        "mothra": mothra,
+        "yasashii": yasashii,
+        "digimon-v1": digimon,
+        "digimon-v2": digimon,
+        "digimon-v3": digimon
+    ]
+
+    static func forDevice(_ id: String) -> V1IconProfile {
+        byDevice[id] ?? original
+    }
+
+    /// "food, light, game, medicine, then bathroom, ..." for Screen Style.
+    var sheetOrderDescription: String {
+        // Top row, then bottom row: 4 + 4 on most models, 3 + 3 on the Yasashii.
+        let labels = slots.map(\.label)
+        let perRow = (labels.count + 1) / 2
+        guard labels.count > 4 else { return labels.joined(separator: ", ") }
+        return labels.prefix(perRow).joined(separator: ", ") + ", then " + labels.dropFirst(perRow).joined(separator: ", ")
+    }
 }
 
 // MARK: - User-supplied artwork
 
-/// The user's own background image and icon sheet for the P1 screen,
-/// picked from their photo library in P1ScreenStyleView. Kept as two PNGs in
-/// Application Support and loaded once; P1ScreenView reads them straight
-/// off `shared`, so the play screen, screenshots and recordings all pick
-/// up a change immediately.
+/// The user's own background image and icon sheet for each first-gen
+/// model, picked from their photo library in P1ScreenStyleView. Kept as
+/// PNGs in Application Support and loaded once; P1ScreenView reads them
+/// straight off `shared`, so the play screen, screenshots and recordings
+/// all pick up a change immediately.
+///
+/// Each model has its own pair, so a P1 sheet never shows on an Angel.
+/// The P1's live at the folder's top level, where the single shared pair
+/// lived before art became per-model, so existing art stays on the P1
+/// with no migration; every other model gets a subfolder named by its
+/// device ID.
 ///
 /// An icon sheet is one image holding 8 equal slots, 4 across and 2
-/// down, in P1ScreenView's icon order (food, light, game, medicine /
-/// bathroom, status, training, attention).
+/// down, in the order of that model's `V1IconProfile.slots`.
 @MainActor
 @Observable
 final class P1CustomArt {
     static let shared = P1CustomArt()
 
-    private(set) var background: UIImage?
-    private(set) var icons: [UIImage]?
+    private var backgrounds: [String: UIImage] = [:]
+    private var iconSets: [String: [UIImage]] = [:]
+
+    func background(for deviceID: String) -> UIImage? { backgrounds[deviceID] }
+    func icons(for deviceID: String) -> [UIImage]? { iconSets[deviceID] }
 
     enum ImportError: LocalizedError {
         case unreadable
@@ -208,22 +460,39 @@ final class P1CustomArt {
 
     private static let maxDimension: CGFloat = 1024
 
-    private static var directory: URL {
+    private static var rootDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return base.appendingPathComponent("P1CustomArt", isDirectory: true)
     }
-    private static var backgroundURL: URL { directory.appendingPathComponent("background.png") }
-    private static var iconSheetURL: URL { directory.appendingPathComponent("icons.png") }
+    private static func directory(for deviceID: String) -> URL {
+        deviceID == "p1" ? rootDirectory : rootDirectory.appendingPathComponent(deviceID, isDirectory: true)
+    }
+    private static func backgroundURL(for deviceID: String) -> URL {
+        directory(for: deviceID).appendingPathComponent("background.png")
+    }
+    private static func iconSheetURL(for deviceID: String) -> URL {
+        directory(for: deviceID).appendingPathComponent("icons.png")
+    }
 
     private init() {
-        background = UIImage(contentsOfFile: Self.backgroundURL.path)
-        if let sheet = UIImage(contentsOfFile: Self.iconSheetURL.path) {
-            icons = Self.slice(sheet)
+        let subfolders = (try? FileManager.default.contentsOfDirectory(
+            at: Self.rootDirectory, includingPropertiesForKeys: [.isDirectoryKey]
+        )) ?? []
+        let deviceIDs = ["p1"] + subfolders
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .map(\.lastPathComponent)
+        for id in deviceIDs {
+            if let image = UIImage(contentsOfFile: Self.backgroundURL(for: id).path) {
+                backgrounds[id] = image
+            }
+            if let sheet = UIImage(contentsOfFile: Self.iconSheetURL(for: id).path), let sliced = Self.slice(sheet) {
+                iconSets[id] = sliced
+            }
         }
     }
 
     /// Center-crops to a square, since the screen is square.
-    func setBackground(from data: Data) throws {
+    func setBackground(from data: Data, for deviceID: String) throws {
         guard let image = UIImage(data: data), image.size.width > 0, image.size.height > 0 else {
             throw ImportError.unreadable
         }
@@ -236,11 +505,11 @@ final class P1CustomArt {
                 width: drawn.width, height: drawn.height
             ))
         }
-        try Self.write(square, to: Self.backgroundURL)
-        background = square
+        try Self.write(square, to: Self.backgroundURL(for: deviceID))
+        backgrounds[deviceID] = square
     }
 
-    func setIconSheet(from data: Data) throws {
+    func setIconSheet(from data: Data, for deviceID: String) throws {
         guard let image = UIImage(data: data), image.size.height > 0 else { throw ImportError.unreadable }
         let ratio = image.size.width / image.size.height
         guard abs(ratio - 2) < 0.1 else { throw ImportError.wrongSheetShape }
@@ -254,18 +523,18 @@ final class P1CustomArt {
             sheet = Self.inkOnly(sheet) ?? sheet
         }
         guard let sliced = Self.slice(sheet) else { throw ImportError.unreadable }
-        try Self.write(sheet, to: Self.iconSheetURL)
-        icons = sliced
+        try Self.write(sheet, to: Self.iconSheetURL(for: deviceID))
+        iconSets[deviceID] = sliced
     }
 
-    func resetBackground() {
-        try? FileManager.default.removeItem(at: Self.backgroundURL)
-        background = nil
+    func resetBackground(for deviceID: String) {
+        try? FileManager.default.removeItem(at: Self.backgroundURL(for: deviceID))
+        backgrounds[deviceID] = nil
     }
 
-    func resetIcons() {
-        try? FileManager.default.removeItem(at: Self.iconSheetURL)
-        icons = nil
+    func resetIcons(for deviceID: String) {
+        try? FileManager.default.removeItem(at: Self.iconSheetURL(for: deviceID))
+        iconSets[deviceID] = nil
     }
 
     // MARK: Helpers
@@ -279,7 +548,7 @@ final class P1CustomArt {
 
     private static func write(_ image: UIImage, to url: URL) throws {
         guard let data = image.pngData() else { throw ImportError.unreadable }
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: url, options: .atomic)
     }
 
@@ -335,6 +604,8 @@ final class P1CustomArt {
 /// image and the icon sheet. This family has no Settings screen of its
 /// own, so this is a small sheet rather than a Settings section.
 struct P1ScreenStyleView: View {
+    /// The model whose art this edits (a `TamaDevice.id`).
+    let deviceID: String
     @Environment(\.dismiss) private var dismiss
     @State private var backgroundPick: PhotosPickerItem?
     @State private var iconSheetPick: PhotosPickerItem?
@@ -347,8 +618,8 @@ struct P1ScreenStyleView: View {
                     PhotosPicker(selection: $backgroundPick, matching: .images) {
                         Label("Choose Background", systemImage: "photo")
                     }
-                    if P1CustomArt.shared.background != nil {
-                        Button("Reset Background", role: .destructive) { P1CustomArt.shared.resetBackground() }
+                    if P1CustomArt.shared.background(for: deviceID) != nil {
+                        Button("Reset Background", role: .destructive) { P1CustomArt.shared.resetBackground(for: deviceID) }
                     }
                 } header: {
                     Text("Background")
@@ -359,13 +630,13 @@ struct P1ScreenStyleView: View {
                     PhotosPicker(selection: $iconSheetPick, matching: .images) {
                         Label("Choose Icon Sheet", systemImage: "square.grid.2x2")
                     }
-                    if P1CustomArt.shared.icons != nil {
-                        Button("Reset Icons", role: .destructive) { P1CustomArt.shared.resetIcons() }
+                    if P1CustomArt.shared.icons(for: deviceID) != nil {
+                        Button("Reset Icons", role: .destructive) { P1CustomArt.shared.resetIcons(for: deviceID) }
                     }
                 } header: {
                     Text("Icons")
                 } footer: {
-                    Text("A single image with 8 equal slots, 4 across and 2 down, in this order: food, light, game, medicine, then bathroom, status, training, attention. A transparent PNG works best.")
+                    Text("A single image with 8 equal slots, 4 across and 2 down, in this order: \(V1IconProfile.forDevice(deviceID).sheetOrderDescription). A transparent PNG works best.")
                 }
             }
             .navigationTitle("Screen Style")
@@ -376,11 +647,11 @@ struct P1ScreenStyleView: View {
                 }
             }
             .onChange(of: backgroundPick) { _, item in
-                load(item) { try P1CustomArt.shared.setBackground(from: $0) }
+                load(item) { [deviceID] in try P1CustomArt.shared.setBackground(from: $0, for: deviceID) }
                 backgroundPick = nil
             }
             .onChange(of: iconSheetPick) { _, item in
-                load(item) { try P1CustomArt.shared.setIconSheet(from: $0) }
+                load(item) { [deviceID] in try P1CustomArt.shared.setIconSheet(from: $0, for: deviceID) }
                 iconSheetPick = nil
             }
             .alert(

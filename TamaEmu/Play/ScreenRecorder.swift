@@ -18,8 +18,8 @@ func renderLCDSnapshot(image: CGImage?, side: CGFloat, scale: CGFloat = 3) -> CG
 /// gallery (its icons are a fixed size, so the proportions only hold
 /// there) and unrounded, for the same reason as renderLCDSnapshot above.
 @MainActor
-func renderP1Snapshot(state: P1ScreenState, scale: CGFloat = 3) -> CGImage? {
-    let renderer = ImageRenderer(content: P1ScreenView(state: state, rounded: false).frame(width: 280, height: 280))
+func renderP1Snapshot(state: P1ScreenState, deviceID: String, scale: CGFloat = 3) -> CGImage? {
+    let renderer = ImageRenderer(content: P1ScreenView(state: state, deviceID: deviceID, rounded: false).frame(width: 280, height: 280))
     renderer.scale = scale
     return renderer.cgImage
 }

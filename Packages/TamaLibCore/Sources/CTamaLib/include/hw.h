@@ -37,6 +37,12 @@ typedef enum {
 	BTN_MIDDLE,
 	BTN_RIGHT,
 	BTN_TAP,
+	/* iOS port: the K10-K13 input pins. Only the Yasashii has buttons
+	 * there (toilet, affection, happiness, meal). */
+	BTN_K10,
+	BTN_K11,
+	BTN_K12,
+	BTN_K13,
 } button_t;
 
 

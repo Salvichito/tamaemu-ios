@@ -8,6 +8,9 @@ import TamaCore
 struct P1ScreenState: Equatable {
     var bits: [Bool]
     var icons: [Bool]
+    /// Yasashii only: its six lit care buttons, IOS_HAL_LAMP_* bits
+    /// (meal, happiness, affection, toilet, lights, status). 0 elsewhere.
+    var lamps: UInt8 = 0
 
     static let blank = P1ScreenState(
         bits: Array(repeating: false, count: 32 * 16),
@@ -61,6 +64,7 @@ final class V1EmulatorEngine {
     /// already on when this engine started" (not a new call, don't fire)
     /// apart from "icon just turned on" (a real new edge).
     private var lastAttentionOn: Bool?
+    private var lampCalls = LampCallTracker()
 
     private lazy var audioOutput = AudioOutput(
         toneProvider: {
@@ -209,10 +213,11 @@ final class V1EmulatorEngine {
             let mask = input.currentMask()
             let changed = mask ^ lastButtonMask
             if changed != 0 {
-                // InputController's bit order (A=0, B=1, C=2) already
-                // matches ios_hal_set_button's own (0=A/left, 1=B/middle,
-                // 2=C/right) -- no remapping needed.
-                for bit in 0..<3 where (changed & (1 << bit)) != 0 {
+                // InputController's bit order (A=0, B=1, C=2, then the
+                // tap and K10-K13 pins) already matches ios_hal_set_button's
+                // own -- no remapping needed. The HAL ignores 4-7 on every
+                // model but the Yasashii.
+                for bit in 0..<8 where (changed & (1 << bit)) != 0 {
                     ios_hal_set_button(Int32(bit), (mask & (1 << bit)) != 0)
                 }
                 lastButtonMask = mask
@@ -249,13 +254,16 @@ final class V1EmulatorEngine {
             // engine even started doesn't immediately fire (lastAttentionOn
             // starts nil, so the very first read only primes it) while a
             // real new call still does, live, the same instant it starts.
-            let attentionOn = icons[7]
+            // The Yasashii has no attention icon: it blinks the care
+            // button it wants instead (lamps stay 0 on every other model).
+            let lamps = ios_hal_get_lamps()
+            let attentionOn = icons[7] || lampCalls.isCalling(lamps: lamps, nowUs: ios_hal_elapsed_us())
             if let last = lastAttentionOn, attentionOn && !last {
                 onCallDetected?()
             }
             lastAttentionOn = attentionOn
 
-            let state = P1ScreenState(bits: bits, icons: icons)
+            let state = P1ScreenState(bits: bits, icons: icons, lamps: lamps)
             let callback = onFrame
             DispatchQueue.main.async {
                 callback?(state)
@@ -324,6 +332,7 @@ extension V1EmulatorEngine {
         // call already sitting on in the loaded save doesn't itself count
         // as a new edge.
         var lastAttentionOn: Bool?
+        var lampCalls = LampCallTracker()
 
         while !outOfTime {
             let remaining = backlogSeconds - Double(advancedUs) / 1_000_000
@@ -360,6 +369,7 @@ extension V1EmulatorEngine {
                     // is calling, far longer than one batch, so sampling it
                     // per batch can't miss a call.
                     let attentionOn = ios_hal_get_icon(7)
+                        || lampCalls.isCalling(lamps: ios_hal_get_lamps(), nowUs: ios_hal_elapsed_us())
                     if let last = lastAttentionOn, attentionOn && !last {
                         onCallDetected?()
                     }
@@ -414,7 +424,8 @@ extension V1EmulatorEngine {
         }
         return P1ScreenState(
             bits: (0..<(32 * 16)).map { (bitsBuf[$0 / 8] & (0x80 >> ($0 % 8))) != 0 },
-            icons: (0..<8).map { (iconsByte & (1 << $0)) != 0 }
+            icons: (0..<8).map { (iconsByte & (1 << $0)) != 0 },
+            lamps: ios_hal_get_lamps()
         )
     }
 
@@ -444,5 +455,23 @@ extension V1EmulatorEngine {
             words.append((UInt16(hi) << 8) | UInt16(lo))
         }
         return words
+    }
+}
+
+/// Turns the Yasashii's blinking care-button lamps into one steady
+/// "calling" signal, the way the attention icon works on other models: a
+/// lamp blinks about once a second, so "calling" means some lamp was lit
+/// within the last 1.5 emulated seconds. Times are the core's own clock
+/// (ios_hal_elapsed_us), compared with wrapping subtraction.
+struct LampCallTracker {
+    private var lastLitUs: UInt32?
+
+    mutating func isCalling(lamps: UInt8, nowUs: UInt32) -> Bool {
+        if lamps != 0 {
+            lastLitUs = nowUs
+            return true
+        }
+        guard let lastLitUs else { return false }
+        return nowUs &- lastLitUs < 1_500_000
     }
 }

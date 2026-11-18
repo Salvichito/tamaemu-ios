@@ -165,6 +165,18 @@ static MEM_BUFFER_TYPE memory[MEM_BUFFER_SIZE];
 
 static input_port_t inputs[INPUT_PORT_NUM] = {{0}};
 
+/* iOS port: last values written to output ports R00-R33 (index 0-3) and
+ * I/O ports P00-P33 (index 4-7). Upstream ignored these writes; the
+ * Yasashii drives its six lit care buttons from them (active low). Not
+ * part of state_t on purpose -- the ROM rewrites them every second, and
+ * adding fields there would break every existing save. */
+static u4_t out_ports[8] = {0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF};
+
+u4_t cpu_get_out_port(u8_t index)
+{
+	return index < 8 ? out_ports[index] : 0xF;
+}
+
 /* Interrupts (in priority order) */
 static interrupt_t interrupts[INT_SLOT_NUM] = {
 	{0x0, 0x0, 0, 0x0C}, // Prog timer
@@ -324,7 +336,7 @@ static void generate_interrupt(int_slot_t slot, u8_t bit)
 
 void cpu_set_input_pin(pin_t pin, pin_state_t state)
 {
-	u4_t old_state = (inputs[pin & 0x4].states >> (pin & 0x3)) & 0x1;
+	u4_t old_state = (inputs[(pin & 0x4) >> 2].states >> (pin & 0x3)) & 0x1;
 
 	/* Trigger the interrupt if the state changed */
 	if (state != old_state) {
@@ -346,7 +358,7 @@ void cpu_set_input_pin(pin_t pin, pin_state_t state)
 	}
 
 	/* Set the I/O */
-	inputs[pin & 0x4].states = (inputs[pin & 0x4].states & ~(0x1 << (pin & 0x3))) | (state << (pin & 0x3));
+	inputs[(pin & 0x4) >> 2].states = (inputs[(pin & 0x4) >> 2].states & ~(0x1 << (pin & 0x3))) | (state << (pin & 0x3));
 }
 
 void cpu_sync_ref_timestamp(void)
@@ -458,6 +470,13 @@ static u4_t get_io(u12_t n)
 		case REG_R40_R43_BZ_OUTPUT_PORT:
 			/* Output port (R40-R43) */
 			return GET_IO_MEMORY(memory, n);
+
+		case REG_P30_P33_IO_PORT:
+			/* iOS port: the Yasashii polls this. Still reads 0, exactly
+			 * what the unimplemented default returned: answering 0xF here
+			 * changed its behaviour (hatch timing, which lamps lit) in
+			 * headless tests, so keep 0 and only drop the log line. */
+			return 0;
 
 		case REG_CPU_OSC3_CTRL:
 			/* CPU/OSC3 clocks switch, CPU voltage switch */
@@ -659,6 +678,30 @@ static void set_io(u12_t n, u4_t v)
 		case REG_PROG_TIMER_CLK_SEL:
 			/* Prog timer clock selection */
 			/* Assume 256Hz, output disabled */
+			break;
+
+		case REG_R00_R03_OUTPUT_PORT:
+		case REG_R10_R13_OUTPUT_PORT:
+		case REG_R20_R23_OUTPUT_PORT:
+		case REG_R30_R33_OUTPUT_PORT:
+			/* iOS port: kept for the Yasashii's button lamps */
+			out_ports[n - REG_R00_R03_OUTPUT_PORT] = v;
+			break;
+
+		case REG_P00_P03_IO_PORT:
+		case REG_P10_P13_IO_PORT:
+		case REG_P20_P23_IO_PORT:
+		case REG_P30_P33_IO_PORT:
+			/* iOS port: kept for the Yasashii's button lamps */
+			out_ports[4 + (n - REG_P00_P03_IO_PORT)] = v;
+			break;
+
+		case REG_HIGH_IMPEDANCE_OUTPUT_CTRL:
+		case REG_IO_CTRL:
+		case REG_IO_PULLUP_CFG:
+			/* iOS port: port direction/pull-up setup. Nothing to model,
+			 * but the Yasashii writes these dozens of times a second, and
+			 * logging each one cost a formatted line every time. */
 			break;
 
 		default:
@@ -1945,6 +1988,9 @@ static void handle_timers(void)
 void cpu_reset(void)
 {
 	bz_shot = 0;
+	for (int p = 0; p < 8; p++) {
+		out_ports[p] = 0xF;
+	}
 
 	u13_t i;
 

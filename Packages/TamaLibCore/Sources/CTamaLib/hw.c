@@ -31,6 +31,7 @@ static u8_t seg_pos[MEM_DISPLAY1_SIZE/2] = {0, 1, 2, 3, 4, 5, 6, 7, 32, 8, 9, 10
 #endif
 
 static bool_t bz_out, bz_shot_on;
+static u8_t hw_model; /* iOS port: defined with the per-model wiring below */
 
 bool_t hw_init(void)
 {
@@ -42,6 +43,17 @@ bool_t hw_init(void)
 	cpu_set_input_pin(PIN_K01, PIN_STATE_HIGH);
 	cpu_set_input_pin(PIN_K02, PIN_STATE_HIGH);
 	cpu_set_input_pin(PIN_K03, PIN_STATE_HIGH);
+
+	/* iOS port: the Yasashii has four more buttons on K10-K13, also active
+	 * low. Left unset they read as held down and the toy never gets past
+	 * its start screen. Only for that model: other ROMs may read K1 for
+	 * something else, and upstream always left it low. */
+	if (hw_model == HW_MODEL_DIRECT) {
+		cpu_set_input_pin(PIN_K10, PIN_STATE_HIGH);
+		cpu_set_input_pin(PIN_K11, PIN_STATE_HIGH);
+		cpu_set_input_pin(PIN_K12, PIN_STATE_HIGH);
+		cpu_set_input_pin(PIN_K13, PIN_STATE_HIGH);
+	}
 
 	return 0;
 }
@@ -156,6 +168,22 @@ void hw_set_button(button_t btn, btn_state_t state)
 
 		case BTN_RIGHT:
 			cpu_set_input_pin(PIN_K00, pin_state);
+			break;
+
+		case BTN_K10:
+			cpu_set_input_pin(PIN_K10, pin_state);
+			break;
+
+		case BTN_K11:
+			cpu_set_input_pin(PIN_K11, pin_state);
+			break;
+
+		case BTN_K12:
+			cpu_set_input_pin(PIN_K12, pin_state);
+			break;
+
+		case BTN_K13:
+			cpu_set_input_pin(PIN_K13, pin_state);
 			break;
 	}
 }

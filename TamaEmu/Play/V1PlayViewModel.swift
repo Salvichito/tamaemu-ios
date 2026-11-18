@@ -207,7 +207,7 @@ final class V1PlayViewModel: SaveBackupHost {
 
     /// The screen as a picture, at the size it's drawn in the gallery.
     func screenshot() -> CGImage? {
-        renderP1Snapshot(state: screenState)
+        renderP1Snapshot(state: screenState, deviceID: selectedDevice.id)
     }
 
     /// Catch-up (if there's a saved state and real time has passed since
@@ -342,7 +342,7 @@ extension V1PlayViewModel: ScreenRecordable {
 
     func recordingFrame(side: CGFloat) -> CGImage? {
         if let cached = recordingFrameCache, cached.state == screenState { return cached.image }
-        guard let image = renderP1Snapshot(state: screenState) else { return nil }
+        guard let image = renderP1Snapshot(state: screenState, deviceID: selectedDevice.id) else { return nil }
         recordingFrameCache = (screenState, image)
         return image
     }

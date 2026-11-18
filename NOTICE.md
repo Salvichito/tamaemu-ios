@@ -38,7 +38,7 @@ statically-linked package under the same GPLv3 terms:
 
 ## Bundled artwork
 
-The eight menu icons on the P1-era screen
+The menu icons on the P1-era screen
 ([`TamaEmu/Resources/Assets.xcassets/P1Icon*.imageset`](TamaEmu/Resources/Assets.xcassets/))
 are from [Tabler Icons](https://github.com/tabler/tabler-icons) (filled set),
 Copyright (c) 2020-2024 Paweł Kuna, used under the MIT License:

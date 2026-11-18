@@ -37,8 +37,14 @@ struct V1PageView: View {
     private var pageContent: some View {
         VStack(spacing: 16) {
             ZStack {
-                P1ScreenView(state: viewModel.screenState)
-                    .frame(maxWidth: 280)
+                P1ScreenView(
+                    state: viewModel.screenState,
+                    deviceID: viewModel.selectedDevice.id,
+                    onButton: buttonsDisabled ? nil : { button, down in
+                        if down { viewModel.pressButton(button) } else { viewModel.releaseButton(button) }
+                    }
+                )
+                .frame(maxWidth: 280)
 
                 if viewModel.isPaused {
                     badge(systemImage: "pause.circle.fill", text: "Paused — tap to resume")
@@ -56,12 +62,24 @@ struct V1PageView: View {
                     .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
-            .contentShape(Rectangle())
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in beginPress() }
-                    .onEnded { _ in endPress() }
-            )
+            .overlay {
+                // Tap to pause / hold to fast-forward. On a model whose
+                // icons are buttons (Yasashii), only the middle band around
+                // the pixels takes it, so pressing a care button doesn't
+                // also pause the Tama.
+                GeometryReader { geo in
+                    let side = min(geo.size.width, geo.size.height)
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .frame(width: side, height: hasScreenButtons ? side * 0.5 : side)
+                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in beginPress() }
+                                .onEnded { _ in endPress() }
+                        )
+                }
+            }
 
             if ambientBackgroundEnabled {
                 Text(viewModel.selectedDevice.title)
@@ -75,9 +93,10 @@ struct V1PageView: View {
 
             ButtonPad(
                 onPress: { viewModel.pressButton($0) },
-                onRelease: { viewModel.releaseButton($0) }
+                onRelease: { viewModel.releaseButton($0) },
+                buttons: V1IconProfile.padButtons(for: viewModel.selectedDevice.id)
             )
-            .disabled(viewModel.isLoading || viewModel.isPaused)
+            .disabled(buttonsDisabled)
 
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
@@ -88,6 +107,12 @@ struct V1PageView: View {
             }
         }
         .padding()
+    }
+
+    private var buttonsDisabled: Bool { viewModel.isLoading || viewModel.isPaused }
+
+    private var hasScreenButtons: Bool {
+        V1IconProfile.forDevice(viewModel.selectedDevice.id).hasButtons
     }
 
     private func beginPress() {

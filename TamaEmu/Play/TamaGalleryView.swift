@@ -550,7 +550,9 @@ struct TamaGalleryView: View {
                     Text("Up to 5 digits (max 99999). This replaces the current total.")
                 }
                 .sheet(isPresented: $showingP1ScreenStyle) {
-                    P1ScreenStyleView()
+                    if let device = selectedDevice {
+                        P1ScreenStyleView(deviceID: device.id)
+                    }
                 }
                 .sheet(isPresented: $showingNearbyLink) {
                     if let device = selectedDevice {

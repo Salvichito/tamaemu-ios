@@ -7,6 +7,9 @@ import SwiftUI
 struct ButtonPad: View {
     let onPress: (InputController.Button) -> Void
     let onRelease: (InputController.Button) -> Void
+    /// Which pins get a button, left to right. The Yasashii has only
+    /// select and cancel here (its other buttons are on the screen).
+    var buttons: [InputController.Button] = [.a, .b, .c]
 
     var body: some View {
         // Several glass shapes side by side belong in one container: it
@@ -23,9 +26,9 @@ struct ButtonPad: View {
 
     private var row: some View {
         HStack(spacing: 28) {
-            ButtonView(button: .a, onPress: onPress, onRelease: onRelease)
-            ButtonView(button: .b, onPress: onPress, onRelease: onRelease)
-            ButtonView(button: .c, onPress: onPress, onRelease: onRelease)
+            ForEach(buttons, id: \.self) { button in
+                ButtonView(button: button, onPress: onPress, onRelease: onRelease)
+            }
         }
     }
 }

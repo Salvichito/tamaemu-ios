@@ -64,6 +64,23 @@ void ios_hal_set_speed(uint8_t multiplier);
  * physical left-to-right A/B/C layout. BTN_TAP (3) is the touch sensor on
  * later E0C6S48 devices, unused on a plain P1. */
 void ios_hal_set_button(int btn, bool pressed);
+/* 4-7 are the K10-K13 pins, the Yasashii's toilet, affection, happiness
+ * and meal buttons (ignored on every other model). On the Yasashii, 0 is
+ * its status button, 1 select, 2 cancel and 3 lights. */
+
+/* Yasashii only (0 for every other model): which of its six lit care
+ * buttons are on right now, one bit each. Measured 2026-11-18 with a
+ * headless runner: meal, happiness and lights each blink when the toy
+ * needs that care and stop once it's given; affection, status and toilet
+ * are placed from the order the six run in at hatching (clockwise around
+ * the real toy), not individually confirmed. */
+#define IOS_HAL_LAMP_MEAL       (1 << 0)
+#define IOS_HAL_LAMP_HAPPINESS  (1 << 1)
+#define IOS_HAL_LAMP_AFFECTION  (1 << 2)
+#define IOS_HAL_LAMP_TOILET     (1 << 3)
+#define IOS_HAL_LAMP_LIGHTS     (1 << 4)
+#define IOS_HAL_LAMP_STATUS     (1 << 5)
+uint8_t ios_hal_get_lamps(void);
 
 bool ios_hal_tone_on(void);
 uint32_t ios_hal_tone_freq_dhz(void); /* deci-hertz, matches set_frequency()'s unit */

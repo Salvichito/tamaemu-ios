@@ -218,6 +218,10 @@ u32_t cpu_get_depth(void);
 
 void cpu_set_input_pin(pin_t pin, pin_state_t state);
 
+/* iOS port: last value written to output port R0x-R3x (index 0-3) or
+ * I/O port P0x-P3x (index 4-7). 0xF before the ROM writes one. */
+u4_t cpu_get_out_port(u8_t index);
+
 void cpu_sync_ref_timestamp(void);
 
 void cpu_refresh_hw(void);

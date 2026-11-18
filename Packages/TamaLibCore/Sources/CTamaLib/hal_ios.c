@@ -12,6 +12,7 @@
 #include "tamalib.h"
 #include "hal.h"
 #include "hw.h"
+#include "cpu.h"
 
 #include <os/lock.h>
 #include <stdarg.h>
@@ -355,10 +356,39 @@ bool ios_hal_get_icon(uint8_t icon)
 
 void ios_hal_set_button(int btn, bool pressed)
 {
-	if (btn < 0 || btn > 3) {
+	if (btn < 0 || btn > 7) {
+		return;
+	}
+	/* K10-K13 only exist as buttons on the Yasashii; elsewhere upstream
+	 * leaves them low and the ROM may read them, so never touch them. */
+	if (btn > 3 && s_model != IOS_HAL_MODEL_YASASHII) {
 		return;
 	}
 	tamalib_set_button((button_t)btn, pressed ? BTN_STATE_PRESSED : BTN_STATE_RELEASED);
+}
+
+uint8_t ios_hal_get_lamps(void)
+{
+	if (s_model != IOS_HAL_MODEL_YASASHII) {
+		return 0;
+	}
+	/* Port index (cpu_get_out_port) per lamp, in IOS_HAL_LAMP_* bit order.
+	 * Active low: a lamp is lit while its port isn't all ones. */
+	static const uint8_t ports[6] = {
+		4, /* P0: meal */
+		5, /* P1: happiness */
+		6, /* P2: affection */
+		0, /* R0: toilet */
+		1, /* R1: lights */
+		2, /* R2: status */
+	};
+	uint8_t lamps = 0;
+	for (int i = 0; i < 6; i++) {
+		if (cpu_get_out_port(ports[i]) != 0xF) {
+			lamps |= (uint8_t)(1 << i);
+		}
+	}
+	return lamps;
 }
 
 bool ios_hal_tone_on(void)
