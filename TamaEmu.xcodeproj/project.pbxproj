@@ -46,6 +46,7 @@
 		7E2D4F8A1B3C4D5E6F708192 /* ReminderNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */; };
 		832BCB74B2DFD79FFC09EC39 /* ReorderTamasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */; };
 		86E6B610807911E71EAFC307 /* TomomixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50143D488F11AA54BEFF43ED /* TomomixView.swift */; };
+		89333E30B711F69BD07A7EA3 /* TomomixAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C72058A070E307D1BA4EFEB3 /* TomomixAnimation.swift */; };
 		8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */ = {isa = PBXBuildFile; fileRef = A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */; };
 		8B2D3F4E5C6071829304A5B6 /* LCDScreenEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A39281706F5E4 /* LCDScreenEffect.swift */; };
 		8DCF8788183AD7BA77EAD00B /* GalleryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291654CFB51D6F793B885E33 /* GalleryViewModel.swift */; };
@@ -163,6 +164,7 @@
 		B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenImagePrep.swift; sourceTree = "<group>"; };
 		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
 		C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotificationScheduler.swift; sourceTree = "<group>"; };
+		C72058A070E307D1BA4EFEB3 /* TomomixAnimation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TomomixAnimation.swift; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
 		D07A735B64EEDCE8C20FB0B1 /* T7PageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = T7PageView.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				22A448D14ED86EC103F74C83 /* TomomixBrain.swift */,
 				4F51CBE682BD89D42AFE444A /* TomomixViewModel.swift */,
 				50143D488F11AA54BEFF43ED /* TomomixView.swift */,
+				C72058A070E307D1BA4EFEB3 /* TomomixAnimation.swift */,
 			);
 			name = Tomomix;
 			path = Tomomix;
@@ -526,6 +529,7 @@
 				E5D2CFE353E438AD0044C19B /* TomomixBrain.swift in Sources */,
 				58954D6CFADCBA28E1D22FB4 /* TomomixViewModel.swift in Sources */,
 				86E6B610807911E71EAFC307 /* TomomixView.swift in Sources */,
+				89333E30B711F69BD07A7EA3 /* TomomixAnimation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

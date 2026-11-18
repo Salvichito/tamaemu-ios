@@ -57,6 +57,8 @@ The buttons are the classic way to play. Tapping is a quicker, modern way to do 
 | Any of the 7 care icons | Pressing A until that icon is selected, then B |
 | A food (meal or snack) in the food menu | Selecting it and pressing B |
 
+**Tap the screen to skip.** Tapping the screen itself (not an icon or a choice) skips the animation that's playing, or closes whatever can be closed: status, a menu, a game result. It never skips a real wait, like the fallen star's 30 seconds, or the game's sequence. Change
+
 Tapping follows the same rules as the buttons. Anything that's blocked (while asleep, during the birth, during an animation) is blocked for taps too.
 
 **Settings and ⋯ menu**: Phone. Extra options live behind the cog and ⋯ buttons. See §17.

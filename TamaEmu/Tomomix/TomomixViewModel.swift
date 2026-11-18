@@ -40,8 +40,10 @@ final class TomomixViewModel {
     private(set) var screen: Screen = .main
     /// Highlighted care icon; nil = none (§2).
     private(set) var cursor: Icon?
-    /// Placeholder for animations: a short line under the tomomix.
+    /// A short line under the tomomix, for things with no animation.
     private(set) var caption: String?
+    /// The animation playing now, if any (Animations.md §4).
+    private(set) var moment: TomoMoment?
     private(set) var muted: Bool
     private(set) var paused: Bool
     /// Prototype only: how many simulated seconds pass per real second.
@@ -66,12 +68,25 @@ final class TomomixViewModel {
             muted = save.muted
             paused = save.pausedAt != nil
         } else {
-            brain = TomoBrain(now: Date())
+            brain = TomoBrain(now: Date().addingTimeInterval(TomoRules.birthIntroSeconds))
             timeOffset = 0
             pausedAt = nil
             muted = false
             paused = false
+            moment = TomoMoment(.birthIntro)
         }
+    }
+
+    /// The moment still playing at `date`, if any.
+    func activeMoment(at date: Date) -> TomoMoment? {
+        guard let moment, !moment.isOver(at: date) else { return nil }
+        return moment
+    }
+
+    private func play(_ kind: TomoMoment.Kind) {
+        moment = TomoMoment(kind)
+        caption = nil
+        captionUntil = nil
     }
 
     var simNow: Date { simTime(at: Date()) }
@@ -108,8 +123,12 @@ final class TomomixViewModel {
         let dt = now.timeIntervalSince(lastTick)
         lastTick = now
         if !paused, speed != 1 { timeOffset += dt * (speed - 1) }
+        let before = brain.clock
         let events = brain.advance(to: simNow)
-        handle(events)
+        // Only animate what happened just now, not a long catch-up after
+        // the app was closed (or a debug skip).
+        handle(events, live: brain.clock.timeIntervalSince(before) <= 180)
+        if let m = moment, m.isOver(at: now) { moment = nil }
         beeper.idleTick()
         if let until = captionUntil, now >= until { caption = nil; captionUntil = nil }
         if case .game = screen, !brain.canPlay { endGameEarly() }
@@ -117,16 +136,29 @@ final class TomomixViewModel {
         if !events.isEmpty || now.timeIntervalSince(lastSave) > 30 { save() }
     }
 
-    private func handle(_ events: [TomoBrain.Event]) {
+    private func handle(_ events: [TomoBrain.Event], live: Bool) {
         for event in events {
             switch event {
-            case .born: say("Born!"); beep(.fanfare)
-            case .evolved(_, let to): say("Grew into \(to.label)!"); beep(.fanfare)
-            case .callStarted: beep(.call)
-            case .gotSick: say("Feeling sick…")
-            case .becameOld: say("Getting old")
-            case .departed: beep(.fanfare); screen = .main; cursor = nil
-            default: break
+            case .born:
+                if live { play(.burst) }
+                beep(.fanfare)
+            case .evolved(let from, let to):
+                if live { play(.evolve(from: from, to: to)) }
+                beep(.fanfare)
+            case .pooped:
+                if live, moment == nil { play(.poop) }
+            case .callStarted:
+                if live { beep(.call) }
+            case .becameOld:
+                say("Getting old")
+            case .departed:
+                gameTask?.cancel()
+                screen = .main
+                cursor = nil
+                if live { play(.depart(brain.character)) }
+                beep(.fanfare)
+            default:
+                break
             }
         }
     }
@@ -252,6 +284,30 @@ final class TomomixViewModel {
         gameInput(right: right)
     }
 
+    /// Tap on the screen itself (not an icon or menu item): skips what's
+    /// playing or closes what can be closed, so players can move on
+    /// quickly (§2). Never skips a real wait (the star's 30 seconds) or
+    /// the game's sequence.
+    func tapScreen() {
+        if activeMoment(at: Date()) != nil {
+            moment = nil
+            return
+        }
+        if caption != nil {
+            caption = nil
+            captionUntil = nil
+            return
+        }
+        switch screen {
+        case .status, .food, .lights:
+            screen = .main
+        case .game(let g):
+            if case .result = g.step { screen = .main }
+        case .main:
+            break
+        }
+    }
+
     // MARK: - Care actions
 
     private var isStarOrDeparted: Bool { brain.phase != .alive }
@@ -264,17 +320,18 @@ final class TomomixViewModel {
         case .light: screen = .lights(choice: brain.lightsOn ? 1 : 0)
         case .status: screen = .status
         case .game:
-            if brain.canPlay { startGame() } else { say("Doesn't want to play") }
+            if brain.canPlay { startGame() } else { play(.refuse) }
         case .medicine:
             switch brain.giveMedicine() {
             case .notSick: say("Not sick")
-            case .needsMore: say("One more dose…")
-            case .cured: say("Cured!")
+            case .needsMore: play(.medicine(cured: false))
+            case .cured: play(.medicine(cured: true))
             }
         case .clean:
-            say(brain.clean() ? "All clean!" : "Nothing to clean")
+            let poop = brain.poop
+            if brain.clean() { play(.clean(poop: poop)) } else { say("Nothing to clean") }
         case .discipline:
-            say(brain.scold() == .scolded ? "Scolded!" : "Huh?")
+            if brain.scold() == .scolded { play(.scold) } else { say("Huh?") }
         case .attention:
             break
         }
@@ -283,18 +340,22 @@ final class TomomixViewModel {
 
     private func giveFood(snack: Bool) {
         let result = snack ? brain.feedSnack() : brain.feedMeal()
-        let bites = brain.character.params.bites
-        say(result == .ate ? (snack ? "Snack! " : "Meal! ") + String(repeating: "nom ", count: bites) : "No thanks")
+        if result == .ate {
+            play(.eat(snack: snack, bites: brain.character.params.bites))
+        } else {
+            play(.refuse)
+        }
         screen = .main
         save()
     }
 
     func newStar() {
         gameTask?.cancel()
-        brain = TomoBrain(now: simNow)
+        // It lands after the intro, so the 30-second pulse is all there (§3).
+        brain = TomoBrain(now: simNow.addingTimeInterval(TomoRules.birthIntroSeconds))
         screen = .main
         cursor = nil
-        caption = nil
+        play(.birthIntro)
         save()
     }
 

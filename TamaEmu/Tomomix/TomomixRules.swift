@@ -107,6 +107,8 @@ struct TomoParams: Sendable {
 /// Fixed numbers from the rulebook that aren't per character.
 enum TomoRules {
     static let starPulseSeconds: TimeInterval = 30            // §3
+    /// Sky + shooting star + close-up before the pulse (Animations.md §5).
+    static let birthIntroSeconds: TimeInterval = 5
     static let maxLevel = 4                                    // §4: empty + 4 steps
     static let disciplineStep = 10                             // §8: 10 scolds fill it
     static let timerWobble = 0.2                               // §4

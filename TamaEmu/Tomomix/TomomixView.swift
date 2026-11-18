@@ -78,6 +78,10 @@ private struct TomoScreen: View {
                     TomoScene(model: model)
                     overlay
                 }
+                // Tap anywhere on the screen to skip or dismiss (§2). The
+                // menu items and game sides keep their own taps.
+                .contentShape(Rectangle())
+                .onTapGesture { model.tapScreen() }
                 .frame(height: side * 0.64)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .padding(.horizontal, side * 0.04)
@@ -125,7 +129,7 @@ private struct TomoScreen: View {
         case .status:
             TomoStatusView(brain: model.brain)
         case .game(let game):
-            TomoGameView(game: game, onSide: { model.tapGameSide(right: $0) })
+            TomoGameView(game: game, character: model.brain.character, onSide: { model.tapGameSide(right: $0) })
         }
     }
 }
@@ -154,172 +158,34 @@ private struct TomoIcon: View {
     }
 }
 
-// MARK: - The scene (placeholder art)
+// MARK: - The scene (TomomixAnimation.swift draws it)
 
 private struct TomoScene: View {
     let model: TomomixViewModel
 
     var body: some View {
-        let brain = model.brain
-        ZStack {
+        // Redraws up to 30 times a second, only while this screen is shown.
+        TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
+            let now = timeline.date
+            let brain = model.brain
+            let moment = model.activeMoment(at: now)
             switch brain.phase {
             case .star:
-                NightSky()
-                PulsingStar(birth: brain.birthTime, model: model)
+                TomoBirthScene(
+                    bornAt: brain.birthTime,
+                    simNow: model.simTime(at: now),
+                    now: now,
+                    intro: moment?.isBirthIntro == true ? moment : nil
+                )
             case .departed:
-                NightSky()
-                TomoBlob(character: brain.character)
-                    .opacity(0.25)
-                    .blur(radius: 1)
-                Image(systemName: "star.fill")
-                    .font(.system(size: 30))
-                    .foregroundStyle(.yellow)
-                    .offset(y: -10)
-                VStack {
-                    Spacer()
-                    Text("Age \(brain.ageYears)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.8))
-                        .padding(.bottom, 8)
-                }
+                TomoEndingScene(
+                    character: brain.character,
+                    ageYears: brain.ageYears,
+                    now: now,
+                    transition: moment.map { $0.progress(at: now) }
+                )
             case .alive:
-                aliveScene(brain)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func aliveScene(_ brain: TomoBrain) -> some View {
-        let dark = !brain.lightsOn
-        ZStack {
-            Color(.systemBackground)
-            TomoBlob(character: brain.character)
-                .scaleEffect(brain.asleep ? 0.9 : 1)
-            VStack {
-                HStack {
-                    if brain.asleep { Text("Zzz").font(.headline) }
-                    Spacer()
-                    if brain.sick { Text("☠︎").font(.title2) }
-                }
-                Spacer()
-                HStack(alignment: .bottom) {
-                    if brain.isOld { Text("old").font(.caption2).foregroundStyle(.secondary) }
-                    Spacer()
-                    PoopPile(count: brain.poop)
-                }
-            }
-            .padding(10)
-            if dark { Color.black.opacity(brain.asleep ? 0.8 : 0.65) }
-            if let caption = model.caption {
-                VStack {
-                    Spacer()
-                    Text(caption)
-                        .font(.footnote.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(.thinMaterial, in: Capsule())
-                        .padding(.bottom, 26)
-                }
-            }
-        }
-    }
-}
-
-/// Placeholder for each character's art: a colored blob with its name.
-private struct TomoBlob: View {
-    let character: TomoCharacter
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Circle()
-                .fill(color.gradient)
-                .frame(width: size, height: size)
-                .overlay {
-                    HStack(spacing: size * 0.18) {
-                        Circle().frame(width: size * 0.1)
-                        Circle().frame(width: size * 0.1)
-                    }
-                    .foregroundStyle(.black.opacity(0.7))
-                    .offset(y: -size * 0.05)
-                }
-            Text(character.label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var size: CGFloat {
-        switch character.stage {
-        case .baby: return 44
-        case .child: return 58
-        case .teen: return 70
-        case .adult: return 84
-        }
-    }
-
-    private var color: Color {
-        switch character {
-        case .baby: return .pink
-        case .childGood: return .mint
-        case .childBad: return .brown
-        case .teenExcellent, .adult1A, .adult1B, .adult1C, .adult1D: return .yellow
-        case .teenGood, .adult2A, .adult2B, .adult2C, .adult2D: return .cyan
-        case .teenBad, .adult3A, .adult3B, .adult3C, .adult3D: return .purple
-        }
-    }
-}
-
-/// §10: up to 8 poops, small ones turning big after the 4th.
-private struct PoopPile: View {
-    let count: Int
-
-    var body: some View {
-        let big = max(0, count - 4)
-        let small = min(count, 4) - big
-        HStack(alignment: .bottom, spacing: 3) {
-            ForEach(0..<max(0, small), id: \.self) { _ in Circle().fill(.brown).frame(width: 10, height: 10) }
-            ForEach(0..<big, id: \.self) { _ in Circle().fill(.brown).frame(width: 18, height: 18) }
-        }
-    }
-}
-
-private struct NightSky: View {
-    var body: some View {
-        Canvas { context, size in
-            context.fill(Path(CGRect(origin: .zero, size: size)), with: .linearGradient(
-                Gradient(colors: [Color(red: 0.05, green: 0.06, blue: 0.2), Color(red: 0.15, green: 0.1, blue: 0.3)]),
-                startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
-            var rng = TomoRandom(state: 42)
-            for _ in 0..<40 {
-                let x = rng.unit() * size.width, y = rng.unit() * size.height
-                let r = 0.6 + rng.unit() * 1.2
-                context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)), with: .color(.white.opacity(0.4 + rng.unit() * 0.5)))
-            }
-        }
-    }
-}
-
-/// §3: the fallen star pulses slowly at first, faster as birth nears.
-private struct PulsingStar: View {
-    let birth: Date
-    let model: TomomixViewModel
-
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            let left = max(0, birth.timeIntervalSince(model.simTime(at: timeline.date)))
-            let total = TomoRules.starPulseSeconds
-            let elapsed = total - left
-            // Pulse rate rises from 0.5 to 4 per second; integrate for phase.
-            let f0 = 0.5, f1 = 4.0
-            let phase = 2 * Double.pi * (f0 * elapsed + (f1 - f0) * elapsed * elapsed / (2 * total))
-            let glow = (sin(phase) + 1) / 2
-            VStack {
-                Spacer()
-                Image(systemName: "star.fill")
-                    .font(.system(size: 34))
-                    .foregroundStyle(.yellow)
-                    .shadow(color: .yellow, radius: 4 + 14 * glow)
-                    .scaleEffect(0.85 + 0.25 * glow)
-                    .padding(.bottom, 24)
+                TomoStage(brain: brain, moment: moment, now: now, caption: model.caption)
             }
         }
     }
@@ -391,6 +257,7 @@ private struct TomoStatusView: View {
 /// §6 Follow Me: the two directions, lit while shown or pressed.
 private struct TomoGameView: View {
     let game: TomomixViewModel.GameState
+    let character: TomoCharacter
     let onSide: (Bool) -> Void
 
     var body: some View {
@@ -400,11 +267,27 @@ private struct TomoGameView: View {
                 side(right: false)
                 side(right: true)
             }
+            // The tomomix shows each direction by looking that way; it's
+            // drawn looking left and mirrored for right (Animations.md §3).
+            GeometryReader { geo in
+                let size = geo.size.height * 0.7
+                TomoSprite(character: character, pose: pose, mirrored: game.lit == true)
+                    .frame(width: size, height: size)
+                    .position(x: geo.size.width / 2, y: geo.size.height - size / 2)
+            }
+            .allowsHitTesting(false)
             VStack {
                 Text(header).font(.footnote.weight(.semibold)).padding(.top, 8)
                 Spacer()
             }
             .allowsHitTesting(false)
+        }
+    }
+
+    private var pose: TomoPose {
+        switch game.step {
+        case .result(let score, _): return score > 0 ? .happy : .sad
+        default: return game.lit == nil ? .idle : .look
         }
     }
 
