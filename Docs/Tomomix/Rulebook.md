@@ -1,4 +1,4 @@
-# Tomomix Rulebook — draft 3
+# Tomomix Rulebook — draft 4
 
 The rules for **Tomomix**, TamaEmu's built-in virtual pet. One pet is a *tomomix*; several are *tomomixis*. It ships with the app and needs no ROM. All characters, art, names and wording are original.
 
@@ -14,7 +14,6 @@ Every rule carries one tag:
 | **Choice** | The classic rule is unknown, or doesn't fit our cast, so this is our decision. |
 | **Change** | Deliberately different from the classic rules. |
 | **Phone** | Something a toy never had to deal with, such as the app being closed. |
-| **Proposal** | Suggested but not yet confirmed. See §19. |
 
 **Time unit:** unless stated otherwise, "minutes" means **awake minutes**: minutes when the tomomix is alive, born and not asleep. A tomomix that sleeps 11 hours a night takes much longer than 23 wall-clock hours to use up "23 hours" of growth.
 
@@ -103,15 +102,33 @@ Tapping follows the same rules as the buttons. Anything that's blocked (while as
 | Weight doesn't affect growth. | Classic `FD06` |
 | Each snack given at full happiness takes **15 minutes** off the healthy timer (§10). | Choice `HL08` `U07` |
 
-## 6. The mini-game — to be designed
+## 6. The mini-game — Follow Me
 
-The game will be completely different from the classic one. Until it's designed, these placeholder rules keep it in balance with the rest of the care loop:
+A memory game: the tomomix shows a sequence of directions, and you repeat it. Change (the classic game is a left/right guess)
 
 | Rule | Tag |
 |---|---|
-| Doing well in a game gives **+1 happiness step**. | Classic `GM01` (placeholder) |
-| Finishing a game, win or lose, costs **1 weight** (never below the character's minimum). | Classic `GM02` (placeholder) |
-| Quitting partway through gives no reward and costs no weight. | Choice |
+| Up to **5 rounds**. Round 1 is 1 direction long, round 2 is 2, and so on up to 5. | Change |
+| Each round **repeats the previous sequence and adds one new random direction** at the end (left → left, right → left, right, right …). | Change |
+| The tomomix shows each direction by turning or pointing left or right. Left and right each have their own beep. | Change |
+| You repeat the sequence with **A = left, B = right**, or by tapping the left or right side of the screen. **C** quits. | Change |
+| **A wrong direction ends the game.** Your score is the number of rounds you completed. | Change |
+| If you don't press anything for **5 seconds**, that counts as a wrong direction. | Choice |
+
+**Results**
+
+| Score | Result | Happiness |
+|---|---|---|
+| 5 | Perfect | +3 steps |
+| 3–4 | Good | +2 steps |
+| 1–2 | OK | +1 step |
+| 0 | Fail | none |
+
+| Rule | Tag |
+|---|---|
+| Happiness never goes above 4 steps. | Classic `GM01` |
+| Finishing a game, whatever the result, costs **1 weight** (never below the character's minimum). A game that ends on a wrong direction counts as finished. | Classic `GM02` |
+| Quitting with C before the end gives no happiness and costs no weight. | Choice |
 | The game can't be played while asleep, sick or refusing. | Classic `GM03` |
 
 ## 7. Calls and care mistakes
@@ -142,8 +159,8 @@ Sometimes the tomomix calls even though it doesn't need anything, or refuses foo
 | Disciplining a tomomix that genuinely needs food or play doesn't count. | Classic `DS01` |
 | **Starting discipline when evolving** (replaces the classic hidden-subtype rule): | |
 | · Children start at 0%. | Classic |
-| · Teens start at 50% if D is 0–2, or 0% if D is 3 or more. | Proposal (based on Classic `DS07`) |
-| · Adults start by type, whatever their tier: **A 100% · B 75% · C 25% · D 0%**. | Proposal |
+| · Teens start at 50% if D is 0–2, or 0% if D is 3 or more. | Choice (based on Classic `DS07`) |
+| · Adults start by type, whatever their tier: **A 100% · B 75% · C 25% · D 0%**. | Choice |
 
 **What changes because of the new chart:** the classic rules set a teen's starting discipline from its hidden subtype, and each adult had its own fixed starting level. Tomomix has no subtypes and four discipline-based adult types, so both rules above are new. The adult numbers are the average of the classic good-care and poor-care adults for each discipline band. Everything else about discipline is unchanged.
 
@@ -165,7 +182,7 @@ Sometimes the tomomix calls even though it doesn't need anything, or refuses foo
 | Up to **8** poops can pile up, shown as small and big piles (table below). After 8, no more are added. | Change `U06` |
 | Cleaning removes all poop at once. | Classic `HL02` |
 | Each character has a "healthy timer" that counts down while it's awake and well (§14). When it runs out, the tomomix gets sick and a **skull** appears. | Classic `HL06` |
-| Each poop on screen makes the healthy timer run **25% faster**: 1 poop = ×1.25, 4 poops = ×2, 8 poops = ×3. | Proposal `U06` |
+| Each poop on screen makes the healthy timer run **25% faster**: 1 poop = ×1.25, 4 poops = ×2, 8 poops = ×3. | Choice `U06` |
 | Medicine cures sickness. Some characters need **2 or 3 doses** (§14). | Classic `HL04` `HL05` |
 | Getting sick **3 times as the same character** means critical condition (§12). Evolving resets that count. | Classic `HL07` |
 
@@ -244,9 +261,9 @@ The tomomix becomes a **fixed star** in the starry night sky, with a **faded ima
 
 | Unknown | Decision | Research ID |
 |---|---|---|
-| Game win odds | Doesn't apply: new game (§6) | `U04` |
+| Game win odds | Doesn't apply: new game, Follow Me (§6) | `U04` |
 | Two empty meters at once | One shared deadline, one mistake | `U05` |
-| Poop limit and effect on health | 8 poops, small and big (§10). Health effect: Proposal | `U06` |
+| Poop limit and effect on health | 8 poops, small and big; each one makes sickness 25% sooner (§10) | `U06` |
 | Snacks and sickness | Each snack at full happiness takes 15 min off the healthy timer | `U07` |
 | Timers when evolving | Keep the time left | `U08` |
 | Critical condition length | 10 minutes | `U09` `U11` |
@@ -254,7 +271,7 @@ The tomomix becomes a **fixed star** in the starry night sky, with a **faded ima
 
 ## 14. Character numbers
 
-Minutes are awake minutes. *Classic* rows copy a classic character. *Blend* rows sit halfway between the Excellent and Bad versions (Proposal). Starting discipline follows §8.
+Minutes are awake minutes. *Classic* rows copy a classic character. *Blend* rows sit halfway between the Excellent and Bad versions. Starting discipline follows §8.
 
 | Character | Source | Awake | Hunger / happiness drop every | Weight | Doses | Healthy timer | Grows / ages after |
 |---|---|---|---|---|---|---|---|
@@ -331,9 +348,8 @@ Options the classic never had, behind the cog and ⋯ buttons. This is a list of
 - **Small random moments:** animation-only moments like a sneeze, a dance or a stare at the sky. They don't change any numbers.
 - Wobbly timers for poop as well.
 
-## 19. Open questions
+## 19. Still to design
 
-1. **Adult starting discipline** by type (A 100% · B 75% · C 25% · D 0%), §8.
-2. **Teen starting discipline** (50% if D 0–2, else 0%), §8.
-3. **Poop and health:** each poop makes the healthy timer 25% faster, up to ×3 at 8 poops, §10.
-4. Later: the mini-game (§6), the settings (§17), what "no deaths" does instead of an ending, and how difficulty scales.
+Everything above is confirmed as the baseline. Still open:
+
+1. The settings and ⋯ menu (§17), including what "no deaths" does instead of an ending and how difficulty scales.
