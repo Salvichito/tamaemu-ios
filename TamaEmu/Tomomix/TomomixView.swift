@@ -360,9 +360,9 @@ private struct TomoStatusView: View {
         ZStack {
             Color(.systemBackground)
             VStack(alignment: .leading, spacing: 10) {
-                meter("stomach", "Hunger", brain.hunger)
-                meter("heart.fill", "Happiness", brain.happiness)
-                meter("brain.head.profile", "Discipline", brain.discipline / 25)
+                meter("fork.knife", "Hunger", brain.hunger, of: TomoRules.maxLevel)
+                meter("heart.fill", "Happiness", brain.happiness, of: TomoRules.maxLevel)
+                meter("brain.head.profile", "Discipline", brain.discipline / TomoRules.disciplineStep, of: 100 / TomoRules.disciplineStep)
                 HStack {
                     Text("Age \(brain.ageYears)")
                     Spacer()
@@ -374,11 +374,11 @@ private struct TomoStatusView: View {
         }
     }
 
-    private func meter(_ symbol: String, _ name: String, _ level: Int) -> some View {
+    private func meter(_ symbol: String, _ name: String, _ level: Int, of segments: Int) -> some View {
         HStack(spacing: 10) {
             Image(systemName: symbol).frame(width: 24).accessibilityLabel(name)
-            HStack(spacing: 4) {
-                ForEach(0..<TomoRules.maxLevel, id: \.self) { i in
+            HStack(spacing: segments > 5 ? 2 : 4) {
+                ForEach(0..<segments, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 3)
                         .fill(i < level ? Color.accentColor : Color.secondary.opacity(0.2))
                         .frame(height: 14)

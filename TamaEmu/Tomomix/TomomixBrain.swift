@@ -53,7 +53,7 @@ struct TomoBrain: Codable, Sendable {
     /// 0-4 each (§4).
     private(set) var hunger = 0
     private(set) var happiness = 0
-    /// 0-100 in steps of 25 (§8).
+    /// 0-100 in steps of 10 (§8).
     private(set) var discipline = 0
     /// The two hidden counts growth depends on (§11).
     private(set) var careMistakes = 0
@@ -478,7 +478,7 @@ struct TomoBrain: Codable, Sendable {
         guard canCare, !asleep, misbehaving else { return .noEffect }
         misbehaving = false
         disciplineDeadline = nil
-        discipline = min(100, discipline + 25)
+        discipline = min(100, discipline + TomoRules.disciplineStep)
         return .scolded
     }
 

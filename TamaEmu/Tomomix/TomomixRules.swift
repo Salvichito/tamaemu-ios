@@ -108,6 +108,7 @@ struct TomoParams: Sendable {
 enum TomoRules {
     static let starPulseSeconds: TimeInterval = 30            // §3
     static let maxLevel = 4                                    // §4: empty + 4 steps
+    static let disciplineStep = 10                             // §8: 10 scolds fill it
     static let timerWobble = 0.2                               // §4
     static let babyNapAfter = 40                               // §3
     static let babyNapLength = 5                               // §3
@@ -187,8 +188,8 @@ enum TomoRules {
         case .adult:
             switch character {
             case .adult1A, .adult2A, .adult3A: return 100
-            case .adult1B, .adult2B, .adult3B: return 75
-            case .adult1C, .adult2C, .adult3C: return 25
+            case .adult1B, .adult2B, .adult3B: return 80
+            case .adult1C, .adult2C, .adult3C: return 20
             default: return 0
             }
         }

@@ -1,4 +1,4 @@
-# Tomomix Rulebook — draft 4
+# Tomomix Rulebook — draft 5
 
 The rules for **Tomomix**, TamaEmu's built-in virtual pet. One pet is a *tomomix*; several are *tomomixis*. It ships with the app and needs no ROM. All characters, art, names and wording are original.
 
@@ -151,7 +151,7 @@ Sometimes the tomomix calls even though it doesn't need anything, or refuses foo
 
 | Rule | Tag |
 |---|---|
-| Choosing **Discipline** during misbehavior raises the discipline meter: 0 → 25 → 50 → 75 → 100%. | Classic `DS01` `DS02` |
+| Choosing **Discipline** during misbehavior raises the discipline meter by **10%**. It takes **10 scolds** to reach 100%. | Change (classic: 4 steps of 25%) |
 | Misbehavior that goes undisciplined for **14 minutes** counts as **1 discipline mistake (D)**. | Classic `DS03` |
 | **D** is counted separately from the meter. Filling the meter later doesn't erase it. | Classic `ST01` |
 | Misbehavior happens after a number of meter drops, not on a clock. Each time, the number is picked at random: **5–7** for Children and Teens, **6–8** for adults. (Classic: exactly 6 and 7.) | Classic `DS04` + Change |
@@ -160,9 +160,9 @@ Sometimes the tomomix calls even though it doesn't need anything, or refuses foo
 | **Starting discipline when evolving** (replaces the classic hidden-subtype rule): | |
 | · Children start at 0%. | Classic |
 | · Teens start at 50% if D is 0–2, or 0% if D is 3 or more. | Choice (based on Classic `DS07`) |
-| · Adults start by type, whatever their tier: **A 100% · B 75% · C 25% · D 0%**. | Choice |
+| · Adults start by type, whatever their tier: **A 100% · B 80% · C 20% · D 0%**. | Choice |
 
-**What changes because of the new chart:** the classic rules set a teen's starting discipline from its hidden subtype, and each adult had its own fixed starting level. Tomomix has no subtypes and four discipline-based adult types, so both rules above are new. The adult numbers are the average of the classic good-care and poor-care adults for each discipline band. Everything else about discipline is unchanged.
+**What changes because of the new chart:** the classic rules set a teen's starting discipline from its hidden subtype, and each adult had its own fixed starting level. Tomomix has no subtypes and four discipline-based adult types, so both rules above are new. The adult numbers are the average of the classic good-care and poor-care adults for each discipline band, rounded to the 10% steps. Scolds are smaller (+10%) and the timing of misbehavior is unchanged, so a full meter takes longer to earn than in the classic.
 
 ## 9. Sleep, lights and age
 
@@ -305,11 +305,11 @@ Change: everything is on **one screen** instead of several pages.
 |---|---|
 | Hunger | Meter with a **stomach** icon, 5 levels (empty + 4) |
 | Happiness | Meter with a **heart or smiley** icon, 5 levels |
-| Discipline | Meter with a **brain** icon, 5 levels (0–100% in steps of 25) |
+| Discipline | Meter with a **brain** icon, 10 steps (0–100% in steps of 10) |
 | Age | Number (§9) |
 | Weight | Number |
 
-All three meters share the same 5-level scale, so they read the same way at a glance.
+Hunger and happiness have 4 steps; discipline has 10, so it fills more slowly.
 
 ## 16. Phone rules
 

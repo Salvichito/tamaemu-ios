@@ -200,11 +200,34 @@ final class TomomixViewModel {
 
     // MARK: - Taps (§2 hidden shortcuts)
 
+    /// Tapping an icon opens it. Tapping the icon whose screen is already
+    /// open closes it again; tapping a different one jumps straight there.
     func tapIcon(_ icon: Icon) {
-        guard icon != .attention, case .main = screen, brain.canCare else { return }
-        beep(.click)
+        guard icon != .attention, brain.canCare else { return }
+        if let open = openIcon {
+            beep(.click)
+            if open == icon {
+                if case .game = screen { quitGame() } else { screen = .main }
+                return
+            }
+            if case .game = screen { return }   // finish or quit the game first
+            screen = .main
+        } else {
+            beep(.click)
+        }
         cursor = icon
         open(icon)
+    }
+
+    /// Which icon the current screen belongs to; nil on the main screen.
+    private var openIcon: Icon? {
+        switch screen {
+        case .main: return nil
+        case .food: return .food
+        case .lights: return .light
+        case .status: return .status
+        case .game: return .game
+        }
     }
 
     func tapFood(snack: Bool) {
