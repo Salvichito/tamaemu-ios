@@ -494,6 +494,12 @@ struct TomoStage: View {
             } else if !brain.asleep, brain.attention, !brain.sick, moment == nil {
                 effect("tomo-call", fallback: Image(systemName: "exclamationmark.bubble.fill").foregroundStyle(.red))
                     .position(x: head.x + size * 0.2, y: head.y - size * 0.05)
+            } else if !brain.asleep, !brain.sick, moment == nil,
+                      brain.hunger == 1 || brain.happiness == 1 {
+                // §4: one step left on a meter, so it thinks about what
+                // it'll soon want, before it starts calling.
+                TomoThoughtBubble(meal: brain.hunger == 1, snack: brain.happiness == 1, size: size)
+                    .position(x: head.x + size * 0.3, y: head.y - size * 0.12)
             }
             if let m = moment {
                 momentEffects(m, head: head, size: size, width: w)
@@ -579,6 +585,56 @@ struct TomoStage: View {
             }
         }
     }
+}
+
+/// §4: the thought bubble shown when a meter has one step left: the meal
+/// for hunger, the snack for happiness, or both. Uses `tomo-thought` and
+/// the whole `tomo-meal-1` / `tomo-snack-1` drawings when they exist.
+private struct TomoThoughtBubble: View {
+    let meal: Bool
+    let snack: Bool
+    let size: CGFloat
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            HStack(spacing: d * 0.15) {
+                if meal { food("tomo-meal-1", symbol: "fork.knife", color: .orange) }
+                if snack { food("tomo-snack-1", symbol: "birthday.cake.fill", color: .pink) }
+            }
+            .padding(.horizontal, d * 0.35)
+            .padding(.vertical, d * 0.25)
+            .background {
+                if let art = TomoArt.item("tomo-thought") {
+                    Image(art).resizable()
+                } else {
+                    Capsule().fill(Color.white).shadow(color: .black.opacity(0.15), radius: 2)
+                }
+            }
+            // The two little trailing circles that make it a thought.
+            if TomoArt.item("tomo-thought") == nil {
+                Circle().fill(Color.white).frame(width: d * 0.22, height: d * 0.22)
+                    .shadow(color: .black.opacity(0.15), radius: 1)
+                    .offset(x: -d * 0.05, y: d * 0.3)
+                Circle().fill(Color.white).frame(width: d * 0.13, height: d * 0.13)
+                    .shadow(color: .black.opacity(0.15), radius: 1)
+                    .offset(x: -d * 0.25, y: d * 0.52)
+            }
+        }
+        .fixedSize()
+    }
+
+    @ViewBuilder
+    private func food(_ name: String, symbol: String, color: Color) -> some View {
+        if let art = TomoArt.item(name) {
+            Image(art).resizable().scaledToFit().frame(width: d, height: d)
+        } else {
+            Image(systemName: symbol).resizable().scaledToFit()
+                .foregroundStyle(color).frame(width: d * 0.8, height: d * 0.8)
+                .frame(width: d, height: d)
+        }
+    }
+
+    private var d: CGFloat { size * 0.13 }
 }
 
 /// §10: up to 8 poops, small ones turning big after the 4th. `newestDrop`

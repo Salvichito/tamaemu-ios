@@ -191,6 +191,13 @@ enum BackgroundRefresh {
             if let eeprom = result.eeprom {
                 try? eeprom.write(to: paths.t7EepromPath, options: .atomic)
             }
+
+        case .tomomix:
+            // No emulator: the rules engine plays the missed minutes in
+            // milliseconds, so there's no budget to worry about. Its calls
+            // are already scheduled as timed notifications
+            // (TomomixNotifications), so none is fired from here.
+            _ = TomomixStore.catchUp()
         }
     }
 }
@@ -238,6 +245,7 @@ final class EngineGate: @unchecked Sendable {
         case .ctama: key = "ctama." + device.id
         case .v1: key = "v1"
         case .t7: key = "t7"
+        case .tomomix: key = "tomomix"
         }
         registryLock.lock(); defer { registryLock.unlock() }
         if let existing = gates[key] { return existing }

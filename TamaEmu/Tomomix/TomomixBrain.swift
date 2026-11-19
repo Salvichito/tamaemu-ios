@@ -126,6 +126,10 @@ struct TomoBrain: Codable, Sendable {
         poopCountdown = TomoRules.firstPoop
         lightsOn = true
         events.append(.born)
+        // §3: it's born with both meters empty, so it calls right away
+        // instead of waiting for the first drop a minute later.
+        careDeadline = TomoRules.careDeadline
+        events.append(.callStarted(.hunger))
     }
 
     // MARK: - Moving time forward
@@ -405,11 +409,13 @@ struct TomoBrain: Codable, Sendable {
 
     // MARK: - What the screen shows
 
-    /// The attention icon (§2, §7, §8).
+    /// The attention icon (§2, §7, §8). Unlike the classic toy, it stays
+    /// lit while a meter is empty, even after the 14 minutes run out (§7).
     var attention: Bool {
         guard phase == .alive else { return false }
         return careDeadline != nil || misbehaving || criticalLeft != nil
             || (asleep && lightsOn && napLeft == nil)
+            || (!asleep && (hunger == 0 || happiness == 0))
     }
 
     /// Care actions are possible: alive, not in critical condition.

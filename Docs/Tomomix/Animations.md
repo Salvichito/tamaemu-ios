@@ -92,6 +92,7 @@ Every living character (Baby through all adults) uses this set. **Core** poses a
 | `tomo-anger` | 1 | Misbehaving |
 | `tomo-scold` | 1 | Scold effect |
 | `tomo-sparkle` | 1–2 | Evolving, cured |
+| `tomo-thought` | 1 | Thought bubble when a meter has one step left (holds `tomo-meal-1` and/or `tomo-snack-1`) |
 | `tomo-badge-perfect`, `-good`, `-ok`, `-fail` | 1 each | Follow Me results |
 
 ### Scenes

@@ -13,6 +13,11 @@ enum ActiveDeviceLookup {
     /// the gallery's page list, and the set the background refresh pass and
     /// the widget's device picker both draw from.
     static func allImported() -> [TamaDevice] {
-        DeviceCatalog.all().filter(hasImportedROM)
+        var devices = DeviceCatalog.all().filter(hasImportedROM)
+        // The built-in pet has no ROM: it's owned while its save exists.
+        if TomomixStore.exists {
+            devices.append(DeviceCatalog.tomomix)
+        }
+        return devices
     }
 }

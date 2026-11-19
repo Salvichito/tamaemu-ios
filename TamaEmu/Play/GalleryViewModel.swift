@@ -16,6 +16,7 @@ private protocol EngineLifecycle: AnyObject {
 extension PlayViewModel: EngineLifecycle {}
 extension V1PlayViewModel: EngineLifecycle {}
 extension T7PlayViewModel: EngineLifecycle {}
+extension TomomixViewModel: EngineLifecycle {}
 
 /// Owns the set of owned Tamas and one cached view-model per device —
 /// PlayViewModel for CTama devices, V1PlayViewModel for TamaLib ones.
@@ -34,8 +35,15 @@ final class GalleryViewModel {
     private var viewModels: [TamaDevice.ID: PlayViewModel] = [:]
     private var v1ViewModels: [TamaDevice.ID: V1PlayViewModel] = [:]
     private var t7ViewModels: [TamaDevice.ID: T7PlayViewModel] = [:]
+    /// There's only ever one tomomix.
+    private var tomomix: TomomixViewModel?
 
     init() {
+        // No ROM yet: start with the built-in pet so there's something to
+        // play straight away -- unless the player deleted it before.
+        if ActiveDeviceLookup.allImported().isEmpty, !TomomixStore.removedByPlayer {
+            TomomixViewModel().save()
+        }
         ownedDevices = Self.restoreOrder(of: ActiveDeviceLookup.allImported())
         selectedPage = ownedDevices.first?.id
         WidgetSharedState.publishOwnedDevices(ownedDevices)
@@ -77,6 +85,33 @@ final class GalleryViewModel {
         return vm
     }
 
+    func tomomixViewModel() -> TomomixViewModel {
+        if let tomomix { return tomomix }
+        let vm = TomomixViewModel()
+        tomomix = vm
+        return vm
+    }
+
+    /// Whether "Add Tomomix" should be offered (it isn't in the gallery).
+    var canAddTomomix: Bool { !ownedDevices.contains { $0.family == .tomomix } }
+
+    /// Tamas that count toward the free tier's one-Tama limit: the
+    /// built-in tomomix doesn't.
+    var emulatedDeviceCount: Int { ownedDevices.filter { $0.family != .tomomix }.count }
+
+    /// Adds the built-in pet: a new shooting star lands in its page.
+    func addTomomix() {
+        guard canAddTomomix else { return }
+        TomomixStore.removedByPlayer = false
+        let vm = TomomixViewModel()
+        vm.save()
+        tomomix = vm
+        let device = DeviceCatalog.tomomix
+        ownedDevices.append(device)
+        selectedPage = device.id
+        WidgetSharedState.publishOwnedDevices(ownedDevices)
+    }
+
     func t7ViewModel(for device: TamaDevice) -> T7PlayViewModel {
         if let existing = t7ViewModels[device.id] { return existing }
         let vm = T7PlayViewModel(device: device)
@@ -90,15 +125,18 @@ final class GalleryViewModel {
     /// above do.
     private func cachedEngine(for id: TamaDevice.ID) -> EngineLifecycle? {
         (viewModels[id] as EngineLifecycle?) ?? (v1ViewModels[id] as EngineLifecycle?) ?? (t7ViewModels[id] as EngineLifecycle?)
+            ?? (id == DeviceCatalog.tomomix.id ? tomomix : nil)
     }
 
     /// Whichever kind of view-model backs this device, as far as the
     /// backup/restore screen is concerned.
-    func backupHost(for device: TamaDevice) -> SaveBackupHost {
+    /// nil for the tomomix, which has no backups yet.
+    func backupHost(for device: TamaDevice) -> SaveBackupHost? {
         switch device.family {
         case .ctama: return viewModel(for: device)
         case .v1: return v1ViewModel(for: device)
         case .t7: return t7ViewModel(for: device)
+        case .tomomix: return nil
         }
     }
 
@@ -114,6 +152,7 @@ final class GalleryViewModel {
         case .ctama: viewModel(for: device).resumeIfNeeded()
         case .v1: v1ViewModel(for: device).resumeIfNeeded()
         case .t7: t7ViewModel(for: device).resumeIfNeeded()
+        case .tomomix: tomomixViewModel().resumeIfNeeded()
         }
     }
 
@@ -156,6 +195,11 @@ final class GalleryViewModel {
         case .ctama: PlayViewModel.removeDeviceData(device)
         case .v1: V1PlayViewModel.removeDeviceData(device)
         case .t7: T7PlayViewModel.removeDeviceData(device)
+        case .tomomix:
+            TomomixStore.remove()
+            TomomixStore.removedByPlayer = true
+            TomomixNotifications.cancel()
+            tomomix = nil
         }
         viewModels[device.id] = nil
         v1ViewModels[device.id] = nil

@@ -135,6 +135,7 @@ enum TomoRules {
     static let yearsPerWake = 3                                // §9
     static let gameRounds = 5                                  // §6
     static let gameIdleSeconds: TimeInterval = 5               // §6
+    static let gameResultSeconds: TimeInterval = 2.5           // §6
 
     /// §6 results: happiness steps for a score of 0-5.
     static func gameReward(score: Int) -> Int {

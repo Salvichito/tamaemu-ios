@@ -8,6 +8,9 @@ public enum TamaDeviceFamily: Hashable, Sendable {
     case ctama
     case v1
     case t7
+    /// Tomomix, the built-in original pet: no ROM, no emulator core. Its
+    /// rules live in the app (TamaEmu/Tomomix), not in this package.
+    case tomomix
 }
 
 public struct TamaDevice: Identifiable, Hashable, Sendable {
@@ -100,6 +103,10 @@ private let t7Devices: [TamaDevice] = [
 private let t7Enabled = false
 
 public enum DeviceCatalog {
+    /// The built-in pet. Not part of `all()`, which lists devices a ROM
+    /// can be imported for.
+    public static let tomomix = TamaDevice(id: "tomomix", title: "Tomomix", romSize: 0, family: .tomomix)
+
     public static func all() -> [TamaDevice] {
         var result: [TamaDevice] = []
         var i: Int = 0
@@ -115,6 +122,9 @@ public enum DeviceCatalog {
     }
 
     public static func find(name: String) -> TamaDevice? {
+        if name == tomomix.id {
+            return tomomix
+        }
         if let v1 = v1Devices.first(where: { $0.id == name }) {
             return v1
         }

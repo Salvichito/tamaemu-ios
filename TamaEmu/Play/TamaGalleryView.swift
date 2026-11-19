@@ -27,9 +27,7 @@ struct TamaGalleryView: View {
     /// it outlives the sheet that sets it up (see NearbyLinkView).
     @State private var nearbyLink = NearbyLinkSession()
     @State private var showingNearbyLink = false
-    /// The built-in Tomomix pet, still a prototype: opened full screen
-    /// from the ⋯ menu, outside the gallery of emulated Tamas.
-    @State private var showingTomomix = false
+    @State private var showingNewStarConfirm = false
 
     /// Ambient Background is a premium feature — forced off for free users
     /// regardless of their own stored preference, which is left untouched
@@ -47,7 +45,8 @@ struct TamaGalleryView: View {
     }
 
     private func requestAddTama() {
-        if !gallery.ownedDevices.isEmpty && !purchases.isPremium {
+        // The built-in tomomix doesn't use up the free Tama.
+        if gallery.emulatedDeviceCount > 0 && !purchases.isPremium {
             showingPaywall = true
         } else {
             gallery.showingImport = true
@@ -78,6 +77,11 @@ struct TamaGalleryView: View {
         return gallery.v1ViewModel(for: device)
     }
 
+    private var selectedTomomix: TomomixViewModel? {
+        guard let device = selectedDevice, device.family == .tomomix else { return nil }
+        return gallery.tomomixViewModel()
+    }
+
     var body: some View {
         Group {
             if gallery.ownedDevices.isEmpty {
@@ -87,6 +91,16 @@ struct TamaGalleryView: View {
                     }
                     .navigationTitle("TamaEmu")
                     .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        // No ROM needed for the built-in pet.
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                gallery.addTomomix()
+                            } label: {
+                                Label("Play Tomomix", systemImage: "sparkles")
+                            }
+                        }
+                    }
                 }
             } else {
                 galleryStack
@@ -108,6 +122,11 @@ struct TamaGalleryView: View {
             switch newPhase {
             case .background:
                 gallery.pageDidDisappear(current)
+                // The tomomix's own page schedules its calls when it
+                // stops; from any other page, schedule them from its save.
+                if current.family != .tomomix, let save = TomomixStore.load() {
+                    TomomixNotifications.schedule(for: save)
+                }
                 BackgroundRefresh.scheduleNext()
                 ReminderNotificationScheduler.scheduleIfEnabled()
                 // Scoped to this one onChange — not GalleryViewModel's
@@ -116,8 +135,6 @@ struct TamaGalleryView: View {
                 // screen widget's timer is about leaving the app entirely.
                 WidgetSharedState.recordAppClosed()
             case .active:
-                // Tomomix covers the gallery: keep the Tama under it stopped.
-                guard !showingTomomix else { break }
                 gallery.pageDidAppear(current)
                 ReminderNotificationScheduler.cancel()
             default:
@@ -144,6 +161,8 @@ struct TamaGalleryView: View {
                 viewModel: gallery.t7ViewModel(for: device),
                 ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
             )
+        case .tomomix:
+            TomomixPageView(model: gallery.tomomixViewModel())
         }
     }
 
@@ -274,10 +293,12 @@ struct TamaGalleryView: View {
                 } label: {
                     Label("Add a Tama", systemImage: "plus")
                 }
-                Button {
-                    showingTomomix = true
-                } label: {
-                    Label("Tomomix (Prototype)", systemImage: "sparkles")
+                if gallery.canAddTomomix {
+                    Button {
+                        gallery.addTomomix()
+                    } label: {
+                        Label("Add Tomomix", systemImage: "sparkles")
+                    }
                 }
                 Button {
                     gallery.showingReorder = true
@@ -333,6 +354,42 @@ struct TamaGalleryView: View {
     /// since it has no view model for the pause/settings/screenshot/
     /// recording/translation/set-clock items to hook into.
     @ToolbarContentBuilder
+    private func tomomixToolbarContent(model: TomomixViewModel) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    model.togglePause()
+                } label: {
+                    Label(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill")
+                }
+                Button {
+                    // Ask first only while it's alive: after the ending a
+                    // new star is the expected next step.
+                    if model.brain.phase == .departed { model.newStar() } else { showingNewStarConfirm = true }
+                } label: {
+                    Label("Send a New Shooting Star", systemImage: "moon.stars")
+                }
+                Button {
+                    requestAddTama()
+                } label: {
+                    Label("Add a Tama", systemImage: "plus")
+                }
+                Button {
+                    gallery.showingReorder = true
+                } label: {
+                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                }
+                Button(role: .destructive) {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+        }
+    }
+
     private func minimalToolbarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
@@ -341,10 +398,12 @@ struct TamaGalleryView: View {
                 } label: {
                     Label("Add a Tama", systemImage: "plus")
                 }
-                Button {
-                    showingTomomix = true
-                } label: {
-                    Label("Tomomix (Prototype)", systemImage: "sparkles")
+                if gallery.canAddTomomix {
+                    Button {
+                        gallery.addTomomix()
+                    } label: {
+                        Label("Add Tomomix", systemImage: "sparkles")
+                    }
                 }
                 Button {
                     gallery.showingReorder = true
@@ -394,10 +453,12 @@ struct TamaGalleryView: View {
                 } label: {
                     Label("Add a Tama", systemImage: "plus")
                 }
-                Button {
-                    showingTomomix = true
-                } label: {
-                    Label("Tomomix (Prototype)", systemImage: "sparkles")
+                if gallery.canAddTomomix {
+                    Button {
+                        gallery.addTomomix()
+                    } label: {
+                        Label("Add Tomomix", systemImage: "sparkles")
+                    }
                 }
                 Button {
                     gallery.showingReorder = true
@@ -536,7 +597,11 @@ struct TamaGalleryView: View {
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
+                    if selectedDevice?.family == .tomomix {
+                        Text("Your tomomix and its progress will be gone. You can add a new one later from the ⋯ menu.")
+                    } else {
+                        Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
+                    }
                 }
                 .confirmationDialog(
                     "Set the clock to the current time?",
@@ -589,9 +654,9 @@ struct TamaGalleryView: View {
                     }
                 }
                 .sheet(isPresented: $showingBackups) {
-                    if let device = selectedDevice {
+                    if let device = selectedDevice, let host = gallery.backupHost(for: device) {
                         NavigationStack {
-                            BackupListView(device: device, host: gallery.backupHost(for: device)) {
+                            BackupListView(device: device, host: host) {
                                 showingBackups = false
                             }
                             .toolbar {
@@ -605,14 +670,17 @@ struct TamaGalleryView: View {
                 .sheet(isPresented: $gallery.showingReorder) {
                     ReorderTamasView(gallery: gallery)
                 }
-                .fullScreenCover(isPresented: $showingTomomix) {
-                    TomomixView()
-                }
-                .onChange(of: showingTomomix) { _, showing in
-                    // Only one thing plays at a time: pause the Tama on
-                    // screen while Tomomix is open, resume it after.
-                    guard let device = selectedDevice else { return }
-                    if showing { gallery.pageDidDisappear(device) } else { gallery.pageDidAppear(device) }
+                .confirmationDialog(
+                    "Send a new shooting star?",
+                    isPresented: $showingNewStarConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Send a New Star", role: .destructive) {
+                        selectedTomomix?.newStar()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Your current tomomix will be gone, and a new one starts from a falling star.")
                 }
                 .sheet(isPresented: $showingPaywall) {
                     PaywallView()
@@ -704,6 +772,8 @@ struct TamaGalleryView: View {
                     bottomToolbarContent(viewModel: viewModel)
                 } else if let viewModel = selectedV1ViewModel {
                     v1ToolbarContent(viewModel: viewModel)
+                } else if let model = selectedTomomix {
+                    tomomixToolbarContent(model: model)
                 } else if selectedDevice != nil {
                     minimalToolbarContent()
                 }

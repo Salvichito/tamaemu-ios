@@ -1,66 +1,38 @@
 import SwiftUI
 
-/// Tomomix prototype: the full play screen with placeholder shapes instead
-/// of art. Real art drops into `TomoScene` later; the layout, menus and
-/// controls here are the real ones.
-struct TomomixView: View {
-    @State private var model = TomomixViewModel()
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var showingTools = true
+/// Tomomix's page in the gallery: the screen, the A/B/C buttons, and (for
+/// now) the prototype tools. The gallery starts and stops it like any
+/// other Tama's page, and its ⋯ menu holds Pause and a new star.
+/// Placeholder shapes stand in until the art drops in (TomomixAnimation).
+struct TomomixPageView: View {
+    let model: TomomixViewModel
+    @State private var showingTools = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 28) {
-                    TomoScreen(model: model)
-                        .frame(maxWidth: 340)
-                        .aspectRatio(1, contentMode: .fit)
-                    ButtonPad(
-                        onPress: { model.press($0) },
-                        onRelease: { model.release($0) }
-                    )
-                    DisclosureGroup("Prototype tools", isExpanded: $showingTools) {
-                        TomoDebugPanel(model: model)
-                    }
-                    .padding(.horizontal)
+        ScrollView {
+            VStack(spacing: 22) {
+                TomoScreen(model: model)
+                    .frame(maxWidth: 320)
+                    .aspectRatio(1, contentMode: .fit)
+                    .padding(.horizontal, 24)
+                Text("Tomomix")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                ButtonPad(
+                    onPress: { model.press($0) },
+                    onRelease: { model.release($0) }
+                )
+                DisclosureGroup("Prototype tools", isExpanded: $showingTools) {
+                    TomoDebugPanel(model: model)
                 }
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
             }
-            .navigationTitle("Tomomix")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            model.togglePause()
-                        } label: {
-                            Label(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill")
-                        }
-                        Button(role: .destructive) {
-                            model.newStar()
-                        } label: {
-                            Label("Send a New Shooting Star", systemImage: "sparkles")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
-                }
-            }
+            .padding(.top, 70)
+            .padding(.bottom, 60)
+            .frame(maxWidth: .infinity)
         }
-        .onAppear { model.start() }
-        .onDisappear { model.stop() }
-        .onChange(of: scenePhase) { _, phase in
-            switch phase {
-            case .active: model.start()
-            case .background: model.stop()
-            default: break
-            }
-        }
+        .scrollBounceBehavior(.basedOnSize)
     }
 }
 
@@ -165,10 +137,12 @@ private struct TomoScene: View {
 
     var body: some View {
         // Redraws up to 30 times a second, only while this screen is shown.
-        TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
-            let now = timeline.date
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: model.paused || !model.isRunning)) { timeline in
+            // Paused: draw the frozen instant, so nothing moves (§16).
+            let now = model.frozenAt ?? timeline.date
             let brain = model.brain
             let moment = model.activeMoment(at: now)
+            ZStack {
             switch brain.phase {
             case .star:
                 TomoBirthScene(
@@ -186,6 +160,16 @@ private struct TomoScene: View {
                 )
             case .alive:
                 TomoStage(brain: brain, moment: moment, now: now, caption: model.caption)
+            }
+            if model.paused {
+                VStack(spacing: 6) {
+                    Image(systemName: "pause.circle.fill").font(.system(size: 34))
+                    Text("Paused — tap to resume").font(.footnote.weight(.semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(14)
+                .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+            }
             }
         }
     }

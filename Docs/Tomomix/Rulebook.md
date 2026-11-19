@@ -71,7 +71,7 @@ Tapping follows the same rules as the buttons. Anything that's blocked (while as
 | 2 | A shooting star crosses the sky. | Change |
 | 3 | Close-up: the star falls to the ground. | Change |
 | 4 | The fallen star **pulses for 30 seconds**. It starts slow and pulses faster and faster as the birth gets closer. No care is possible. | Change (classic egg: 5 min) |
-| 5 | A **burst of light**, and the star becomes the Baby. | Change |
+| 5 | A **burst of light**, and the star becomes the Baby. It's born with empty meters, so it **calls right away**. | Change |
 
 | Rule | Tag |
 |---|---|
@@ -91,6 +91,7 @@ Tapping follows the same rules as the buttons. Anything that's blocked (while as
 | **Wobbly timers:** each time a meter's timer restarts, it gets a random **±20%**. "Every 50 minutes" becomes anywhere from 40 to 60, and the average stays the same. | Change |
 | Meters don't drop during sleep. | Classic `TM03` |
 | On evolving, timers keep whatever time they had left. The new character's interval applies from the next time a timer restarts. | Classic `TM04` |
+| **Thought bubble:** when a meter is down to its **last step**, a thought bubble shows what it'll soon want: the meal for hunger, the snack for happiness, or both. It's a heads-up before the call. Hidden while asleep, sick or during an animation. | Change |
 
 ## 5. Food and weight
 
@@ -101,6 +102,7 @@ Tapping follows the same rules as the buttons. Anything that's blocked (while as
 | The tomomix refuses food when it's full, sick, asleep or misbehaving (§8). Refused food does nothing. | Classic `FD03` |
 | Weight stays within the character's range (§14). The top limit is 99. | Classic `FD04` |
 | Food is unlimited. There's no money, shop or stock. | Classic `FD05` |
+| After eating (or refusing), the food menu comes back with the **same choice selected**, so feeding several snacks is quick. Leaving the menu resets it to Meal. | Change |
 | Weight doesn't affect growth. | Classic `FD06` |
 | Each snack given at full happiness takes **15 minutes** off the healthy timer (§10). | Choice `HL08` `U07` |
 
@@ -131,6 +133,7 @@ A memory game: the tomomix shows a sequence of directions, and you repeat it. Ch
 | Happiness never goes above 4 steps. | Classic `GM01` |
 | Finishing a game, whatever the result, costs **1 weight** (never below the character's minimum). A game that ends on a wrong direction counts as finished. | Classic `GM02` |
 | Quitting with C before the end gives no happiness and costs no weight. | Choice |
+| The result shows for **2.5 seconds**, then the game closes by itself. A tap or a button closes it sooner. | Choice |
 | The game can't be played while asleep, sick or refusing. | Classic `GM03` |
 
 ## 7. Calls and care mistakes
@@ -145,7 +148,7 @@ A **call** is the tomomix asking for something. The attention icon lights up and
 | One step of food or happiness is enough to answer a call. If both meters are empty, both need at least one step. | Classic `CR05` |
 | Hunger and happiness share **one** 14-minute deadline. If both are empty, it's still only 1 mistake when time runs out. | Choice `CR06` `U05` |
 | Care mistakes (**C**) add up from Baby onward and are never erased. | Classic `CR07` |
-| The attention icon can go out on its own while the need is still there. | Classic `CR01` |
+| The attention icon **stays lit while hunger or happiness is empty**, until the need is met. When the 14 minutes run out, the care mistake still counts, but the icon doesn't go out. | Change (classic: it goes out on its own) |
 
 ## 8. Discipline
 
@@ -183,6 +186,7 @@ Sometimes the tomomix calls even though it doesn't need anything, or refuses foo
 | First poop comes 15 minutes after birth. After that, every **25 minutes** for the Baby and every **180 minutes** for everyone else. | Classic `HL01` |
 | Up to **8** poops can pile up, shown as small and big piles (table below). After 8, no more are added. | Change `U06` |
 | Cleaning removes all poop at once. | Classic `HL02` |
+| Cleaning works even when there's no poop: the sweep still plays, just for fun. | Change |
 | Each character has a "healthy timer" that counts down while it's awake and well (§14). When it runs out, the tomomix gets sick and a **skull** appears. | Classic `HL06` |
 | Each poop on screen makes the healthy timer run **25% faster**: 1 poop = ×1.25, 4 poops = ×2, 8 poops = ×3. | Choice `U06` |
 | Medicine cures sickness. Some characters need **2 or 3 doses** (§14). | Classic `HL04` `HL05` |
