@@ -9,15 +9,21 @@ import UIKit
 
 enum TomoPose: String, CaseIterable {
     case idle, blink, eat, refuse, happy, sad, sleep, sick, look, call, pout, scolded
+    /// Its own drawing, for characters that shouldn't simply be flipped
+    /// (curly hair, a bow on one side). Without one, `look` is mirrored.
+    case lookRight = "look-right"
 
     var frameCount: Int { self == .idle || self == .eat ? 2 : 1 }
 
-    /// What to show when this pose hasn't been drawn yet.
+    /// What to show when this pose hasn't been drawn yet (Animations.md §3).
+    /// A missing second frame falls back to the first.
     var fallback: TomoPose? {
         switch self {
-        case .blink, .call: return .idle
-        case .sad, .pout: return .refuse
-        case .scolded: return .sad
+        case .blink: return .idle
+        case .sleep: return .eat            // eat-1 doubles as sleeping
+        case .pout, .scolded: return .refuse
+        case .call: return .sad
+        case .sad: return .sick
         default: return nil
         }
     }
@@ -85,6 +91,7 @@ enum TomoArt {
         while let p = current {
             let n = name(character, p, currentFrame)
             if has(n) { return n }
+            if currentFrame > 1, has(name(character, p, 1)) { return name(character, p, 1) }
             current = p.fallback
             currentFrame = 1
         }
@@ -92,7 +99,12 @@ enum TomoArt {
     }
 
     /// A shared item (prop, effect, scene), e.g. "tomo-meal-2", if drawn.
-    static func item(_ name: String) -> String? { has(name) ? name : nil }
+    /// A name without a frame number also finds frame 1, so `tomo-zzz`
+    /// uses `tomo-zzz-1` until each frame is animated on its own.
+    static func item(_ name: String) -> String? {
+        if has(name) { return name }
+        return has(name + "-1") ? name + "-1" : nil
+    }
 }
 
 // MARK: - Moments (Animations.md §4)
@@ -141,6 +153,12 @@ struct TomoMoment {
 
 // MARK: - A character drawing
 
+/// The shared 512 × 512 artboard every character pose is drawn on.
+enum TomoArtboard {
+    /// Where the feet rest: y = 442 of 512, as in the Baby's drawings.
+    static let baseline: CGFloat = 442.0 / 512
+}
+
 struct TomoSprite: View {
     let character: TomoCharacter
     let pose: TomoPose
@@ -148,16 +166,22 @@ struct TomoSprite: View {
     var mirrored = false
 
     var body: some View {
+        // Looking right: its own drawing if there is one, otherwise the
+        // left-looking one flipped.
+        let ownRight = pose == .lookRight ? TomoArt.imageName(character, .lookRight, 1) : nil
+        let shown: TomoPose = pose == .lookRight && ownRight == nil ? .look : pose
+        let flip = mirrored != (pose == .lookRight && ownRight == nil)
+        let art = ownRight ?? TomoArt.imageName(character, shown, frame)
         Group {
-            if let name = TomoArt.imageName(character, pose, frame) {
-                Image(name).resizable().scaledToFit()
+            if let art {
+                Image(art).resizable().scaledToFit()
             } else {
-                TomoPlaceholder(character: character, pose: pose, frame: frame)
+                TomoPlaceholder(character: character, pose: shown, frame: frame)
             }
         }
-        .scaleEffect(x: mirrored ? -1 : 1, y: 1)
+        .scaleEffect(x: flip ? -1 : 1, y: 1)
         .overlay {
-            if TomoArt.imageName(character, pose, frame) == nil {
+            if art == nil {
                 TomoPlaceholderLabel(character: character)
             }
         }
@@ -184,7 +208,7 @@ private struct TomoPlaceholder: View {
             case .scolded: bh *= 0.92
             default: break
             }
-            let body = CGRect(x: (s - bw) / 2, y: s - bh - s * 0.02, width: bw, height: bh)
+            let body = CGRect(x: (s - bw) / 2, y: s * TomoArtboard.baseline - bh, width: bw, height: bh)
             g.fill(Path(ellipseIn: body), with: .color(character.placeholderColor))
             if pose == .sick { g.fill(Path(ellipseIn: body), with: .color(.green.opacity(0.35))) }
 
@@ -298,14 +322,10 @@ struct TomoStage: View {
             let h = geo.size.height
             let size = h * 0.86
             let look = self.look(width: w, size: size)
-            let head = CGPoint(x: w / 2 + look.x, y: h - size * (look.character.placeholderScale + 0.06) + look.y)
+            let head = CGPoint(x: w / 2 + look.x, y: h - size * (look.character.placeholderScale + 0.2) + look.y)
+            // The room, the sky and the lights-off dimming are drawn by the
+            // screen around this stage (TomoRoom); this is only the floor area.
             ZStack {
-                if let bg = TomoArt.item("tomo-bg-day") {
-                    Image(bg).resizable().scaledToFill()
-                } else {
-                    Color(.systemBackground)
-                }
-
                 poopLayer(width: w, height: h)
 
                 if let m = moment, case .eat(let snack, let bites) = m.kind {
@@ -322,10 +342,6 @@ struct TomoStage: View {
                     .position(x: w / 2 + look.x, y: h - size / 2 + look.y)
 
                 effects(head: head, size: size, width: w, height: h)
-
-                if !brain.lightsOn {
-                    Color.black.opacity(brain.asleep ? 0.8 : 0.65)
-                }
 
                 momentOverlay(width: w, height: h)
 
@@ -363,13 +379,24 @@ struct TomoStage: View {
             if t.truncatingRemainder(dividingBy: 3.7) < 0.15 { l.pose = .blink; l.frame = 1 }
         }
 
-        // Wander back and forth while awake; it's drawn facing left, so
-        // mirror it when it walks right.
+        // Wander around while awake, the classic way: no sliding, it hops
+        // one step at a time, a couple of times a second, for a retro feel.
+        // It isn't flipped when walking right: some characters aren't
+        // symmetric (curly hair).
         if !brain.asleep {
-            let speed = brain.sick ? 0.4 : 1.0
-            l.x = (sin(t * 0.35 * speed) * 0.22 + sin(t * 0.13 * speed + 1) * 0.08) * w
-            let dx = cos(t * 0.35 * speed) * 0.35 * 0.22 + cos(t * 0.13 * speed + 1) * 0.13 * 0.08
-            l.mirrored = dx > 0
+            // Happy jumps (happiness above half), only while it's just
+            // hanging around: not sick, calling or misbehaving.
+            let calm = l.pose == .idle || l.pose == .blink
+            let chance = !calm ? 0 : brain.happiness >= TomoRules.maxLevel ? 0.6 : brain.happiness * 2 > TomoRules.maxLevel ? 0.35 : 0
+            let walk = Self.wander(at: t, slow: brain.sick, jumpChance: chance)
+            l.x = walk.x * w
+            // Each depth step is a small move up (further back) or down.
+            l.y = CGFloat(walk.depth) * size * 0.035
+            switch walk.jump {
+            case .up: l.pose = .happy; l.frame = 1; l.y -= size * 0.12
+            case .landed: l.pose = .happy; l.frame = 1
+            case nil: break
+            }
         }
 
         guard let m = moment else { return l }
@@ -377,6 +404,7 @@ struct TomoStage: View {
         let p = m.progress(at: now)
         // Moments happen center stage, facing the player.
         l.x = 0
+        l.y = 0
         l.mirrored = false
         l.frame = 1
         switch m.kind {
@@ -422,6 +450,61 @@ struct TomoStage: View {
             break
         }
         return l
+    }
+
+    /// The wandering tomomix at time `t`: where it stands (a fraction of
+    /// the stage width from its center) and whether it's mid-jump. Every
+    /// few seconds it picks a random spot on a grid of steps, hops there
+    /// one step per beat, then waits. A happy one sometimes jumps while
+    /// it waits (`jumpChance` per walk). Worked out from the time alone,
+    /// so a paused screen stays put.
+    static func wander(at t: TimeInterval, slow: Bool, jumpChance: Double) -> (x: CGFloat, depth: Int, jump: JumpBeat?) {
+        let beat = slow ? 1.0 : 0.5                // seconds per hop
+        let stepsPerLeg = 8                         // beats between new spots
+        let reach = 4                               // steps left or right of center
+        let stepSize: CGFloat = 0.06                // of the stage width
+
+        let beats = Int((t / beat).rounded(.down))
+        let leg = beats / stepsPerLeg
+        let into = beats - leg * stepsPerLeg
+        let from = Int(shuffle(leg - 1) % UInt64(2 * reach + 1)) - reach
+        let to = Int(shuffle(leg) % UInt64(2 * reach + 1)) - reach
+        let distance = to - from
+        let moved = min(abs(distance), into) * (distance < 0 ? -1 : 1)
+        let x = CGFloat(from + moved) * stepSize
+
+        // A little forward or back too (depth -2…2), stepping at the same
+        // time as sideways, so it doesn't walk along a single line.
+        let depthReach = 2
+        func depthSpot(_ n: Int) -> Int { Int(shuffle(n &* 31 &+ 5) % UInt64(2 * depthReach + 1)) - depthReach }
+        let fromDepth = depthSpot(leg - 1)
+        let depthDistance = depthSpot(leg) - fromDepth
+        let depth = fromDepth + min(abs(depthDistance), into) * (depthDistance < 0 ? -1 : 1)
+        // Wait only once both have arrived.
+        let travel = max(abs(distance), abs(depthDistance))
+
+        // A jump takes two beats of the wait after arriving: up, then a
+        // smile back on the ground.
+        let wait = stepsPerLeg - travel
+        guard jumpChance > 0, wait >= 2 else { return (x, depth, nil) }
+        let roll = shuffle(leg &* 7919 &+ 1)
+        guard Double(roll % 1000) / 1000 < jumpChance else { return (x, depth, nil) }
+        let start = travel + Int((roll / 1000) % UInt64(wait - 1))
+        switch into - start {
+        case 0: return (x, depth, .up)
+        case 1: return (x, depth, .landed)
+        default: return (x, depth, nil)
+        }
+    }
+
+    enum JumpBeat { case up, landed }
+
+    /// A fixed shuffle of whole numbers: the same answer every time.
+    private static func shuffle(_ n: Int) -> UInt64 {
+        var z = UInt64(bitPattern: Int64(n)) &+ 0x9E37_79B9_7F4A_7C15
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
     }
 
     // MARK: Props and effects
@@ -635,6 +718,54 @@ private struct TomoThoughtBubble: View {
     }
 
     private var d: CGFloat { size * 0.13 }
+}
+
+/// The room the tomomix lives in: a square drawing (`tomo-room`) that fills
+/// the whole screen, with the window cut out so the sky behind it shows
+/// through. The sky follows the time of day (`tomo-sky-morning`, `-day`,
+/// `-evening`, `-night`), and turns to night when the light is off.
+struct TomoRoom: View {
+    let simNow: Date
+    let lightsOn: Bool
+    let asleep: Bool
+
+    enum TimeOfDay: String { case morning, day, evening, night }
+
+    static func timeOfDay(_ date: Date, lightsOn: Bool) -> TimeOfDay {
+        guard lightsOn else { return .night }
+        switch Calendar.current.component(.hour, from: date) {
+        case 6..<10: return .morning
+        case 10..<17: return .day
+        case 17..<20: return .evening
+        default: return .night
+        }
+    }
+
+    var body: some View {
+        let time = Self.timeOfDay(simNow, lightsOn: lightsOn)
+        ZStack {
+            if let sky = TomoArt.item("tomo-sky-\(time.rawValue)") {
+                Image(sky).resizable().scaledToFill()
+            } else {
+                LinearGradient(colors: Self.skyColors(time), startPoint: .top, endPoint: .bottom)
+            }
+            if let room = TomoArt.item("tomo-room") {
+                Image(room).resizable().scaledToFill()
+            } else {
+                Color(.secondarySystemBackground)
+            }
+        }
+    }
+
+    /// Stand-in skies until the drawings exist.
+    private static func skyColors(_ time: TimeOfDay) -> [Color] {
+        switch time {
+        case .morning: return [Color(red: 1.0, green: 0.85, blue: 0.66), Color(red: 0.75, green: 0.88, blue: 0.97)]
+        case .day: return [Color(red: 0.55, green: 0.80, blue: 0.97), Color(red: 0.78, green: 0.91, blue: 0.99)]
+        case .evening: return [Color(red: 0.98, green: 0.62, blue: 0.48), Color(red: 0.55, green: 0.42, blue: 0.70)]
+        case .night: return [Color(red: 0.08, green: 0.11, blue: 0.27), Color(red: 0.18, green: 0.20, blue: 0.42)]
+        }
+    }
 }
 
 /// §10: up to 8 poops, small ones turning big after the 4th. `newestDrop`

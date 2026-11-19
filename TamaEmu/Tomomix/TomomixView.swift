@@ -36,7 +36,7 @@ struct TomomixPageView: View {
     }
 }
 
-// MARK: - The screen: 8 icons around the scene (§2)
+// MARK: - The screen: the room, with 8 icons floating on top (§2)
 
 private struct TomoScreen: View {
     let model: TomomixViewModel
@@ -44,36 +44,39 @@ private struct TomoScreen: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            VStack(spacing: 0) {
-                iconRow([.food, .light, .game, .medicine], side: side)
-                ZStack {
-                    TomoScene(model: model)
+            ZStack {
+                TomoScene(model: model, side: side)
+                    // Tap anywhere on the screen to skip or dismiss (§2). The
+                    // icons, menu items and game sides keep their own taps.
+                    .contentShape(Rectangle())
+                    .onTapGesture { model.tapScreen() }
+                if model.screen != .main {
                     overlay
+                        .frame(width: side * 0.8, height: side * 0.56)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                 }
-                // Tap anywhere on the screen to skip or dismiss (§2). The
-                // menu items and game sides keep their own taps.
-                .contentShape(Rectangle())
-                .onTapGesture { model.tapScreen() }
-                .frame(height: side * 0.64)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .padding(.horizontal, side * 0.04)
-                iconRow([.clean, .status, .discipline, .attention], side: side)
+                VStack(spacing: 0) {
+                    iconRow([.food, .light, .game, .medicine], side: side)
+                    Spacer(minLength: 0)
+                    iconRow([.clean, .status, .discipline, .attention], side: side)
+                }
             }
             .frame(width: side, height: side)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 28))
+            .clipShape(RoundedRectangle(cornerRadius: 28))
         }
     }
 
     private func iconRow(_ icons: [TomomixViewModel.Icon], side: CGFloat) -> some View {
         HStack {
             ForEach(icons, id: \.self) { icon in
-                TomoIcon(icon: icon, lit: isLit(icon))
+                TomoIcon(icon: icon, lit: isLit(icon), onDark: model.brain.phase != .alive || !model.brain.lightsOn)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture { model.tapIcon(icon) }
             }
         }
-        .frame(height: side * 0.18)
+        .frame(height: side * 0.16)
         .padding(.horizontal, side * 0.04)
     }
 
@@ -109,11 +112,17 @@ private struct TomoScreen: View {
 private struct TomoIcon: View {
     let icon: TomomixViewModel.Icon
     let lit: Bool
+    /// Over the night sky or a dark room, the icons turn light.
+    let onDark: Bool
+
+    /// The ink color of the room drawing.
+    private static let ink = Color(red: 0x1D / 255, green: 0x17 / 255, blue: 0x3C / 255)
 
     var body: some View {
+        let color = onDark ? Color.white : Self.ink
         Image(systemName: symbol)
             .font(.system(size: 22, weight: .semibold))
-            .foregroundStyle(lit ? Color.primary : Color.primary.opacity(0.18))
+            .foregroundStyle(color.opacity(lit ? 1 : 0.28))
     }
 
     private var symbol: String {
@@ -134,6 +143,19 @@ private struct TomoIcon: View {
 
 private struct TomoScene: View {
     let model: TomomixViewModel
+    let side: CGFloat
+
+    /// Where the tomomix lives inside the room drawing (596 x 596): it
+    /// stands with its feet in the middle of the rug (y = 415) and walks
+    /// around on it. Fractions of the square's side.
+    private enum Floor {
+        static let feet: CGFloat = 415.0 / 596
+        static let center: CGFloat = 306.0 / 596
+        /// The stage keeps the size it had in the prototype: 80% of the
+        /// width, 64% of the height (the character is 86% of that).
+        static let width: CGFloat = 0.8
+        static let height: CGFloat = 0.64
+    }
 
     var body: some View {
         // Redraws up to 30 times a second, only while this screen is shown.
@@ -143,35 +165,51 @@ private struct TomoScene: View {
             let brain = model.brain
             let moment = model.activeMoment(at: now)
             ZStack {
-            switch brain.phase {
-            case .star:
-                TomoBirthScene(
-                    bornAt: brain.birthTime,
-                    simNow: model.simTime(at: now),
-                    now: now,
-                    intro: moment?.isBirthIntro == true ? moment : nil
-                )
-            case .departed:
-                TomoEndingScene(
-                    character: brain.character,
-                    ageYears: brain.ageYears,
-                    now: now,
-                    transition: moment.map { $0.progress(at: now) }
-                )
-            case .alive:
-                TomoStage(brain: brain, moment: moment, now: now, caption: model.caption)
-            }
-            if model.paused {
-                VStack(spacing: 6) {
-                    Image(systemName: "pause.circle.fill").font(.system(size: 34))
-                    Text("Paused — tap to resume").font(.footnote.weight(.semibold))
+                switch brain.phase {
+                case .star:
+                    TomoBirthScene(
+                        bornAt: brain.birthTime,
+                        simNow: model.simTime(at: now),
+                        now: now,
+                        intro: moment?.isBirthIntro == true ? moment : nil
+                    )
+                case .departed:
+                    TomoEndingScene(
+                        character: brain.character,
+                        ageYears: brain.ageYears,
+                        now: now,
+                        transition: moment.map { $0.progress(at: now) }
+                    )
+                case .alive:
+                    TomoRoom(simNow: model.simTime(at: now), lightsOn: brain.lightsOn, asleep: brain.asleep)
+                    stage(brain: brain, moment: moment, now: now)
+                    if !brain.lightsOn {
+                        Color.black.opacity(brain.asleep ? 0.7 : 0.55)
+                    }
                 }
-                .foregroundStyle(.white)
-                .padding(14)
-                .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+                if model.paused {
+                    VStack(spacing: 6) {
+                        Image(systemName: "pause.circle.fill").font(.system(size: 34))
+                        Text("Paused — tap to resume").font(.footnote.weight(.semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(14)
+                    .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+                }
             }
-            }
+            .frame(width: side, height: side)
         }
+    }
+
+    private func stage(brain: TomoBrain, moment: TomoMoment?, now: Date) -> some View {
+        let h = side * Floor.height
+        // The sprite fills 86% of the stage's height and its feet sit at
+        // y = 442 of its 512 artboard; line those feet up with the rug.
+        let size = h * 0.86
+        let bottom = side * Floor.feet + size * (1 - TomoArtboard.baseline)
+        return TomoStage(brain: brain, moment: moment, now: now, caption: model.caption)
+            .frame(width: side * Floor.width, height: h)
+            .position(x: side * Floor.center, y: bottom - h / 2)
     }
 }
 
@@ -184,7 +222,6 @@ private struct TomoChoiceMenu: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground)
             HStack(spacing: 18) {
                 ForEach(options.indices, id: \.self) { i in
                     VStack(spacing: 6) {
@@ -208,7 +245,6 @@ private struct TomoStatusView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground)
             VStack(alignment: .leading, spacing: 10) {
                 meter("fork.knife", "Hunger", brain.hunger, of: TomoRules.maxLevel)
                 meter("heart.fill", "Happiness", brain.happiness, of: TomoRules.maxLevel)
@@ -246,16 +282,15 @@ private struct TomoGameView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground)
             HStack(spacing: 0) {
                 side(right: false)
                 side(right: true)
             }
-            // The tomomix shows each direction by looking that way; it's
-            // drawn looking left and mirrored for right (Animations.md §3).
+            // The tomomix shows each direction by looking that way, with
+            // its own look-right drawing when there is one (Animations.md §3).
             GeometryReader { geo in
                 let size = geo.size.height * 0.7
-                TomoSprite(character: character, pose: pose, mirrored: game.lit == true)
+                TomoSprite(character: character, pose: pose)
                     .frame(width: size, height: size)
                     .position(x: geo.size.width / 2, y: geo.size.height - size / 2)
             }
@@ -271,7 +306,7 @@ private struct TomoGameView: View {
     private var pose: TomoPose {
         switch game.step {
         case .result(let score, _): return score > 0 ? .happy : .sad
-        default: return game.lit == nil ? .idle : .look
+        default: return game.lit == nil ? .idle : game.lit == true ? .lookRight : .look
         }
     }
 

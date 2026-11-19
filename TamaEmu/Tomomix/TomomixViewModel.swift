@@ -743,7 +743,7 @@ final class TomoBeeper: @unchecked Sendable {
             if hz > 0 { scheduled.append((hz, t, end)) }
             t = end
         }
-        notes.withLock { $0 = scheduled }
+        notes.withLock { [scheduled] in $0 = scheduled }
         output.tick(buttonsDown: true)   // wake the audio engine right away
     }
 

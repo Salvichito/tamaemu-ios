@@ -24,7 +24,7 @@ A "happy" moment is then one happy pose plus a bounce from the app, rather than 
 | Topic | Convention |
 |---|---|
 | Artboard | **The same square size for every character pose**, e.g. 512 × 512. A Baby is small inside it and an adult is big. That keeps sizes consistent between stages without the app scaling anything. |
-| Feet | Every pose stands on the **same baseline**, centered horizontally. Switching poses then never makes the character jump. |
+| Feet | Every pose stands on the **same baseline: feet at y = 442** of 512, centered horizontally. Switching poses then never makes the character jump. |
 | Background | Transparent. |
 | Facing | Draw characters facing **front or left**. The app mirrors for the right side. If a character isn't symmetric (a bow on one side, say), add an explicit `look-right` pose. |
 | Format | **SVG** (or PDF) export, so the art stays sharp at any size. PNG at 3× also works. |
@@ -34,28 +34,31 @@ A "happy" moment is then one happy pose plus a bounce from the app, rather than 
 
 Every living character (Baby through all adults) uses this set. **Core** poses are needed before a character can appear in the game; the rest fall back.
 
-| Pose | Frames | Used for | Core? | Fallback |
+| Pose | Frames | Used for | Core? | If not drawn, uses |
 |---|---|---|---|---|
-| `idle` | 2 | Standing around: the app alternates them and makes it wander | ✅ | — |
-| `blink` | 1 | Random blinks while idle | | `idle-1` |
+| `idle` | 1–2 | Standing around; the app makes it wander | ✅ (`idle-1`) | `idle-2` → `idle-1` |
 | `eat` | 2 | Mouth open / mouth closed, repeated 2 or 4 bites (§14) | ✅ | — |
-| `refuse` | 1 | Turning away food or a game (app shakes it) | ✅ | — |
-| `happy` | 1 | After eating a snack, a good game, a cure, a clean (app bounces it) | ✅ | — |
-| `sad` | 1 | A failed game, an empty meter | | `refuse` |
-| `sleep` | 1 | Asleep (app adds Zzz) | ✅ | — |
-| `sick` | 1 | Sick (app adds the skull) | ✅ | — |
-| `look` | 1 | Follow Me game: pointing or turning to its left (app mirrors for right) | ✅ | — |
-| `call` | 1 | Calling for attention, while the attention icon is lit | | `idle-1` |
+| `refuse` | 1 | Turning away food or a game; also mad, angry, upset | ✅ | — |
+| `happy` | 1 | After a snack, a good game, a cure, a clean (app bounces it) | ✅ | — |
+| `sick` | 1 | Sick (app adds the skull); also sad | ✅ | — |
+| `look` | 1 | Follow Me game: looking to its left | ✅ | — |
+| `look-right` | 1 | Follow Me game: looking to its right | ✅ | `look`, flipped |
+| `sleep` | 1 | Asleep (app adds Zzz) | | `eat-1` |
+| `blink` | 1 | Random blinks while idle | | `idle-1` |
+| `sad` | 1 | A failed game, an empty meter | | `sick` |
+| `call` | 1 | Calling for attention | | `sad` → `sick` |
 | `pout` | 1 | Misbehaving | | `refuse` |
-| `scolded` | 1 | Being disciplined | | `sad` |
+| `scolded` | 1 | Being disciplined | | `refuse` |
 
-**Per character: 9 core drawings, 14 with everything.** The Baby never misbehaves, so it doesn't need `pout` or `scolded`.
+**Per character: 7 core drawings** (`idle-1`, `eat-1`, `eat-2`, `refuse`, `happy`, `sick`, `look`), plus `look-right` for characters that shouldn't be flipped. Everything else is optional.
+
+The character is **never flipped while walking**, since some characters aren't symmetric. Only `look` is flipped, and only when there's no `look-right`.
 
 ## 4. Moments and their timing
 
 | Moment | What happens | Length | Skippable |
 |---|---|---|---|
-| Idle | `idle` frames alternate; it wanders left and right every few seconds | loops | — |
+| Idle | `idle` frames alternate; it **hops** one step every half second (a full second when sick) toward a random spot on the rug, sideways and slightly forward or back, waits, then picks another. No smooth sliding, for a retro feel. When happiness is **above half** it sometimes jumps while waiting: `happy` pose, up for one beat, then a smile on the ground (about every 13 s at 3 hearts, 7 s at 4). | loops | — |
 | Meal / snack | Food appears beside it, then `eat` × bites while the food shrinks (§5 props) | ~0.5 s per bite | ✅ |
 | Refuse | `refuse` with a side-to-side shake | 1 s | ✅ |
 | Happy | `happy` with a bounce, hearts float up | 1.5 s | ✅ |
@@ -90,6 +93,7 @@ Every living character (Baby through all adults) uses this set. **Core** poses a
 | `tomo-heart` | 1 | Happy (floats up) |
 | `tomo-sweat` | 1 | Sad |
 | `tomo-anger` | 1 | Misbehaving |
+| `tomo-call` | 1 | Calling for attention (over its head) |
 | `tomo-scold` | 1 | Scold effect |
 | `tomo-sparkle` | 1–2 | Evolving, cured |
 | `tomo-thought` | 1 | Thought bubble when a meter has one step left (holds `tomo-meal-1` and/or `tomo-snack-1`) |
@@ -99,7 +103,8 @@ Every living character (Baby through all adults) uses this set. **Core** poses a
 
 | Item | Frames | Used in |
 |---|---|---|
-| `tomo-bg-day` | 1 | Main scene background (landscape, roughly 3:2; keep the middle clear for the character) |
+| `tomo-room` | 1 | The whole screen: a 596 × 596 square room, edge to edge. The icons float on top. The window is cut out so the sky shows through. The tomomix stands on the rug (feet at y = 415, the middle of the rug) and walks across it. |
+| `tomo-sky-morning`, `-day`, `-evening`, `-night` | 1 each | Behind the room, seen through the window. Same square size. Follows the phone's clock (morning 6–10, day 10–17, evening 17–20, night otherwise); night while the light is off. |
 | `tomo-bg-night-sky` | 1 | Birth and ending sky |
 | `tomo-twinkle` | 2 | Small stars twinkling in the night sky |
 | `tomo-shooting-star` | 1 | Birth step 2: star with its trail crossing the sky |
@@ -134,7 +139,7 @@ Character names for file names: `baby`, `child-good`, `child-bad`, `teen-excelle
 
 **Core poses** (✅ needed to appear in the game)
 
-| Character | idle ×2 | eat ×2 | refuse | happy | sleep | sick | look |
+| Character | idle-1 | eat ×2 | refuse | happy | sick | look | look-right |
 |---|---|---|---|---|---|---|---|
 | baby | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | child-good | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
@@ -146,14 +151,9 @@ Character names for file names: `baby`, `child-good`, `child-bad`, `teen-excelle
 | 2a · 2b · 2c · 2d | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ |
 | 3a · 3b · 3c · 3d | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ | ☐☐☐☐ |
 
-**Extra poses** (nice to have)
+**Optional poses:** `idle-2`, `sleep`, `blink`, `sad`, `call`, `pout`, `scolded` (see §3 for what each falls back to).
 
-| Character | blink | sad | call | pout | scolded |
-|---|---|---|---|---|---|
-| baby | ☐ | ☐ | ☐ | — | — |
-| children, teens, adults | ☐ each | ☐ each | ☐ each | ☐ each | ☐ each |
-
-**Totals:** 17 characters × 9 core drawings = **153 core drawings**. With every extra pose, about 236. Plus about 40 shared items in §5.
+**Totals:** 17 characters × 8 drawings (7 core + `look-right`) = **136 drawings**. Plus about 40 shared items in §5.
 
 ## 7. Suggested order
 
