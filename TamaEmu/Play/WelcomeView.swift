@@ -106,8 +106,8 @@ private struct WelcomeChoice<Art: View>: View {
                 Image(systemName: "chevron.right").font(.headline).foregroundStyle(tint)
             }
             .padding(18)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(tint.opacity(0.45), lineWidth: 1))
+            // The card's own color at 20%, edge to edge, no outline.
+            .background(tint.opacity(0.2), in: RoundedRectangle(cornerRadius: 24))
         }
         .buttonStyle(WelcomePressStyle())
     }

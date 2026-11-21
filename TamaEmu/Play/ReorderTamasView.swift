@@ -19,7 +19,7 @@ struct ReorderTamasView: View {
                 .onMove { gallery.moveDevices(fromOffsets: $0, toOffset: $1) }
             }
             .environment(\.editMode, .constant(.active))
-            .navigationTitle("Rearrange Tamas")
+            .navigationTitle("Rearrange Devices")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

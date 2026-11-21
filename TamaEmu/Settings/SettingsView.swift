@@ -186,7 +186,7 @@ struct SettingsView: View {
         } header: {
             Text("Save")
         } footer: {
-            Text("A backup of this Tama is kept automatically, about once an hour while you play. Add more Tamas from the gallery's \"⋯\" menu.")
+            Text("A backup of this Tama is kept automatically, about once an hour while you play. Add more devices with \"Add a Device\" in the \"⋯\" menu.")
         }
     }
 

@@ -287,7 +287,7 @@ struct TamaGalleryView: View {
                 Button {
                     requestAddTama()
                 } label: {
-                    Label("Add a Tama", systemImage: "plus")
+                    Label("Add a Device", systemImage: "plus")
                 }
                 if gallery.canAddTomomix {
                     Button {
@@ -299,7 +299,7 @@ struct TamaGalleryView: View {
                 Button {
                     gallery.showingReorder = true
                 } label: {
-                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
                 }
                 Button {
                     showingP1ScreenStyle = true
@@ -351,6 +351,22 @@ struct TamaGalleryView: View {
     /// recording/translation/set-clock items to hook into.
     @ToolbarContentBuilder
     private func tomomixToolbarContent(model: TomomixViewModel) -> some ToolbarContent {
+        // Screenshot and video, free on Tomomix (a taste of Premium).
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                saveScreenshot(model.recordingFrame(side: 1024))
+            } label: {
+                Image(systemName: "camera")
+            }
+        }
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                toggleRecording(for: model)
+            } label: {
+                Image(systemName: isRecording ? "stop.circle.fill" : "video")
+                    .foregroundStyle(isRecording ? .red : .primary)
+            }
+        }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button {
@@ -373,12 +389,12 @@ struct TamaGalleryView: View {
                 Button {
                     requestAddTama()
                 } label: {
-                    Label("Add a Tama", systemImage: "plus")
+                    Label("Add a Device", systemImage: "plus")
                 }
                 Button {
                     gallery.showingReorder = true
                 } label: {
-                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
                 }
                 Button(role: .destructive) {
                     showingDeleteConfirm = true
@@ -397,7 +413,7 @@ struct TamaGalleryView: View {
                 Button {
                     requestAddTama()
                 } label: {
-                    Label("Add a Tama", systemImage: "plus")
+                    Label("Add a Device", systemImage: "plus")
                 }
                 if gallery.canAddTomomix {
                     Button {
@@ -409,7 +425,7 @@ struct TamaGalleryView: View {
                 Button {
                     gallery.showingReorder = true
                 } label: {
-                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
                 }
                 Button {
                     showingBackups = true
@@ -452,7 +468,7 @@ struct TamaGalleryView: View {
                 Button {
                     requestAddTama()
                 } label: {
-                    Label("Add a Tama", systemImage: "plus")
+                    Label("Add a Device", systemImage: "plus")
                 }
                 if gallery.canAddTomomix {
                     Button {
@@ -464,7 +480,7 @@ struct TamaGalleryView: View {
                 Button {
                     gallery.showingReorder = true
                 } label: {
-                    Label("Rearrange Tamas", systemImage: "arrow.up.arrow.down")
+                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
                 }
                 Button {
                     showingSetClockConfirm = true
@@ -698,7 +714,7 @@ struct TamaGalleryView: View {
                             gallery.deviceImported(device)
                             gallery.showingImport = false
                         }
-                        .navigationTitle("Add a Tama")
+                        .navigationTitle("Add a Device")
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Cancel") { gallery.showingImport = false }
@@ -812,7 +828,8 @@ private struct TomoAmbientSky: View {
             let now = model.frozenAt ?? timeline.date
             let brain = model.brain
             // Night for the birth, the ending, and the light off.
-            let lit = brain.phase == .alive && !model.waitingForStar && brain.lightsOn
+            // The light switch doesn't change the time of day outside.
+            let lit = brain.phase == .alive && !model.waitingForStar
             ZStack {
                 TomoSky(simNow: model.simTime(at: now), lightsOn: lit)
                 if scheme == .dark {

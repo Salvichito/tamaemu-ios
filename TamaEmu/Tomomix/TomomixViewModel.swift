@@ -1,6 +1,8 @@
+import AVFoundation
 import Foundation
 import Observation
 import os
+import UIKit
 import UserNotifications
 
 /// Drives one tomomix on screen: moves the brain forward with the clock,
@@ -88,6 +90,8 @@ final class TomomixViewModel {
     private var momentEndTask: Task<Void, Never>?
     private var held: Set<InputController.Button> = []
     private let beeper = TomoBeeper()
+    /// For screenshots and video: the on-screen game screen (set by the view).
+    @ObservationIgnored weak var captureView: UIView?
 
     init() {
         if let save = TomomixStore.load() {
@@ -338,7 +342,7 @@ final class TomomixViewModel {
             case .born:
                 outdoors = false                // stars always hatch into the room
                 if live { play(.burst) }
-                beep(.fanfare)
+                beep(.birth)
             case .evolved(let from, let to):
                 foodChoiceAfterMoment = nil
                 if live { play(.evolve(from: from, to: to)) }
@@ -346,7 +350,10 @@ final class TomomixViewModel {
             case .pooped:
                 if live, moment == nil { play(.poop) }
             case .callStarted:
-                if live { beep(.call) }
+                // Just born: let the birth tune play out before the first call.
+                guard live else { break }
+                let justBorn = events.contains { if case .born = $0 { true } else { false } }
+                if justBorn { beep(.call, after: 1.6) } else { beep(.call) }
             case .becameOld:
                 say("Getting old")
             case .departed:
@@ -552,7 +559,7 @@ final class TomomixViewModel {
         if brain.asleep, icon != .light, icon != .status { say("Shh… sleeping"); return }   // §2
         switch icon {
         case .food: screen = .food(choice: 0)
-        case .light: screen = .lights(choice: brain.lightsOn ? 1 : 0)
+        case .light: screen = .lights(choice: 0)      // always starts on "On", like food
         case .status: screen = .status
         case .game:
             if brain.canPlay { startGame() } else { play(.refuse) }
@@ -1010,7 +1017,7 @@ enum TomomixNotifications {
 /// Placeholder beeps for the prototype, through the app's own square-wave
 /// synth (AudioOutput), at the app's volume setting.
 final class TomoBeeper: @unchecked Sendable {
-    enum Sound { case click, call, left, right, fanfare, happy, sad, scary, magic, toot, farewell, gameStart, okay }
+    enum Sound { case click, call, left, right, fanfare, happy, sad, scary, magic, toot, farewell, gameStart, okay, birth }
 
     /// (frequency, start, end) in uptime nanoseconds.
     private let notes = OSAllocatedUnfairLock<[(Float, UInt64, UInt64)]>(initialState: [])
@@ -1021,6 +1028,13 @@ final class TomoBeeper: @unchecked Sendable {
 
     func start() { output.start() }
     func stop() { output.stop() }
+
+    // Screen recording: the same non-destructive mixer tap the ROM Tamas use.
+    var outputFormat: AVAudioFormat { output.outputFormat }
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock) {
+        output.installRecordingTap(format: format, bufferSize: bufferSize, block: block)
+    }
+    func removeRecordingTap() { output.removeRecordingTap() }
     /// Lets the audio engine go idle once nothing has played for a while.
     func idleTick() { output.tick(buttonsDown: false) }
 
@@ -1034,6 +1048,9 @@ final class TomoBeeper: @unchecked Sendable {
         case .fanfare: pattern = [(1047, 0.1), (1319, 0.1), (1568, 0.1), (2093, 0.2)]
         // Bright little "ding-ding-diiing" going up.
         case .happy: pattern = [(1568, 0.08), (0, 0.03), (1976, 0.08), (0, 0.03), (2349, 0.08), (0, 0.03), (3136, 0.2)]
+        // Born! A bright, bouncy little celebration (about 1.3 s).
+        case .birth: pattern = [(1047, 0.08), (1319, 0.08), (1568, 0.08), (2093, 0.16), (0, 0.05),
+                                (1568, 0.08), (2093, 0.08), (2637, 0.08), (3136, 0.3), (0, 0.05), (2637, 0.08), (3136, 0.22)]
         // Two plain, pleasant notes: "not bad".
         case .okay: pattern = [(1319, 0.1), (0, 0.04), (1568, 0.2)]
         // Sliding down, "wah-wah-wahhh".
@@ -1070,5 +1087,33 @@ final class TomoBeeper: @unchecked Sendable {
             if let note = list.first(where: { now >= $0.1 && now < $0.2 }) { return (true, note.0) }
             return (false, 0)
         }
+    }
+}
+
+// MARK: - Screenshots and video (free on Tomomix)
+
+extension TomomixViewModel: ScreenRecordable {
+    var audioFormat: AVAudioFormat? { beeper.outputFormat }
+
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock) {
+        beeper.installRecordingTap(format: format, bufferSize: bufferSize, block: block)
+    }
+
+    func removeRecordingTap() {
+        beeper.removeRecordingTap()
+    }
+
+    /// The game screen exactly as it looks right now (room, tomomix, icons,
+    /// menus, retro pixels), as a square `side` pixels wide.
+    func recordingFrame(side: CGFloat) -> CGImage? {
+        guard let view = captureView, view.window != nil, view.bounds.width > 0 else { return nil }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = side / view.bounds.width
+        format.opaque = true
+        // Just the screen's own view: a full square, no rounded corners.
+        let image = UIGraphicsImageRenderer(size: view.bounds.size, format: format).image { _ in
+            view.drawHierarchy(in: view.bounds, afterScreenUpdates: false)
+        }
+        return image.cgImage
     }
 }

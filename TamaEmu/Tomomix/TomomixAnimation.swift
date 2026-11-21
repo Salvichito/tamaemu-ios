@@ -1238,7 +1238,9 @@ struct TomoRoom: View {
 
     var body: some View {
         ZStack {
-            TomoSky(simNow: simNow, lightsOn: lightsOn)
+            // The window shows the real time of day even with the light off
+            // (the room itself is dimmed instead).
+            TomoSky(simNow: simNow, lightsOn: true)
             if let room = TomoArt.item(outdoors ? "tomo-outdoors" : "tomo-room") {
                 Image(room).resizable().scaledToFill()
             } else {

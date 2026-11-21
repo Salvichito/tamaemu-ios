@@ -98,7 +98,7 @@ struct TomomixSettingsView: View {
                 } header: {
                     Text("Sound & Haptics")
                 } footer: {
-                    Text("Volume, Haptics and Silent Mode are shared with your other Tamas.")
+                    Text("Volume, Haptics and Silent Mode apply to the whole app.")
                 }
                 Section {
                     Picker("Appearance", selection: $appearanceModeRaw) {
@@ -111,7 +111,7 @@ struct TomomixSettingsView: View {
                 } header: {
                     Text("Screen")
                 } footer: {
-                    Text("Tomomix's sky fills your whole screen, included free with Tomomix. Retro Screen adds big pixels and scan lines, like an old screen. Appearance is shared with your other Tamas.")
+                    Text("Tomomix's sky fills your whole screen, included free with Tomomix. Retro Screen adds big pixels and scan lines, like an old screen. Appearance applies to the whole app.")
                 }
                 Section {
                     Toggle("Notifications", isOn: Binding(

@@ -42,6 +42,25 @@ struct TomomixPageView: View {
     }
 }
 
+/// Hosts the game screen in its own UIKit view, so screenshots and video
+/// can draw exactly that square (full corners, nothing around it).
+private struct TomoCaptureHost<Content: View>: UIViewControllerRepresentable {
+    let model: TomomixViewModel
+    let content: Content
+
+    func makeUIViewController(context: Context) -> UIHostingController<Content> {
+        let host = UIHostingController(rootView: content)
+        host.view.backgroundColor = .clear
+        model.captureView = host.view
+        return host
+    }
+
+    func updateUIViewController(_ host: UIHostingController<Content>, context: Context) {
+        host.rootView = content
+        model.captureView = host.view
+    }
+}
+
 /// Sets the screen apart from the full-screen sky behind it, a little like
 /// iOS's glass buttons: a big soft halo behind it, a small discreet inner
 /// shadow along the top edge, and a thin crisp highlight on the rim.
@@ -58,8 +77,7 @@ private struct TomoScreenGlow: ViewModifier {
                 }
             }
             .overlay {
-                GeometryReader { geo in
-                    let side = min(geo.size.width, geo.size.height)
+                GeometryReader { _ in
                     ZStack {
                         // The glassy rim: bright at the top left, fading round.
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -84,53 +102,60 @@ private struct TomoScreen: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            ZStack {
-                // The room and the tomomix: what the retro screen turns into
-                // big pixels. The icons and menus stay sharp on top.
-                TomoScene(model: model, side: side)
-                    // Tap anywhere on the screen to skip or dismiss (§2),
-                    // catch a shooting star, or poke the tomomix. The
-                    // icons, menu items and game sides keep their own taps.
-                    // (Inside the retro layer, as before, so taps still land.)
-                    .contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .local) { tap(at: $0, side: side) }
-                    .modifier(TomoRetroScreen(enabled: retro, side: side))
-                VStack(spacing: 0) {
-                    iconRow([.food, .light, .game, .medicine], top: true, side: side)
-                    Spacer(minLength: 0)
-                    iconRow([.clean, .status, .discipline, .attention], top: false, side: side)
-                }
-                .opacity(model.waitingForStar ? 0 : 1)
-                if case .game(let game) = model.screen {
-                    TomoGameArrows(game: game, side: side, onSide: { model.tapGameSide(right: $0) })
-                } else if model.screen != .main {
-                    overlay
-                        .frame(width: side * 0.8, height: side * 0.56)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                }
-                if let prompt = model.prompt {
-                    TomoNamePrompt(prompt: prompt) { name in
-                        withAnimation(.easeInOut(duration: 0.4)) {
-                            if prompt == .playerName { model.answerPlayerName(name) } else { model.answerPetName(name) }
-                        }
-                    }
-                    .frame(width: side * 0.84)
-                    // Your name: below the star waiting at the top. Its
-                    // name: above the baby, so you see who you're naming.
-                    .offset(y: side * (prompt == .playerName ? 0.1 : -0.14))
-                    .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.8), value: model.prompt)
-            .frame(width: side, height: side)
-            .clipShape(RoundedRectangle(cornerRadius: 28))
-            // On the screen square itself (its frame can be taller than it).
-            .modifier(TomoScreenGlow())
-            // Any text without its own font is Tomomix lettering too.
-            .fontDesign(.rounded)
-            .fontWeight(.heavy)
+            // Hosted in its own UIKit view so screenshots and video can draw
+            // just this square, without the rounded corners cut below.
+            TomoCaptureHost(model: model, content: screen(side: side))
+                .frame(width: side, height: side)
+                .clipShape(RoundedRectangle(cornerRadius: 28))
+                // On the screen square itself (its frame can be taller than it).
+                .modifier(TomoScreenGlow())
         }
+    }
+
+    private func screen(side: CGFloat) -> some View {
+        ZStack {
+            // The room and the tomomix: what the retro screen turns into
+            // big pixels. The icons and menus stay sharp on top.
+            TomoScene(model: model, side: side)
+                // Tap anywhere on the screen to skip or dismiss (§2),
+                // catch a shooting star, or poke the tomomix. The
+                // icons, menu items and game sides keep their own taps.
+                // (Inside the retro layer, as before, so taps still land.)
+                .contentShape(Rectangle())
+                .onTapGesture(coordinateSpace: .local) { tap(at: $0, side: side) }
+                .modifier(TomoRetroScreen(enabled: retro, side: side))
+            VStack(spacing: 0) {
+                iconRow([.food, .light, .game, .medicine], top: true, side: side)
+                Spacer(minLength: 0)
+                iconRow([.clean, .status, .discipline, .attention], top: false, side: side)
+            }
+            .opacity(model.waitingForStar ? 0 : 1)
+            if case .game(let game) = model.screen {
+                TomoGameArrows(game: game, side: side, onSide: { model.tapGameSide(right: $0) })
+            } else if model.screen != .main {
+                overlay
+                    .frame(width: side * 0.8, height: side * 0.56)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+            }
+            if let prompt = model.prompt {
+                TomoNamePrompt(prompt: prompt) { name in
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        if prompt == .playerName { model.answerPlayerName(name) } else { model.answerPetName(name) }
+                    }
+                }
+                .frame(width: side * 0.84)
+                // Your name: below the star waiting at the top. Its
+                // name: above the baby, so you see who you're naming.
+                .offset(y: side * (prompt == .playerName ? 0.1 : -0.14))
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.8), value: model.prompt)
+        .frame(width: side, height: side)
+        // Any text without its own font is Tomomix lettering too.
+        .fontDesign(.rounded)
+        .fontWeight(.heavy)
     }
 
     private func tap(at location: CGPoint, side: CGFloat) {
@@ -516,7 +541,9 @@ private struct TomoStatusView: View {
         HStack(spacing: side * 0.03) {
             Group {
                 if let icon = TomoArt.item(art) {
-                    Image(icon).resizable().scaledToFit()
+                    // One color, following the text: dark in light mode, light in dark mode.
+                    Image(icon).renderingMode(.template).resizable().scaledToFit()
+                        .foregroundStyle(.primary)
                 } else {
                     Image(systemName: symbol)
                 }
