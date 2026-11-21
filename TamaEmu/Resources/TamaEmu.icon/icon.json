@@ -1,8 +1,8 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "extended-srgb:1.00000,0.80000,0.00000,1.00000",
-      "display-p3:0.92725,0.53467,0.11578,1.00000"
+      "extended-srgb:0.00000,0.78431,0.70196,1.00000",
+      "extended-srgb:0.00000,0.53333,1.00000,1.00000"
     ],
     "orientation" : {
       "start" : {
@@ -20,57 +20,33 @@
       "hidden" : false,
       "layers" : [
         {
-          "blend-mode" : "multiply",
           "fill" : {
-            "solid" : "srgb:0.57875,0.32152,0.00000,1.00000"
+            "solid" : "extended-srgb:1.00000,0.80000,0.00000,1.00000"
           },
-          "glass" : false,
-          "image-name" : "6 – Layer.svg",
-          "name" : "6 – Layer",
-          "opacity" : 1
-        },
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "srgb:1.00000,0.98824,0.47451,1.00000",
-              "display-p3:0.94287,0.59863,0.21606,1.00000"
-            ]
-          },
-          "glass" : false,
-          "image-name" : "5 – Layer 2.svg",
-          "name" : "5 – Layer 2"
-        },
-        {
           "image-name" : "4 – Layer 2.svg",
-          "name" : "4 – Layer 2"
-        },
-        {
-          "blend-mode" : "plus-lighter",
-          "fill" : {
-            "solid" : "extended-gray:1.00000,1.00000"
-          },
-          "image-name" : "3 – Layer 2.svg",
-          "name" : "3 – Layer 2"
-        },
-        {
-          "image-name" : "2 – Layer 2.svg",
-          "name" : "2 – Layer 2"
-        },
-        {
-          "hidden" : true,
-          "image-name" : "1 – Layer 2.svg",
-          "name" : "1 – Layer 2"
-        },
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "extended-srgb:0.00000,0.75294,0.90980,1.00000",
-              "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+          "name" : "4 – Layer 2",
+          "position" : {
+            "scale" : 1.38,
+            "translation-in-points" : [
+              0,
+              -35
             ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "extended-srgb:1.00000,0.80000,0.00000,1.00000"
           },
-          "hidden" : false,
-          "image-name" : "1 – Layer.svg",
-          "name" : "1 – Layer"
+          "glass" : true,
+          "image-name" : "Frame.svg",
+          "name" : "Frame",
+          "position" : {
+            "scale" : 2,
+            "translation-in-points" : [
+              0,
+              -95
+            ]
+          }
         }
       ],
       "shadow" : {
@@ -79,6 +55,84 @@
       },
       "translucency" : {
         "enabled" : true,
+        "value" : 0.3
+      }
+    },
+    {
+      "layers" : [
+        {
+          "blend-mode" : "multiply",
+          "fill" : {
+            "solid" : "display-p3:0.54397,0.37238,0.26512,1.00000"
+          },
+          "glass" : true,
+          "image-name" : "6 – Layer.svg",
+          "name" : "6 – Layer",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1.38,
+            "translation-in-points" : [
+              0,
+              -52
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:1.00000,0.98824,0.47451,1.00000",
+              "display-p3:0.94287,0.59863,0.21606,1.00000"
+            ]
+          },
+          "glass" : true,
+          "image-name" : "5 – Layer 2.svg",
+          "name" : "5 – Layer 2",
+          "position" : {
+            "scale" : 1.38,
+            "translation-in-points" : [
+              0,
+              -61
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:1.00000,0.57811,0.00000,1.00000",
+              "srgb:0.32370,0.10636,0.57486,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5254303289937267,
+                "y" : 1.2253921196939632
+              },
+              "stop" : {
+                "x" : 0.5000000000000011,
+                "y" : -0.9192488985766258
+              }
+            }
+          },
+          "glass" : true,
+          "image-name" : "3 – Layer 2.svg",
+          "name" : "3 – Layer 2",
+          "position" : {
+            "scale" : 1.38,
+            "translation-in-points" : [
+              0,
+              -57
+            ]
+          }
+        }
+      ],
+      "name" : "Group",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : false,
         "value" : 0.3
       }
     }
