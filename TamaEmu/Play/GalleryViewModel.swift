@@ -39,11 +39,7 @@ final class GalleryViewModel {
     private var tomomix: TomomixViewModel?
 
     init() {
-        // No ROM yet: start with the built-in pet so there's something to
-        // play straight away -- unless the player deleted it before.
-        if ActiveDeviceLookup.allImported().isEmpty, !TomomixStore.removedByPlayer {
-            TomomixViewModel().save()
-        }
+        // No pets yet: the welcome screen offers Tomomix or a ROM import.
         ownedDevices = Self.restoreOrder(of: ActiveDeviceLookup.allImported())
         selectedPage = ownedDevices.first?.id
         WidgetSharedState.publishOwnedDevices(ownedDevices)

@@ -35,6 +35,8 @@ final class TomomixViewModel {
         var step: Step
         /// Direction currently lit on screen (shown or just pressed).
         var lit: Bool?
+        /// The opening: a little tune while it hops for joy, before round 1.
+        var intro = false
     }
 
     private(set) var brain: TomoBrain
@@ -47,8 +49,28 @@ final class TomomixViewModel {
     private(set) var moment: TomoMoment?
     private(set) var muted: Bool
     private(set) var paused: Bool
+    /// The starry night before a star is caught: nothing happens until
+    /// the player taps a shooting star (§3).
+    private(set) var waitingForStar: Bool
+    /// Outside on the grass instead of in the room. B (with no icon
+    /// highlighted) goes in and out; it always sleeps inside.
+    private(set) var outdoors: Bool
+    /// Where the caught star hangs (fractions of the screen) while the
+    /// player types their name; it falls from there.
+    private(set) var caughtStar: CGPoint?
+    /// When it was caught: it glides from there up to `starHover`.
+    private(set) var caughtAt: Date?
+    /// The tomomix's name; "" when the player skipped naming it, nil when
+    /// they haven't been asked yet.
+    private(set) var petName: String?
+    /// A name question on screen, if any.
+    enum Prompt { case playerName, petName }
+    private(set) var prompt: Prompt?
     /// Prototype only: how many simulated seconds pass per real second.
     var speed: Double = 1
+    /// Prototype only: show another character / hold one drawing. Only
+    /// changes what's drawn, never the tomomix itself; not saved.
+    var preview = TomoPreview()
 
     /// Simulated time = real time + offset (debug skips push it ahead).
     private var timeOffset: TimeInterval
@@ -62,6 +84,8 @@ final class TomomixViewModel {
     /// choice selected once the animation ends or is skipped. Leaving the
     /// menu clears it, so opening Food again starts on Meal.
     private var foodChoiceAfterMoment: Int?
+    /// Ends the eating moment on time so the menu returns without a gap.
+    private var momentEndTask: Task<Void, Never>?
     private var held: Set<InputController.Button> = []
     private let beeper = TomoBeeper()
 
@@ -73,19 +97,153 @@ final class TomomixViewModel {
             muted = save.muted
             paused = save.pausedAt != nil
             frozenAt = save.pausedAt != nil ? Date() : nil
+            waitingForStar = save.waitingForStar ?? false
+            petName = save.petName
+            outdoors = save.outdoors ?? false
+            // Older pauses and the old speed/skip tools left its clock off
+            // the phone's time. Put it back in step without living or undoing
+            // anything (a gap from the app being closed is still caught up).
+            if pausedAt == nil, timeOffset != 0 {
+                brain.shiftClock(by: -timeOffset)
+                timeOffset = 0
+            }
         } else {
-            brain = TomoBrain(now: Date().addingTimeInterval(TomoRules.birthIntroSeconds))
+            brain = TomoBrain(now: Date())
             timeOffset = 0
             pausedAt = nil
             muted = false
             paused = false
-            moment = TomoMoment(.birthIntro)
+            waitingForStar = true
+            petName = nil
+            outdoors = true
         }
+        #if DEBUG
+        // Debug only: TOMO_DEBUG_CHAR=<character> shows that character.
+        if let name = ProcessInfo.processInfo.environment["TOMO_DEBUG_CHAR"],
+           let c = TomoCharacter(rawValue: name) { preview.character = c }
+        #endif
+    }
+
+    // MARK: - Names and the first star (§3)
+
+    /// The player's own name, shared by every tomomix they raise; "" when
+    /// they skipped the question, nil when it was never asked.
+    nonisolated static var playerName: String? {
+        get { UserDefaults.standard.string(forKey: "tomomix.playerName") }
+        set { UserDefaults.standard.set(newValue, forKey: "tomomix.playerName") }
+    }
+
+    static let maxNameLength = 10
+
+    /// The player tapped a shooting star at `point` (fractions of the screen).
+    /// A tap anywhere or any button, while waiting: catches the shooting
+    /// star flying by (or one that only just left).
+    func catchPassingStar() {
+        guard waitingForStar, !paused, prompt == nil, caughtStar == nil else { return }
+        let t = Date().timeIntervalSinceReferenceDate
+        for lag in [0, 0.12, 0.24, 0.36] {
+            guard let passing = TomoBirthScene.shootingStar(at: t - lag) else { continue }
+            catchStar(at: TomoBirthScene.shootingStar(at: t)?.point ?? passing.point)
+            return
+        }
+    }
+
+    /// The ending's "tap again to shoot a new star" shows until then.
+    private(set) var endingHintUntil: Date?
+
+    /// After the cleaning swoosh, hop for joy (only when there was poop).
+    private var happyAfterMoment = false
+
+    /// When the player last pressed or tapped something; menus and the
+    /// highlighted icon close by themselves after `idleClose` without input.
+    private var lastInput = Date()
+    static let idleClose: TimeInterval = 3
+
+    func catchStar(at point: CGPoint) {
+        guard waitingForStar, caughtStar == nil, !paused else { return }
+        caughtStar = point
+        caughtAt = Date()
+        beep(.fanfare)
+        if Self.playerName == nil {
+            prompt = .playerName      // the star waits while they type
+        } else {
+            launchStar()
+        }
+    }
+
+    func answerPlayerName(_ name: String?) {
+        guard prompt == .playerName else { return }
+        Self.playerName = Self.clean(name)
+        prompt = nil
+        launchStar()
+    }
+
+    func answerPetName(_ name: String?) {
+        guard prompt == .petName else { return }
+        petName = Self.clean(name)
+        prompt = nil
+        save()
+    }
+
+    /// Settings can rename either of them later.
+    func rename(pet name: String) {
+        petName = Self.clean(name)
+        save()
+    }
+
+    func rename(player name: String) {
+        Self.playerName = Self.clean(name)
+    }
+
+    func setMuted(_ value: Bool) {
+        muted = value
+        save()
+    }
+
+    private static func clean(_ name: String?) -> String {
+        String((name ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxNameLength))
+    }
+
+    /// The name to show, or a stand-in.
+    var displayName: String {
+        if let petName, !petName.isEmpty { return petName }
+        return "Tomomix"
+    }
+
+    /// The caught star falls: the birth intro, from the falling part on.
+    private func launchStar() {
+        waitingForStar = false
+        outdoors = true                 // it's born where its star lands
+        let fall = TomoRules.birthIntroSeconds - TomoBirthScene.fallStart
+        brain = TomoBrain(now: simNow.addingTimeInterval(fall))
+        moment = TomoMoment(.birthIntro, at: Date().addingTimeInterval(-TomoBirthScene.fallStart))
+        caption = nil
+        save()
+    }
+
+    /// A tap on the tomomix itself: a little surprised hop, only when it's
+    /// fine (not asleep, sick, calling, misbehaving or about to need
+    /// something). Returns false when the tap should do the usual thing.
+    func tapPet() -> Bool {
+        guard !paused, brain.phase == .alive, prompt == nil, screen == .main,
+              activeMoment(at: Date()) == nil, caption == nil, isContent else { return false }
+        play(.poke)
+        beep(.click)
+        return true
+    }
+
+    /// Nothing wrong and nothing about to be: no thought bubble either.
+    var isContent: Bool {
+        !brain.asleep && !brain.sick && !brain.needsCare
+            && brain.hunger > 1 && brain.happiness > 1
     }
 
     /// The moment still playing at `date`, if any.
     func activeMoment(at date: Date) -> TomoMoment? {
-        guard let moment, !moment.isOver(at: date) else { return nil }
+        guard let moment else { return nil }
+        // After eating, the food menu comes back: hold the last frame
+        // until it does, so the normal pose never flashes in between.
+        if moment.isOver(at: date), foodChoiceAfterMoment == nil { return nil }
         return moment
     }
 
@@ -140,17 +298,37 @@ final class TomomixViewModel {
         let now = Date()
         let dt = now.timeIntervalSince(lastTick)
         lastTick = now
-        if !paused, speed != 1 { timeOffset += dt * (speed - 1) }
+        // Prototype tools' speed and skip live extra time, then the clock is
+        // put back: the tomomix gets older, but the time of day stays real.
+        var extra = pendingSkip
+        pendingSkip = 0
+        if !paused, speed != 1 { extra += dt * (speed - 1) }
         let before = brain.clock
-        let events = brain.advance(to: simNow)
+        // The sky waits for the player: no clock until a star is caught.
+        let events = waitingForStar ? [] : brain.advance(to: simNow.addingTimeInterval(extra))
+        let lived = brain.clock.timeIntervalSince(before)
+        if !waitingForStar, extra > 0 { brain.shiftClock(by: -extra) }
         // Only animate what happened just now, not a long catch-up after
         // the app was closed (or a debug skip).
-        handle(events, live: brain.clock.timeIntervalSince(before) <= 180)
+        handle(events, live: lived <= 180)
         if !paused, let m = moment, m.isOver(at: now) { endMoment() }
         beeper.idleTick()
         if let until = captionUntil, now >= until { caption = nil; captionUntil = nil }
         if case .game = screen, !brain.canPlay { endGameEarly() }
         if !brain.canCare, screen != .main { screen = .main; cursor = nil }
+        // Left alone: an open menu (food, light, status) closes and the
+        // highlighted icon goes back to none. Games and animations wait.
+        if moment == nil, prompt == nil, now.timeIntervalSince(lastInput) >= Self.idleClose {
+            switch screen {
+            case .food, .lights, .status: screen = .main; cursor = nil
+            case .main where cursor != nil: cursor = nil
+            default: break
+            }
+        }
+        // Sleeping (or lights out) always happens in the room.
+        if outdoors, brain.phase == .alive, brain.asleep || !brain.lightsOn { outdoors = false }
+        // Born while the app was closed: ask its name once it's on screen.
+        if brain.phase == .alive, petName == nil, prompt == nil, moment == nil { prompt = .petName }
         if !events.isEmpty || now.timeIntervalSince(lastSave) > 30 { save() }
     }
 
@@ -158,6 +336,7 @@ final class TomomixViewModel {
         for event in events {
             switch event {
             case .born:
+                outdoors = false                // stars always hatch into the room
                 if live { play(.burst) }
                 beep(.fanfare)
             case .evolved(let from, let to):
@@ -176,7 +355,7 @@ final class TomomixViewModel {
                 screen = .main
                 cursor = nil
                 if live { play(.depart(brain.character)) }
-                beep(.fanfare)
+                beep(.farewell)
             default:
                 break
             }
@@ -187,7 +366,13 @@ final class TomomixViewModel {
 
     func press(_ button: InputController.Button) {
         held.insert(button)
-        guard !paused else { return }
+        lastInput = Date()
+        // Waiting for a star: any button catches the one flying by.
+        if waitingForStar {
+            catchPassingStar()
+            return
+        }
+        guard !paused, prompt == nil, !waitingForStar else { return }
         if held.contains(.a) && held.contains(.c) {
             comboAC()
             return
@@ -241,7 +426,7 @@ final class TomomixViewModel {
     private func pressB() {
         switch screen {
         case .main:
-            if let cursor { open(cursor) }
+            if let cursor { open(cursor) } else { toggleOutdoors() }
         case .food(let c): giveFood(snack: c == 1)
         case .lights(let c): brain.setLights(on: c == 0); screen = .main; save()
         case .status: screen = .main
@@ -262,6 +447,7 @@ final class TomomixViewModel {
     /// Tapping an icon opens it. Tapping the icon whose screen is already
     /// open closes it again; tapping a different one jumps straight there.
     func tapIcon(_ icon: Icon) {
+        lastInput = Date()
         guard !paused, icon != .attention, brain.canCare else { return }
         foodChoiceAfterMoment = nil
         if let open = openIcon {
@@ -291,6 +477,7 @@ final class TomomixViewModel {
     }
 
     func tapFood(snack: Bool) {
+        lastInput = Date()
         guard !paused, case .food = screen else { return }
         beep(.click)
         screen = .food(choice: snack ? 1 : 0)
@@ -298,6 +485,7 @@ final class TomomixViewModel {
     }
 
     func tapLights(on: Bool) {
+        lastInput = Date()
         guard !paused, case .lights = screen else { return }
         beep(.click)
         brain.setLights(on: on)
@@ -317,10 +505,12 @@ final class TomomixViewModel {
     /// quickly (§2). Never skips a real wait (the star's 30 seconds) or
     /// the game's sequence.
     func tapScreen() {
+        lastInput = Date()
         if paused {
             togglePause()          // tap to resume, like the other Tamas
             return
         }
+        if prompt != nil || waitingForStar { return }
         if activeMoment(at: Date()) != nil {
             endMoment()
             return
@@ -330,13 +520,26 @@ final class TomomixViewModel {
             captionUntil = nil
             return
         }
+        // The ending: a tap shows "tap again to shoot a new star" for 2
+        // seconds; a second tap while it shows starts a new star.
+        if brain.phase == .departed {
+            if let until = endingHintUntil, Date() < until {
+                endingHintUntil = nil
+                newStar()
+            } else {
+                endingHintUntil = Date().addingTimeInterval(2)
+            }
+            return
+        }
         switch screen {
         case .status, .food, .lights:
             screen = .main
         case .game(let g):
             if case .result = g.step { screen = .main }
         case .main:
-            break
+            // Off the tomomix, on the main screen: out to the grass, or back in.
+            cursor = nil
+            toggleOutdoors()
         }
     }
 
@@ -355,9 +558,15 @@ final class TomomixViewModel {
             if brain.canPlay { startGame() } else { play(.refuse) }
         case .medicine:
             switch brain.giveMedicine() {
-            case .notSick: say("Not sick")
-            case .needsMore: play(.medicine(cured: false))
-            case .cured: play(.medicine(cured: true))
+            case .notSick: play(.refuse)          // "no", like refusing food
+            case .needsMore:
+                play(.medicine(cured: false))
+                beep(.toot, after: TomoFrog.toot)
+            case .cured:
+                play(.medicine(cured: true))
+                beep(.toot, after: TomoFrog.toot)          // the frog's toot…
+                beep(.magic, after: TomoFrog.toot + 0.5)   // …the cure works…
+                beep(.happy, after: TomoFrog.toot + 0.7)   // …and it hops for joy
             }
         case .clean:
             // The sweep plays even with nothing to clean: it's fun to
@@ -365,8 +574,11 @@ final class TomomixViewModel {
             let poop = brain.poop
             _ = brain.clean()
             play(.clean(poop: poop))
+            // Cleaned up: once the swoosh has gone, it hops for joy.
+            if poop > 0 { happyAfterMoment = true }
         case .discipline:
-            if brain.scold() == .scolded { play(.scold) } else { say("Huh?") }
+            // Scolded for nothing: sad and confused, no words.
+            if brain.scold() == .scolded { play(.scold); beep(.scary) } else { play(.confused) }
         case .attention:
             break
         }
@@ -380,15 +592,42 @@ final class TomomixViewModel {
         } else {
             play(.refuse)
         }
-        // The scene shows the eating; the menu comes back afterwards.
+        // The scene shows the eating; the menu comes back afterwards,
+        // right when the animation ends (not at the next clock tick).
         screen = .main
         foodChoiceAfterMoment = snack ? 1 : 0
+        if let m = moment {
+            momentEndTask?.cancel()
+            momentEndTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(m.duration))
+                guard !Task.isCancelled, let self, self.moment?.start == m.start, !self.paused else { return }
+                self.endMoment()
+            }
+        }
+        save()
+    }
+
+    /// B with no icon highlighted: out to the grass, or back inside.
+    private func toggleOutdoors() {
+        guard brain.phase == .alive, moment == nil || activeMoment(at: Date()) == nil else { return }
+        if brain.asleep { say("Shh… sleeping"); return }
+        if !brain.lightsOn { say("Lights are off"); return }
+        outdoors.toggle()
         save()
     }
 
     /// The animation finished or was skipped.
     private func endMoment() {
         moment = nil
+        lastInput = Date()            // a menu coming back gets its full time
+        if happyAfterMoment {
+            happyAfterMoment = false
+            if brain.canCare, !brain.asleep {
+                play(.happy)
+                beep(.happy)
+                return
+            }
+        }
         if let choice = foodChoiceAfterMoment {
             foodChoiceAfterMoment = nil
             if brain.canCare, !brain.asleep, screen == .main { screen = .food(choice: choice) }
@@ -398,11 +637,18 @@ final class TomomixViewModel {
     func newStar() {
         gameTask?.cancel()
         foodChoiceAfterMoment = nil
-        // It lands after the intro, so the 30-second pulse is all there (§3).
-        brain = TomoBrain(now: simNow.addingTimeInterval(TomoRules.birthIntroSeconds))
+        // Back to the starry night: the next star is the player's to catch.
+        brain = TomoBrain(now: simNow)
+        waitingForStar = true
+        caughtStar = nil
+        caughtAt = nil
+        petName = nil
+        outdoors = true
+        prompt = nil
+        moment = nil
+        caption = nil
         screen = .main
         cursor = nil
-        play(.birthIntro)
         save()
     }
 
@@ -410,8 +656,16 @@ final class TomomixViewModel {
 
     private func startGame() {
         var rng = SystemRandomNumberGenerator()
-        screen = .game(GameState(sequence: [Bool.random(using: &rng)], round: 1, step: .showing(index: 0), lit: nil))
-        runShowing()
+        screen = .game(GameState(sequence: [Bool.random(using: &rng)], round: 1, step: .showing(index: 0), lit: nil, intro: true))
+        beep(.gameStart)
+        gameTask?.cancel()
+        gameTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.4))
+            guard !Task.isCancelled, let self, case .game(var g) = self.screen else { return }
+            g.intro = false
+            self.screen = .game(g)
+            self.runShowing()
+        }
     }
 
     /// Plays the sequence for this round, then waits for input.
@@ -494,7 +748,9 @@ final class TomomixViewModel {
         g.step = .result(score: score, reward: reward)
         g.lit = nil
         screen = .game(g)
-        beep(score == TomoRules.gameRounds ? .fanfare : .click)
+        // Perfect: the happy chime. Lost (no happiness won): the sad one.
+        // Anything in between: a plain "okay" tune.
+        beep(score == TomoRules.gameRounds ? .happy : reward > 0 ? .okay : .sad)
         save()
         // The result closes by itself after a moment (§6); a tap or a
         // button closes it sooner.
@@ -518,17 +774,28 @@ final class TomomixViewModel {
 
     // MARK: - Prototype tools
 
+    /// Settings → Notifications changed. Off: drop any pending calls now.
+    /// On: they're scheduled as usual the next time the page goes off screen.
+    func refreshNotifications() {
+        if !TomoCareSettings.notifications { TomomixNotifications.cancel() }
+    }
+
+    /// Prototype tools: live `minutes` right away (the clock stays real).
     func skipAhead(minutes: Double) {
-        if paused { pausedAt = pausedAt?.addingTimeInterval(minutes * 60) } else { timeOffset += minutes * 60 }
+        pendingSkip += minutes * 60
         tick()
     }
+
+    private var pendingSkip: TimeInterval = 0
 
     /// Pause freezes everything (§16): the clock, the tomomix mid-pose,
     /// any animation. Care is blocked until it resumes.
     func togglePause() {
         if paused {
-            timeOffset = (pausedAt ?? Date()).timeIntervalSince(Date())
+            // Back to the phone's real time (the sky, bedtime), but the paused
+            // stretch never happened for the tomomix: it simply skips it.
             pausedAt = nil
+            brain.skipPause(to: simNow)
             // Pick the animation up exactly where it stopped.
             if let m = moment, let frozen = frozenAt {
                 moment = TomoMoment(m.kind, at: m.start.addingTimeInterval(Date().timeIntervalSince(frozen)))
@@ -561,6 +828,14 @@ final class TomomixViewModel {
         beeper.play(sound)
     }
 
+    /// A sound a moment later (e.g. the happy chime once a cure has sunk in).
+    private func beep(_ sound: TomoBeeper.Sound, after seconds: Double) {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            self?.beep(sound)
+        }
+    }
+
     // MARK: - Saving
 
     func save() {
@@ -569,7 +844,8 @@ final class TomomixViewModel {
     }
 
     private var saveFile: TomomixStore.SaveFile {
-        TomomixStore.SaveFile(brain: brain, timeOffset: timeOffset, pausedAt: pausedAt, muted: muted)
+        TomomixStore.SaveFile(brain: brain, timeOffset: timeOffset, pausedAt: pausedAt, muted: muted,
+                              waitingForStar: waitingForStar, petName: petName, outdoors: outdoors)
     }
 }
 
@@ -591,6 +867,10 @@ enum TomomixStore {
         var timeOffset: TimeInterval
         var pausedAt: Date?
         var muted: Bool
+        /// Optional so saves from before these existed still load.
+        var waitingForStar: Bool?
+        var petName: String?
+        var outdoors: Bool?
     }
 
     static var saveURL: URL {
@@ -627,7 +907,7 @@ enum TomomixStore {
     /// Background refresh: plays the minutes since the last save and
     /// saves. Returns true when the tomomix started calling meanwhile.
     static func catchUp(now: Date = Date()) -> Bool {
-        guard var file = load(), file.pausedAt == nil else { return false }
+        guard var file = load(), file.pausedAt == nil, file.waitingForStar != true else { return false }
         let events = file.brain.advance(to: now.addingTimeInterval(file.timeOffset))
         write(file)
         return events.contains { if case .callStarted = $0 { return true } else { return false } }
@@ -646,10 +926,24 @@ enum TomomixNotifications {
     /// keeps 64 pending per app, shared with the other Tamas' reminders).
     private static let lookAheadMinutes = 48 * 60
     private static let maxScheduled = 20
+    /// iOS's notification calls wait on a system service that can be
+    /// slow to answer (a freshly started phone or Simulator froze the
+    /// screen on it), so they all run here, in order, off the main thread.
+    private static let queue = DispatchQueue(label: "tomomix.notifications", qos: .utility)
 
     static func schedule(for file: TomomixStore.SaveFile, now: Date = Date()) {
-        cancel()
-        guard file.pausedAt == nil else { return }
+        queue.async { scheduleNow(for: file, now: now) }
+    }
+
+    static func cancel() {
+        queue.async { cancelNow() }
+    }
+
+    private static func scheduleNow(for file: TomomixStore.SaveFile, now: Date) {
+        cancelNow()
+        guard TomoCareSettings.notifications, file.pausedAt == nil, file.waitingForStar != true else { return }
+        let pet = file.petName.flatMap { $0.isEmpty ? nil : $0 }
+        let player = TomomixViewModel.playerName.flatMap { $0.isEmpty ? nil : $0 }
         var brain = file.brain
         let simNow = now.addingTimeInterval(file.timeOffset)
         brain.advance(to: simNow)
@@ -675,36 +969,39 @@ enum TomomixNotifications {
             let wait = call.0.timeIntervalSince(now)
             guard wait >= 1 else { continue }
             let content = UNMutableNotificationContent()
-            content.title = "Tomomix"
+            content.title = pet ?? "Tomomix"
             let n = turn[call.1, default: start]
             turn[call.1] = n + 1
-            content.body = message(for: call.1, turn: n)
+            content.body = message(for: call.1, turn: n, pet: pet, player: player)
             content.sound = .default
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
             center.add(UNNotificationRequest(identifier: "\(prefix)\(index)", content: content, trigger: trigger))
         }
     }
 
-    static func cancel() {
+    private static func cancelNow() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: (0..<maxScheduled).map { "\(prefix)\($0)" }
         )
     }
 
-    /// Varied wording, so it doesn't read like an alarm clock (§16).
-    private static func message(for kind: TomoBrain.CallKind, turn: Int) -> String {
+    /// Varied wording, so it doesn't read like an alarm clock (§16), with
+    /// the tomomix's and the player's names when they gave them.
+    static func message(for kind: TomoBrain.CallKind, turn: Int, pet: String?, player: String?) -> String {
+        let it = pet ?? "Your tomomix"
+        let you = player.map { ", \($0)" } ?? ""
         let options: [String]
         switch kind {
         case .hunger:
-            options = ["Your tomomix is hungry.", "A little tummy is rumbling.", "Your tomomix is calling: food, please!"]
+            options = ["\(it) is hungry\(you)!", "A little tummy is rumbling.", "\(it) is calling: food, please!"]
         case .happiness:
-            options = ["Your tomomix wants some company.", "Your tomomix is feeling a bit lonely.", "Your tomomix is calling for you."]
+            options = ["\(it) wants some company\(you).", "\(it) is feeling a bit lonely.", "\(it) misses you\(you)."]
         case .bedtime:
-            options = ["Your tomomix fell asleep with the light on.", "Bedtime! Your tomomix needs the light off."]
+            options = ["\(it) fell asleep with the light on.", "Bedtime\(you)! \(it) needs the light off."]
         case .misbehavior:
-            options = ["Your tomomix is calling for you.", "Your tomomix wants your attention."]
+            options = ["\(it) is calling for you\(you).", "\(it) wants your attention."]
         case .critical:
-            options = ["Your tomomix is very sick and needs you now."]
+            options = ["\(it) is very sick and needs you now\(you)."]
         }
         return options[turn % options.count]
     }
@@ -713,7 +1010,7 @@ enum TomomixNotifications {
 /// Placeholder beeps for the prototype, through the app's own square-wave
 /// synth (AudioOutput), at the app's volume setting.
 final class TomoBeeper: @unchecked Sendable {
-    enum Sound { case click, call, left, right, fanfare }
+    enum Sound { case click, call, left, right, fanfare, happy, sad, scary, magic, toot, farewell, gameStart, okay }
 
     /// (frequency, start, end) in uptime nanoseconds.
     private let notes = OSAllocatedUnfairLock<[(Float, UInt64, UInt64)]>(initialState: [])
@@ -735,6 +1032,26 @@ final class TomoBeeper: @unchecked Sendable {
         case .left: pattern = [(784, 0.3)]
         case .right: pattern = [(1175, 0.3)]
         case .fanfare: pattern = [(1047, 0.1), (1319, 0.1), (1568, 0.1), (2093, 0.2)]
+        // Bright little "ding-ding-diiing" going up.
+        case .happy: pattern = [(1568, 0.08), (0, 0.03), (1976, 0.08), (0, 0.03), (2349, 0.08), (0, 0.03), (3136, 0.2)]
+        // Two plain, pleasant notes: "not bad".
+        case .okay: pattern = [(1319, 0.1), (0, 0.04), (1568, 0.2)]
+        // Sliding down, "wah-wah-wahhh".
+        case .sad: pattern = [(784, 0.16), (0, 0.04), (698, 0.16), (0, 0.04), (622, 0.16), (0, 0.04), (523, 0.4)]
+        // A bouncy little "let's play!" tune.
+        case .gameStart: pattern = [(1047, 0.09), (1319, 0.09), (1568, 0.09), (1319, 0.09), (2093, 0.12), (0, 0.05),
+                                    (1568, 0.09), (2093, 0.25)]
+        // The sad chime, slower and lower: for its ending.
+        case .farewell: pattern = [(587, 0.24), (0, 0.06), (523, 0.24), (0, 0.06), (466, 0.24), (0, 0.06), (392, 0.6)]
+        // Low and wobbly, "dun-dun-dunnn".
+        case .scary: pattern = [(247, 0.16), (0, 0.05), (233, 0.16), (0, 0.05),
+                                (220, 0.07), (208, 0.07), (220, 0.07), (208, 0.07), (196, 0.3)]
+        // A silly low "pfrrrt" that wobbles down.
+        case .toot: pattern = [(131, 0.05), (117, 0.05), (139, 0.05), (110, 0.05), (123, 0.05),
+                               (98, 0.05), (110, 0.05), (87, 0.12)]
+        // A quick sparkling run up, ending on a high shimmer.
+        case .magic: pattern = [(1047, 0.045), (1319, 0.045), (1568, 0.045), (2093, 0.045), (2637, 0.045),
+                                (3136, 0.045), (2637, 0.045), (3136, 0.045), (4186, 0.08), (3136, 0.06), (4186, 0.16)]
         }
         var t = DispatchTime.now().uptimeNanoseconds
         var scheduled: [(Float, UInt64, UInt64)] = []

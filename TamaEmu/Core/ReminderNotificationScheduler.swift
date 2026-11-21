@@ -1,3 +1,4 @@
+import Foundation
 import UserNotifications
 
 /// A deliberately dumb fallback for NotificationScheduler.fireCallingNotification:
@@ -35,7 +36,13 @@ enum ReminderNotificationScheduler {
     /// or because a real call-detected notification already gave them a
     /// (more useful) heads-up — so the dumb reminder doesn't also fire on
     /// top of that.
+    ///
+    /// Off the main thread: removing a pending notification waits on a
+    /// system service, which can be slow to answer right after the phone
+    /// starts and would freeze the screen meanwhile.
     static func cancel() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+        DispatchQueue.global(qos: .utility).async {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+        }
     }
 }

@@ -1,5 +1,33 @@
 import Foundation
 
+/// Tomomix Settings → Care. Read by the brain wherever its rules use them.
+enum TomoCareSettings {
+    static let noDeathsKey = "tomomix.noDeaths"
+    static let difficultyKey = "tomomix.difficulty"
+    static let notificationsKey = "tomomix.notifications"
+
+    /// No endings: neglect, untreated sickness and old age never end its life.
+    static var noDeaths: Bool { UserDefaults.standard.bool(forKey: noDeathsKey) }
+
+    /// Call reminders on (the default) or off.
+    static var notifications: Bool { UserDefaults.standard.object(forKey: notificationsKey) as? Bool ?? true }
+
+    enum Difficulty: String, CaseIterable, Identifiable {
+        case easy, classic, hard
+        var id: String { rawValue }
+        var label: String { switch self { case .easy: "Easy"; case .classic: "Classic"; case .hard: "Hard" } }
+        /// How much longer (or shorter) its timers run: meters, deadlines, health.
+        var pace: Double { switch self { case .easy: 1.5; case .classic: 1; case .hard: 0.75 } }
+    }
+
+    static var difficulty: Difficulty {
+        UserDefaults.standard.string(forKey: difficultyKey).flatMap(Difficulty.init) ?? .classic
+    }
+
+    /// `minutes` stretched (or shrunk) by the difficulty; never below 1.
+    static func paced(_ minutes: Int) -> Int { max(1, Int((Double(minutes) * difficulty.pace).rounded())) }
+}
+
 /// Everything about one tomomix's life, and the rules that move it forward.
 /// Pure logic: no UI, no clock of its own. The caller says "it's now
 /// time T" and the brain plays every minute up to T, so catching up after
@@ -106,6 +134,24 @@ struct TomoBrain: Codable, Sendable {
     /// When the fallen star becomes the Baby.
     var birthTime: Date { bornAt }
 
+    /// §16 pause: the clock jumps to `date` without living through the gap
+    /// (no hunger, poop, sickness or growing). A star still waiting to be
+    /// born keeps its remaining wait.
+    /// Moves its clock (and its star's birth time) by `delta` without
+    /// living anything: used to keep it on the phone's real time after
+    /// fast-forwarding.
+    mutating func shiftClock(by delta: TimeInterval) {
+        clock = clock.addingTimeInterval(delta)
+        bornAt = bornAt.addingTimeInterval(delta)
+    }
+
+    mutating func skipPause(to date: Date) {
+        let gap = date.timeIntervalSince(clock)
+        guard gap > 0 else { return }
+        clock = date
+        if phase == .star { bornAt = bornAt.addingTimeInterval(gap) }
+    }
+
     private mutating func beBorn(events: inout [Event]) {
         let p = TomoCharacter.baby.params
         phase = .alive
@@ -128,7 +174,7 @@ struct TomoBrain: Codable, Sendable {
         events.append(.born)
         // §3: it's born with both meters empty, so it calls right away
         // instead of waiting for the first drop a minute later.
-        careDeadline = TomoRules.careDeadline
+        careDeadline = TomoCareSettings.paced(TomoRules.careDeadline)
         events.append(.callStarted(.hunger))
     }
 
@@ -232,12 +278,12 @@ struct TomoBrain: Codable, Sendable {
         // 2-3. Hunger and happiness drop on their own wobbly timers (§4).
         hungerCountdown -= 1
         if hungerCountdown <= 0 {
-            hungerCountdown = rng.wobble(hungerInterval)
+            hungerCountdown = rng.wobble(TomoCareSettings.paced(hungerInterval))
             dropMeter(isHunger: true, events: &events)
         }
         happyCountdown -= 1
         if happyCountdown <= 0 {
-            happyCountdown = rng.wobble(happyInterval)
+            happyCountdown = rng.wobble(TomoCareSettings.paced(happyInterval))
             dropMeter(isHunger: false, events: &events)
         }
 
@@ -293,7 +339,7 @@ struct TomoBrain: Codable, Sendable {
                 return
             }
         } else {
-            healthyLeft -= 1 + TomoRules.poopSicknessSpeedup * Double(poop)
+            healthyLeft -= (1 + TomoRules.poopSicknessSpeedup * Double(poop)) / TomoCareSettings.difficulty.pace
             if healthyLeft <= 0 {
                 getSick(events: &events)
                 if criticalLeft != nil { return }
@@ -327,7 +373,7 @@ struct TomoBrain: Codable, Sendable {
         }
         // Meter is empty: open a call if one isn't already open (§7).
         if careDeadline == nil {
-            careDeadline = TomoRules.careDeadline
+            careDeadline = TomoCareSettings.paced(TomoRules.careDeadline)
             events.append(.callStarted(isHunger ? .hunger : .happiness))
         }
     }
@@ -337,7 +383,7 @@ struct TomoBrain: Codable, Sendable {
         left -= 1
         if left <= 0 {
             misbehaving = true
-            disciplineDeadline = TomoRules.disciplineDeadline
+            disciplineDeadline = TomoCareSettings.paced(TomoRules.disciplineDeadline)
             events.append(.callStarted(.misbehavior))
             left = rng.int(in: misbehaviorRange)
         }
@@ -365,7 +411,7 @@ struct TomoBrain: Codable, Sendable {
         sickMinutes = 0
         sicknessesThisForm += 1
         events.append(.gotSick)
-        if sicknessesThisForm >= TomoRules.sicknessesBeforeCritical {
+        if sicknessesThisForm >= TomoRules.sicknessesBeforeCritical, !TomoCareSettings.noDeaths {
             criticalLeft = TomoRules.criticalMinutes
             events.append(.callStarted(.critical))
         }
@@ -399,6 +445,19 @@ struct TomoBrain: Codable, Sendable {
     }
 
     private mutating func depart(_ cause: DepartureCause, events: inout [Event]) {
+        // No deaths (Settings): it carries on instead. Old age just stays
+        // old; being left empty makes it sick.
+        if TomoCareSettings.noDeaths {
+            switch cause {
+            case .neglect:
+                emptyMinutes = 0
+                if !sick { getSick(events: &events) }
+            case .sickness: sickMinutes = 0
+            case .oldAge: oldAgeMistakes = 0
+            case .critical: criticalLeft = nil
+            }
+            return
+        }
         phase = .departed
         departureCause = cause
         criticalLeft = nil
@@ -411,6 +470,15 @@ struct TomoBrain: Codable, Sendable {
 
     /// The attention icon (§2, §7, §8). Unlike the classic toy, it stays
     /// lit while a meter is empty, even after the 14 minutes run out (§7).
+    /// A real need: everything that lights the attention icon except
+    /// misbehaving (which, as on the classic toy, only lights the icon).
+    var needsCare: Bool {
+        guard phase == .alive else { return false }
+        return careDeadline != nil || criticalLeft != nil
+            || (asleep && lightsOn && napLeft == nil)
+            || (!asleep && (hunger == 0 || happiness == 0))
+    }
+
     var attention: Bool {
         guard phase == .alive else { return false }
         return careDeadline != nil || misbehaving || criticalLeft != nil

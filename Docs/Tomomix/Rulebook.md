@@ -47,6 +47,7 @@ The three teens match the three adult tiers: the Excellent Teen points toward th
 | Moving the cursor or opening menus never clears a call. Only the right care action does. | Classic `UI02` |
 | **A + C** on the main screen turns sound on or off. Calls still show on screen when muted. | Classic `UI04` |
 | While asleep, only Light and Status work. Nothing works during the birth (§3). | Classic `UI06` |
+| **Outdoors.** On the main screen with no icon highlighted, **B** — or **a tap anywhere except on the tomomix** — takes it out to the meadow, and the same brings it back to the room. Everything works the same outside. Its star lands outdoors, but it always hatches into the room. It always sleeps inside: when it falls asleep or the light goes off, it goes in by itself, and B can't take it out until it's up and the light is on. | Change |
 
 **Tap shortcuts (hidden)**: Change
 
@@ -56,6 +57,10 @@ The buttons are the classic way to play. Tapping is a quicker, modern way to do 
 |---|---|
 | Any of the 7 care icons | Pressing A until that icon is selected, then B |
 | A food (meal or snack) in the food menu | Selecting it and pressing B |
+
+**Tap the tomomix.** When it's doing fine (awake, not sick, not calling or misbehaving, and no thought bubble), tapping it makes it hop in surprise with its happy face. Otherwise a tap does what the next paragraph says. Change
+
+**Menus close by themselves.** Left alone for **3 seconds**, an open menu (food, light, status) closes, and a highlighted icon goes back to none. Games and animations don't. Change
 
 **Tap the screen to skip.** Tapping the screen itself (not an icon or a choice) skips the animation that's playing, or closes whatever can be closed: status, a menu, a game result. It never skips a real wait, like the fallen star's 30 seconds, or the game's sequence. Change
 
@@ -67,11 +72,14 @@ Tapping follows the same rules as the buttons. Anything that's blocked (while as
 
 | Step | What you see | Tag |
 |---|---|---|
-| 1 | A starry night sky. | Change |
-| 2 | A shooting star crosses the sky. | Change |
-| 3 | Close-up: the star falls to the ground. | Change |
-| 4 | The fallen star **pulses for 30 seconds**. It starts slow and pulses faster and faster as the birth gets closer. No care is possible. | Change (classic egg: 5 min) |
-| 5 | A **burst of light**, and the star becomes the Baby. It's born with empty meters, so it **calls right away**. | Change |
+| 1 | A starry night sky, with **shooting stars passing every few seconds**. Nothing happens until the player catches one: **a tap anywhere on the screen, or any button (A, B or C), while a star is flying** catches it (just after it leaves still counts). | Change |
+| 2 | The caught star glides to the top and waits while **"Your name?"** fades in (first time only; Skip is fine, and the name can be set later in Settings). | Change |
+| 3 | Close-up: the star falls onto the meadow (the outdoors, in stronger night colors). | Change |
+| 4 | The fallen star **pulses for 30 seconds**. It starts slow and pulses faster and faster as the birth gets closer, while the starry night slowly fades into the real sky of the time of day. No care is possible. | Change (classic egg: 5 min) |
+| 5 | The star **hops up and bursts** (`tomo-evolution`) as the screen fades to white; from the white the Baby appears **in the room**. It's born with empty meters, so it **calls right away**. | Change |
+| 6 | **"Name your baby"** appears above it (Skip is fine). The name stays through every stage, and shows on the status screen, the ending and notifications. Up to 10 letters. | Change |
+
+The player's name is shared by every tomomix they raise. Notifications use both names when given, for example "Mochi is hungry, Sam!" (§16).
 
 | Rule | Tag |
 |---|---|
@@ -80,7 +88,7 @@ Tapping follows the same rules as the buttons. Anything that's blocked (while as
 | The Baby weighs **5** and never gains or loses weight. | Classic `FD04` |
 | The Baby naps after **40 awake minutes** and sleeps **5 minutes**. Waking from the nap is its first birthday (§9). | Classic `LS06` |
 | The Baby becomes a Child after **60 awake minutes** (about 65 minutes total, nap included). | Classic `GR03` |
-| Once a life has ended, **A + C** sends a new shooting star. The same option is also in the menus (§17). | Classic `LS05` + Phone |
+| Once a life has ended, **A + C** brings back the starry night, ready to catch a new shooting star. The same option is also in the menus (§17). | Classic `LS05` + Phone |
 
 ## 4. Hunger and happiness
 
@@ -109,6 +117,8 @@ Tapping follows the same rules as the buttons. Anything that's blocked (while as
 ## 6. The mini-game — Follow Me
 
 A memory game: the tomomix shows a sequence of directions, and you repeat it. Change (the classic game is a left/right guess)
+
+It's played **right where the tomomix is** (the room or outdoors), with nothing resizing: it stands in the middle and looks each way, two arrows (`tomo-arrow`) appear at the left and right sides (lit when shown or pressed; each half of the screen is the tap target). No text and no thought bubble or spiral during the game. It opens with a bouncy "let's play!" tune while it hops for joy (1.4 s), and ends with the happy chime (it won happiness) or the sad one.
 
 | Rule | Tag |
 |---|---|
@@ -187,7 +197,7 @@ Sometimes the tomomix calls even though it doesn't need anything, or refuses foo
 | Up to **8** poops can pile up, shown as small and big piles (table below). After 8, no more are added. | Change `U06` |
 | Cleaning removes all poop at once. | Classic `HL02` |
 | Cleaning works even when there's no poop: the sweep still plays, just for fun. | Change |
-| Each character has a "healthy timer" that counts down while it's awake and well (§14). When it runs out, the tomomix gets sick and a **skull** appears. | Classic `HL06` |
+| Each character has a "healthy timer" that counts down while it's awake and well (§14). When it runs out, the tomomix gets sick: a **scribble ball** churns beside its head, and it **stays still in the middle** of the screen with its sick face (no walking, hopping or blinking), **shivering** now and then (a sudden burst of quick left-right jolts, about every 2 seconds), until it's cured. | Classic `HL06` + Change |
 | Each poop on screen makes the healthy timer run **25% faster**: 1 poop = ×1.25, 4 poops = ×2, 8 poops = ×3. | Choice `U06` |
 | Medicine cures sickness. Some characters need **2 or 3 doses** (§14). | Classic `HL04` `HL05` |
 | Getting sick **3 times as the same character** means critical condition (§12). Evolving resets that count. | Classic `HL07` |
@@ -261,7 +271,7 @@ The adult's **type** comes from D:
 
 **The ending — a fixed star.** Change
 
-The tomomix becomes a **fixed star** in the starry night sky, with a **faded image of the departed tomomix** behind it. The screen shows its final age. **A + C**, or the menu option, sends a new shooting star (§3).
+The tomomix becomes a **fixed star** (the Tomomix star, glowing and floating) at the center of the starry night sky, with a **faint ghost of the departed tomomix** centered behind it. Its **name** shows big near the top and its final age ("6 years old") near the bottom, with a slow, low farewell chime. **Tapping twice** sends a new shooting star (§3): the first tap shows "tap again to shoot a new star" above the age for 2 seconds; a second tap while it shows starts the new star. **A + C**, or the menu option, also sends one.
 
 ## 13. Our choices for the unknowns
 
@@ -309,6 +319,7 @@ Change: everything is on **one screen** instead of several pages.
 
 | Shows | How |
 |---|---|
+| Name | At the top, when it has one (§3) |
 | Hunger | Meter with a **stomach** icon, 5 levels (empty + 4) |
 | Happiness | Meter with a **heart or smiley** icon, 5 levels |
 | Discipline | Meter with a **brain** icon, 10 steps (0–100% in steps of 10) |
@@ -323,7 +334,7 @@ Hunger and happiness have 4 steps; discipline has 10, so it fills more slowly.
 |---|---|
 | **Time keeps passing while the app is closed**, like a toy left in a drawer. When the app opens, it catches up straight away. | Phone |
 | The app knows when the next call will happen, so it can schedule notifications even while it's closed. | Phone |
-| **Pause** freezes everything. All timers resume exactly where they stopped. | Phone `LS03` |
+| **Pause** freezes the tomomix: while paused it doesn't age, grow, get hungry or unhappy, poop or get sick, and a pulsing star doesn't get closer to hatching. All its timers resume exactly where they stopped. **The clock doesn't stop**: on resume the sky, bedtime and everything else follow the phone's real time again; the paused stretch is simply skipped. | Phone `LS03` |
 | Sleep and wake times use the phone's local time (plus any offset, §17). When time zones change, the tomomix follows the new local time. | Phone |
 | Changing the phone's clock by hand doesn't add or remove awake minutes. | Phone `SL04` |
 
@@ -335,16 +346,23 @@ Hunger and happiness have 4 steps; discipline has 10, so it fills more slowly.
 | **Notifications vary:** each kind of call (hungry, unhappy, bedtime, sick, poop, misbehaving) has several messages, and they can differ by character. The same message never appears twice in a row. | Change |
 | **Never random:** the 14-minute and 60-minute deadlines (§7) and the growth chart (§11). A care mistake should always feel fair, and good care should always pay off. | Choice |
 
-## 17. Settings and ⋯ menu — to be defined
+## 17. Settings and ⋯ menu
 
-Options the classic never had, behind the cog and ⋯ buttons. This is a list of candidates, not decisions yet.
+**Free, fully.** Tomomix needs no purchase for anything, and it doesn't count toward the free Tama: a free player can have one Tomomix plus one emulated Tama (never two of either). Its full-screen sky (the ambient background) is always on, for everyone.
 
-- **Send a new shooting star.** Starts a new life (asks to confirm if the current tomomix is still alive).
-- **Volume** and **vibration.**
-- **Clock offset.** Shifts the tomomix's day, for players who are awake at unusual hours.
-- **Difficulty.** Makes care proportionally easier or harder (slower or faster meters, longer or shorter deadlines).
-- **No deaths.** The tomomix never departs from neglect, sickness or old age.
-- Pause (already exists for other Tamas in the app).
+**⋯ menu:** Pause / Resume, Send a New Shooting Star, Tomomix Settings, Add a Tama, Rearrange, Delete.
+
+**Tomomix Settings:**
+
+- **Names:** the tomomix's and the player's, editable any time.
+- **Sound & Haptics:** Sound on/off (same as A + C), and the app-wide Volume, Haptics and Respect Silent Mode (shared with the other Tamas).
+- **Screen:** Appearance (light / dark / automatic, app-wide); Ambient Background, always on ("included free with Tomomix"); Retro Screen (big pixels at 128 across, the same scan lines and glass sheen as the other Tamas; icons and menus stay sharp).
+- **Care:**
+  - **Notifications** on/off (its calls, when the app isn't open).
+  - **Difficulty:** Easy / Classic / Hard. Easy stretches hunger and happiness timers, call and discipline deadlines and the healthy timer by 1.5×; Hard shrinks them to 0.75×.
+  - **No Deaths:** its life never ends. Old age just stays old; an empty meter too long makes it sick instead; untreated sickness and a 3rd sickness don't lead to an ending.
+
+Decided against: a clock offset (pause now freezes its life without shifting the clock, which covers most of that need).
 
 ## 18. Ideas for later (not active)
 
@@ -356,6 +374,5 @@ Options the classic never had, behind the cog and ⋯ buttons. This is a list of
 
 ## 19. Still to design
 
-Everything above is confirmed as the baseline. Still open:
+Everything above is confirmed as the baseline. Nothing is open right now.
 
-1. The settings and ⋯ menu (§17), including what "no deaths" does instead of an ending and how difficulty scales.

@@ -28,12 +28,20 @@ struct TamaGalleryView: View {
     @State private var nearbyLink = NearbyLinkSession()
     @State private var showingNearbyLink = false
     @State private var showingNewStarConfirm = false
+    @State private var showingTomomixSettings = false
 
     /// Ambient Background is a premium feature — forced off for free users
     /// regardless of their own stored preference, which is left untouched
     /// so it springs back on the moment they unlock Premium.
     private var effectiveAmbientBackgroundEnabled: Bool {
         ambientBackgroundEnabled && purchases.isPremium
+    }
+
+    /// Whether the page on screen gets a full-bleed background: always for
+    /// Tomomix (its sky is included free, for everyone), otherwise the
+    /// Premium Ambient Background setting.
+    private var ambientActive: Bool {
+        selectedTomomix != nil || effectiveAmbientBackgroundEnabled
     }
 
     /// First Tama is always free; anything past that needs Premium.
@@ -85,23 +93,11 @@ struct TamaGalleryView: View {
     var body: some View {
         Group {
             if gallery.ownedDevices.isEmpty {
-                NavigationStack {
-                    FirmwareImportView(devices: DeviceCatalog.all()) { device, _ in
-                        gallery.deviceImported(device)
-                    }
-                    .navigationTitle("TamaEmu")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        // No ROM needed for the built-in pet.
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button {
-                                gallery.addTomomix()
-                            } label: {
-                                Label("Play Tomomix", systemImage: "sparkles")
-                            }
-                        }
-                    }
-                }
+                // No pets at all: start the built-in one, or bring a ROM.
+                WelcomeView(
+                    onStartTomomix: { gallery.addTomomix() },
+                    onImported: { gallery.deviceImported($0) }
+                )
             } else {
                 galleryStack
             }
@@ -162,7 +158,7 @@ struct TamaGalleryView: View {
                 ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
             )
         case .tomomix:
-            TomomixPageView(model: gallery.tomomixViewModel())
+            TomomixPageView(model: gallery.tomomixViewModel(), ambientBackgroundEnabled: true)
         }
     }
 
@@ -368,6 +364,11 @@ struct TamaGalleryView: View {
                     if model.brain.phase == .departed { model.newStar() } else { showingNewStarConfirm = true }
                 } label: {
                     Label("Send a New Shooting Star", systemImage: "moon.stars")
+                }
+                Button {
+                    showingTomomixSettings = true
+                } label: {
+                    Label("Tomomix Settings", systemImage: "gearshape")
                 }
                 Button {
                     requestAddTama()
@@ -670,6 +671,9 @@ struct TamaGalleryView: View {
                 .sheet(isPresented: $gallery.showingReorder) {
                     ReorderTamasView(gallery: gallery)
                 }
+                .sheet(isPresented: $showingTomomixSettings) {
+                    TomomixSettingsView(model: gallery.tomomixViewModel())
+                }
                 .confirmationDialog(
                     "Send a new shooting star?",
                     isPresented: $showingNewStarConfirm,
@@ -727,15 +731,20 @@ struct TamaGalleryView: View {
             }
             .tabViewStyle(.page)
             .indexViewStyle(.page(backgroundDisplayMode: .never))
-            .scrollContentBackground(effectiveAmbientBackgroundEnabled ? .hidden : .visible)
+            .scrollContentBackground(ambientActive ? .hidden : .visible)
             .background {
-                if effectiveAmbientBackgroundEnabled {
+                if ambientActive {
                     // Its own view on purpose: reading `lcdImage` right
                     // here made this whole gallery body — toolbar and the
                     // open ⋯ menu included — rebuild on every LCD frame
                     // change, which is what made the menu pulse and drop
                     // taps while the Tama was animating.
-                    LiveAmbientBackground(viewModel: selectedViewModel)
+                    if let model = selectedTomomix {
+                        // Tomomix: its own sky, edge to edge.
+                        TomoAmbientSky(model: model)
+                    } else {
+                        LiveAmbientBackground(viewModel: selectedViewModel)
+                    }
                 }
             }
             // Shows while recording regardless of which page is visible —
@@ -750,7 +759,7 @@ struct TamaGalleryView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(effectiveAmbientBackgroundEnabled ? .hidden : .automatic, for: .navigationBar)
+            .toolbarBackground(ambientActive ? .hidden : .automatic, for: .navigationBar)
             // Attached once here, to the gallery's single NavigationStack,
             // rather than per-page in TamaPageView — see that view's doc
             // comment for why a per-page toolbar could show up twice.
@@ -788,6 +797,34 @@ private struct LiveAmbientBackground: View {
 
     var body: some View {
         BlurredLCDBackground(image: viewModel?.lcdImage)
+    }
+}
+
+/// The tomomix's Ambient Background: the same sky as its window and
+/// outdoors (time of day, or the starry night), filling the whole phone
+/// screen, toned down for dark mode and lifted for light mode.
+private struct TomoAmbientSky: View {
+    let model: TomomixViewModel
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 15, paused: model.paused)) { timeline in
+            let now = model.frozenAt ?? timeline.date
+            let brain = model.brain
+            // Night for the birth, the ending, and the light off.
+            let lit = brain.phase == .alive && !model.waitingForStar && brain.lightsOn
+            ZStack {
+                TomoSky(simNow: model.simTime(at: now), lightsOn: lit)
+                if scheme == .dark {
+                    Color.black.opacity(0.45)
+                } else {
+                    // A screen blend lifts the dark parts and leaves light ones alone.
+                    Color.white.opacity(0.5).blendMode(.screen)
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 

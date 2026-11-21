@@ -41,14 +41,12 @@ Every living character (Baby through all adults) uses this set. **Core** poses a
 | `refuse` | 1 | Turning away food or a game; also mad, angry, upset | ✅ | — |
 | `happy` | 1 | After a snack, a good game, a cure, a clean (app bounces it) | ✅ | — |
 | `sick` | 1 | Sick (app adds the skull); also sad | ✅ | — |
-| `look` | 1 | Follow Me game: looking to its left | ✅ | — |
-| `look-right` | 1 | Follow Me game: looking to its right | ✅ | `look`, flipped |
+| `look` | 1 | Looking to its left: while walking left (glancing back at the player about 1 step in 4), and in the Follow Me game | ✅ | — |
+| `look-right` | 1 | Looking to its right: while walking right, and in the Follow Me game | ✅ | `look`, flipped |
 | `sleep` | 1 | Asleep (app adds Zzz) | | `eat-1` |
 | `blink` | 1 | Random blinks while idle | | `idle-1` |
 | `sad` | 1 | A failed game, an empty meter | | `sick` |
 | `call` | 1 | Calling for attention | | `sad` → `sick` |
-| `pout` | 1 | Misbehaving | | `refuse` |
-| `scolded` | 1 | Being disciplined | | `refuse` |
 
 **Per character: 7 core drawings** (`idle-1`, `eat-1`, `eat-2`, `refuse`, `happy`, `sick`, `look`), plus `look-right` for characters that shouldn't be flipped. Everything else is optional.
 
@@ -59,21 +57,25 @@ The character is **never flipped while walking**, since some characters aren't s
 | Moment | What happens | Length | Skippable |
 |---|---|---|---|
 | Idle | `idle` frames alternate; it **hops** one step every half second (a full second when sick) toward a random spot on the rug, sideways and slightly forward or back, waits, then picks another. No smooth sliding, for a retro feel. When happiness is **above half** it sometimes jumps while waiting: `happy` pose, up for one beat, then a smile on the ground (about every 13 s at 3 hearts, 7 s at 4). | loops | — |
-| Meal / snack | Food appears beside it, then `eat` × bites while the food shrinks (§5 props) | ~0.5 s per bite | ✅ |
+| Tapped | Only when it's doing fine: `happy` pose, a stepped hop right where it stands (up, half way, landed) | 0.6 s | ✅ |
+| Meal / snack | Food appears on its left, then `eat` × bites while the food shrinks (§5 props) | ~0.5 s per bite | ✅ |
 | Refuse | `refuse` with a side-to-side shake | 1 s | ✅ |
 | Happy | `happy` with a bounce, hearts float up | 1.5 s | ✅ |
 | Sad | `sad`, a sweat drop | 1.5 s | ✅ |
-| Medicine | Medicine prop approaches; `happy` if cured, `sick` if it needs another dose | 1.5 s | ✅ |
-| Clean | The cleaning prop sweeps across and takes the poop away | 1.5 s | ✅ |
+| Medicine | "Sana sana, culito de rana": the healing frog pops out of the window's lower-right pane in 2 steps (from the left edge outdoors), grows to adult-tomomix size and makes 3 stepped hops over (0.45–1.65 s), turns its back and toots: the cloud glides smoothly out of its back to the right, onto the face (1.8–2.9 s, toot sound) — the tomomix makes its `refuse` face — then hops home. Cured: magic + happy chimes, `happy` hops and sparkles; another dose needed: stays `sick` | 4.2 s | ✅ |
+| Clean | The swoosh sweeps across the whole screen (easing in and out); the poop sticks to it as it passes and rides it off the right edge | 1.5 s | ✅ |
+| Cleaned up | Only if there was poop: right after the swoosh, it hops for joy a few times (the Happy moment) with the happy chime | 1.5 s | ✅ |
 | Poop appears | Poop drops in beside it | 1 s | ✅ |
-| Scold | Scold effect, then `scolded` | 1.5 s | ✅ |
-| Misbehaving | `pout` with an angry mark, until disciplined or the 14 minutes pass | loops | — |
+| Scold | No effect: upset (`refuse`, quick shake, 0–0.7 s), crying (`sad`, smaller shake, to 1.5 s), then it accepts it (`happy` with a hop) | 2.3 s | ✅ |
+| Misbehaving | Nothing changes (as on the classic toy): only the attention icon lights up | — | ✅ |
+| Scolded for nothing | `sad` face with the confused squiggle (`tomo-confused-1`, `-2`, `-2-1`) turning where the spiral goes | 2 s | ✅ |
+| Medicine when not sick | The `refuse` "no", like refusing food | 1 s | ✅ |
 | Calling | `call` while the attention icon is lit | loops | — |
 | Falling asleep / waking | The light dims, `sleep` with Zzz / the reverse | 1 s | ✅ |
 | Sick | `sick` with the skull, while sick | loops | — |
 | Follow Me: showing | `look` (mirrored for right) with the direction's beep | 0.55 s each | ❌ gameplay |
 | Follow Me: result | `happy` (Perfect/Good/OK) or `sad` (Fail) with a result badge | until tapped | ✅ |
-| Evolving | Flash, sparkles circle it, it turns into a silhouette and then the new character | 3 s | ✅ |
+| Evolving | Like the birth: it hops up, the burst (`tomo-evolution`) grows while the screen fades to white, and the new character, happy, appears as the white fades (hop 0–0.6 s, white by 1.5 s, clear by 2.4 s) | 3 s | ✅ |
 | Old | Same poses; the app makes it move a little slower | — | — |
 
 ## 5. Shared art (not per character)
@@ -82,21 +84,18 @@ The character is **never flipped while walking**, since some characters aren't s
 
 | Item | Frames | Used in |
 |---|---|---|
-| `tomo-meal` | 3: whole, half, crumbs | Meal |
-| `tomo-snack` | 3: whole, half, crumbs | Snack |
-| `tomo-poop-small` | 2 (a wiggle) | Poop 1–4 (§10) |
-| `tomo-poop-big` | 2 (a wiggle) | Poop 5–8 (§10) |
-| `tomo-clean` | 1–2 | The cleaning sweep |
-| `tomo-medicine` | 1 | Medicine |
-| `tomo-skull` | 1 | Sick marker |
-| `tomo-zzz` | 3 (growing) | Asleep |
+| `tomo-meal` | 3: whole, half, crumbs | Meal ✅. Shown at about 44% of the character's size, on its left. Frame 1 is also the food menu choice (drawing only, no words) |
+| `tomo-snack` | 3: whole, half, crumbs | Snack ✅ |
+| `tomo-poop-small` | 1 | Poop 1–4 (§10) ✅, on four floor spots mirrored left/right (screen 72.96%/27.04% × 80.6%, then 90.4%/9.6% × 73.1%), filling right to left, drawn in front of the tomo and food. One drawing with its smell waves: the import script lifts out each wave (any shape more than ~2× taller than wide) and the app flips each one left-right about once a second, out of step |
+| `tomo-poop-big` | 1 | Poop 5–8 (§10) ✅, same as the small one |
+| `tomo-swoosh` | 1 | The cleaning wipe: a tall band of stars (481 × 1075), covering the full screen height; each sparkle twinkles on its own ✅ |
+| `tomo-healing` | 1 | The healing frog. The import script splits it into `tomo-healing-frog` and `tomo-healing-cloud` (shapes right of x = 295), same 512 canvas |
+| `tomo-sick` | 3 | Sick ✅: the scribble ball churns through its 3 drawings (0.22 s each), top-right of its head. While sick it stands still in the middle with its `sick` face |
+| `tomo-needy` | 3 | Needs care (calling) ✅: the dizzy spiral turns through its 3 drawings, top-right of its head, following it as it walks. Replaces `tomo-call` |
+| `tomo-zzz` | 1 | Asleep ✅. One drawing; the import script makes each letter its own layer (in Figma layer order) and the app shows them one after another (0.6 s apart), holds, clears, repeats every 3 s |
 | `tomo-heart` | 1 | Happy (floats up) |
-| `tomo-sweat` | 1 | Sad |
-| `tomo-anger` | 1 | Misbehaving |
-| `tomo-call` | 1 | Calling for attention (over its head) |
-| `tomo-scold` | 1 | Scold effect |
 | `tomo-sparkle` | 1–2 | Evolving, cured |
-| `tomo-thought` | 1 | Thought bubble when a meter has one step left (holds `tomo-meal-1` and/or `tomo-snack-1`) |
+| `tomo-thought` | 1 | Thought bubble ✅ when a meter has one step left, top-right of its head with the trailing puffs toward it. Holds `tomo-meal-1` or `tomo-snack-1`, centered in the cloud (y = 112 of 256); wanting both, it blinks between them every 0.8 s |
 | `tomo-badge-perfect`, `-good`, `-ok`, `-fail` | 1 each | Follow Me results |
 
 ### Scenes
@@ -104,13 +103,13 @@ The character is **never flipped while walking**, since some characters aren't s
 | Item | Frames | Used in |
 |---|---|---|
 | `tomo-room` | 1 | The whole screen: a 596 × 596 square room, edge to edge. The icons float on top. The window is cut out so the sky shows through. The tomomix stands on the rug (feet at y = 415, the middle of the rug) and walks across it. |
-| `tomo-sky-morning`, `-day`, `-evening`, `-night` | 1 each | Behind the room, seen through the window. Same square size. Follows the phone's clock (morning 6–10, day 10–17, evening 17–20, night otherwise); night while the light is off. |
-| `tomo-bg-night-sky` | 1 | Birth and ending sky |
+| `tomo-outdoors` | 1 | Outdoors (B button): the meadow, same 596 square, with a transparent sky so the time-of-day sky shows behind it. Pale on purpose so the tomomix pops. It lines up with the room, so the tomomix stands exactly where it does indoors (feet at y = 415). Poop stays in the room and isn't shown outside. At night the top row of icons turns light over the dark sky. |
+| `tomo-outdoors-birth` | 1 | Birth steps 3–4: the same meadow in stronger colors, over the night sky. The fallen star rests at y = 367, just below the top of the grass. |
+| `tomo-sky-morning`, `-day`, `-evening`, `-night` | 1 each | Behind the room's window and the whole outdoors. Same square size. Follows the phone's clock (morning 6–10, day 10–17, evening 17–20, night otherwise); night while the light is off. Until drawn, soft gradients stand in; night uses the starry night below. |
+| `tomo-starrynight` | 1 | The night sky: birth, ending, and the night window/outdoors. The import script reads each star (position, size, color) and the background color out of it, and the app fades every star in and out on its own slow pace (5–11 s). Just add or move dots in Figma and re-export. |
 | `tomo-twinkle` | 2 | Small stars twinkling in the night sky |
-| `tomo-shooting-star` | 1 | Birth step 2: star with its trail crossing the sky |
-| `tomo-star-falling` | 1 | Birth step 3: close-up of the star coming down |
-| `tomo-ground` | 1 | Birth step 3–4: the ground it lands on |
-| `tomo-star-fallen` | 1–2 | Birth step 4: the star on the ground (the app adds the speeding-up pulse and glow) |
+| `tomo-shootingstar` | 1 | Exported as a 596 square on the night color. The import script cuts it into **`tomo-shooting-star`** (star + curved trail, no background) and **`tomo-star-fallen`** (the 4-point star alone). The shooting star crosses the sky (flipped for stars going left), then falls head-first onto the meadow with its trail above it. The star alone waits at the top during "Your name?" and pulses on the grass |
+| `tomo-ground` | 1 | Not needed any more: only a fallback if `tomo-outdoors-birth` is missing |
 | `tomo-burst` | 1–2 | Birth step 5: the burst of light |
 | `tomo-star-fixed` | 1–2 | Ending: the fixed star (the app twinkles it; the departed character is its own `idle-1`, faded) |
 
@@ -118,8 +117,8 @@ The character is **never flipped while walking**, since some characters aren't s
 
 | Step | Length | Skippable |
 |---|---|---|
-| 1. Night sky | 1.5 s | ✅ |
-| 2. Shooting star crosses | 2 s | ✅ |
+| 1. Night sky with shooting stars | Until the player catches one (one passes every 3.2 s, each crossing in 1.6 s) | — |
+| 2. Caught star glides to the top, "Your name?" | 0.6 s glide, then waits for the answer (first time only) | — |
 | 3. Close-up: falls to the ground | 1.5 s | ✅ |
 | 4. Pulses, slow to fast | **30 s** (rulebook §3) | ❌ real wait |
 | 5. Burst, Baby appears | 1.5 s | ✅ |
@@ -129,9 +128,10 @@ The character is **never flipped while walking**, since some characters aren't s
 
 | Item | Notes |
 |---|---|
-| 8 care icons: `tomo-icon-food`, `-light`, `-game`, `-medicine`, `-clean`, `-status`, `-discipline`, `-attention` | One drawing each. The app dims and lights them. |
+| 8 care icons ✅ | `01-food.svg` … `08-attention.svg` in the assets folder (one color, 256 square). The import script makes them `tomo-icon-*` for Tomomix and the P1/P2 screen's `P1Icon*` defaults, cropped to the middle 128. The app tints them (dim/lit, dark/light). |
 | Status icons: `tomo-meter-hunger` (stomach), `tomo-meter-happy` (heart or smiley), `tomo-meter-discipline` (brain) | §15 |
-| Light menu: `tomo-light-on`, `tomo-light-off` | Food choices reuse `tomo-meal` and `tomo-snack`. |
+| Game arrows: `tomo-arrow` ✅ | Drawn pointing left; mirrored for the right side. |
+| Light menu ✅: `tomo-light-on`, `tomo-light-off` (full color) — no words | Food choices reuse `tomo-meal` and `tomo-snack`. |
 
 ## 6. Checklist
 
@@ -162,3 +162,22 @@ Character names for file names: `baby`, `child-good`, `child-bad`, `teen-excelle
 3. **Children and teens** (5 characters).
 4. **Adults**, one tier at a time.
 5. Interface icons, last: the placeholders work fine in the meantime.
+
+
+## Chimes
+
+Placeholder square-wave sounds (the app's own synth), each easy to retune:
+
+| Chime | When |
+|---|---|
+| Happy (ding-ding-diiing, rising) | After cleaning poop, a perfect game (with happy hops), and the hop after a cure |
+| Okay (two plain notes) | A game that won some happiness but wasn't perfect (it just smiles) |
+| Sad (wah-wah-wahhh, falling) | A failed game (no happiness won) |
+| Scary (low dun-dun-dunnn with a wobble) | Scolding |
+| Farewell (the sad chime, slower and lower) | Its ending |
+| Magic (quick sparkling run up) | Just after the frog's toot, when it cures (then the happy chime) |
+| Toot (low wobbly pfrrrt) | The healing frog's toot |
+
+## Status screen
+
+Name big at the top center; three meters with your icons (`tomo-meter-hunger`, `-happy`, `-discipline`, 90 square); weight and age together at the bottom center ("14 kg, 3 years old"). Hunger and happiness steps each keep their own color, left to right: red `#EC4646`, orange `#FFA322`, yellow `#FFEA60`, green `#7BC188` (a full bar shows all four). Discipline (10 steps) is always `#5989A3`.

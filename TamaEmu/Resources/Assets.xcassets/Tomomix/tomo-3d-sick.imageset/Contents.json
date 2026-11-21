@@ -1,0 +1,15 @@
+{
+  "images": [
+    {
+      "filename": "tomo-3d-sick.svg",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
+  "properties": {
+    "preserves-vector-representation": true
+  }
+}

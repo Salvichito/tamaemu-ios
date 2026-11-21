@@ -38,8 +38,11 @@ statically-linked package under the same GPLv3 terms:
 
 ## Bundled artwork
 
-The menu icons on the P1-era screen
-([`TamaEmu/Resources/Assets.xcassets/P1Icon*.imageset`](TamaEmu/Resources/Assets.xcassets/))
+The eight main menu icons on the P1-era screen (food, light, game, medicine,
+bathroom, status, training, attention) are original drawings made for TamaEmu.
+The other menu icons used by other first-gen models
+([`P1IconAffection`, `P1IconBattle`, `P1IconCall`, `P1IconHappiness`, `P1IconPraise`,
+`P1IconPredator`, `P1IconRehearsal`](TamaEmu/Resources/Assets.xcassets/))
 are from [Tabler Icons](https://github.com/tabler/tabler-icons) (filled set),
 Copyright (c) 2020-2024 Paweł Kuna, used under the MIT License:
 
