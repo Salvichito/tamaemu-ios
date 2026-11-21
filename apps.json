@@ -11,8 +11,16 @@
       "localizedDescription": "An iOS emulator for Tamagotchi-family devices. Does not include any firmware/ROM — bring your own.",
       "iconURL": "https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps-icon.png",
       "tintColor": "FF6FA5",
-      "size": 6719346,
+      "size": 25183836,
       "versions": [
+        {
+          "version": "1.5",
+          "date": "2026-11-21T00:00:00Z",
+          "localizedDescription": "Meet Tomomix, an original virtual pet built into the app: free, no ROM needed. Catch a shooting star, name your baby and raise it through 19 characters, with care icons, a memory game, a room and a meadow under the real sky, notifications, a retro screen option, and free screenshots and video. Also: per-model icons for first-generation Tamas, lit care buttons for the Yasashii and a new app icon. Everything is unlocked in this build.",
+          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.5/TamaEmu.ipa",
+          "size": 25183836,
+          "minOSVersion": "18.0"
+        },
         {
           "version": "1.4",
           "date": "2026-11-16T00:00:00Z",
