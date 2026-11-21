@@ -95,8 +95,7 @@ final class PurchaseManager {
         // building that IPA:
         //   SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) SIDELOAD'
         setPremium(true)
-        return
-        #endif
+        #else
         #if DEBUG
         // Debug builds only (compiled out of Release): lets a Simulator
         // run, which has no StoreKit purchase to restore, show the Premium
@@ -115,6 +114,7 @@ final class PurchaseManager {
             }
         }
         setPremium(false)
+        #endif
     }
 
     /// Mirrors the flag into the App Group suite and kicks both widgets to

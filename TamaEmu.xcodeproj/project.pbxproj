@@ -22,7 +22,6 @@
 		344D1C96652FA73744DB0B24 /* SelectTamaIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */; };
 		34FFC4BF7D11F08E57C2F917 /* TranslationBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C882B35EC13DBF00890164 /* TranslationBubble.swift */; };
 		376943024E12FD504C0B1EA9 /* T7EmuCore in Frameworks */ = {isa = PBXBuildFile; productRef = 25705C1AFE21BBBE608456B1 /* T7EmuCore */; };
-		435413A9EAF49D46B2449EC1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */; };
 		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		4CF56E64D9B116A97407FC59 /* CGImage+GlowColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */; };
@@ -68,6 +67,7 @@
 		D9115EAC767B490EB90DB299 /* ScreenRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */; };
 		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
 		DBDEB5A1D000D35A0A87316E /* T7EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51134BD9CBB7FA2AC0B5BD6C /* T7EmulatorEngine.swift */; };
+		E313A904940FD4FD31FC386B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 229AB57C64B25F1A07269DE4 /* Assets.xcassets */; };
 		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
 		E49CB9524210D840D9C46A28 /* LinkPort.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73A464D9A5B4C551857E6F9 /* LinkPort.swift */; };
 		E5D2CFE353E438AD0044C19B /* TomomixBrain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A448D14ED86EC103F74C83 /* TomomixBrain.swift */; };
@@ -119,6 +119,7 @@
 		1C63D64753E1BC27372B9076 /* TomomixRules.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TomomixRules.swift; sourceTree = "<group>"; };
 		1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TamaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2267519E09184C139C7BAC4C /* ButtonPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonPad.swift; sourceTree = "<group>"; };
+		229AB57C64B25F1A07269DE4 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		22A448D14ED86EC103F74C83 /* TomomixBrain.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TomomixBrain.swift; sourceTree = "<group>"; };
 		291654CFB51D6F793B885E33 /* GalleryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryViewModel.swift; sourceTree = "<group>"; };
 		2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaWidget.entitlements; sourceTree = "<group>"; };
@@ -227,6 +228,7 @@
 				42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */,
 				04981D1305DB4733ACBC657E /* Info.plist */,
 				2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */,
+				229AB57C64B25F1A07269DE4 /* Assets.xcassets */,
 			);
 			path = TamaWidget;
 			sourceTree = "<group>";
@@ -447,7 +449,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				435413A9EAF49D46B2449EC1 /* Assets.xcassets in Resources */,
+				E313A904940FD4FD31FC386B /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
