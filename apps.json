@@ -1,15 +1,15 @@
 {
-  "name": "TamaEmu",
+  "name": "Tomomix",
   "identifier": "com.fluorescente.TamaEmu.source",
-  "sourceURL": "https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps.json",
+  "sourceURL": "https://raw.githubusercontent.com/Salvichito/tomomix/main/apps.json",
   "apps": [
     {
-      "name": "TamaEmu",
+      "name": "Tomomix: Virtual Pets",
       "bundleIdentifier": "com.fluorescente.TamaEmu",
       "developerName": "fluorescente",
-      "subtitle": "Tamagotchi emulator",
+      "subtitle": "Virtual pets, old and new",
       "localizedDescription": "An iOS emulator for Tamagotchi-family devices. Does not include any firmware/ROM — bring your own.",
-      "iconURL": "https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps-icon.png",
+      "iconURL": "https://raw.githubusercontent.com/Salvichito/tomomix/main/apps-icon.png",
       "tintColor": "FF6FA5",
       "size": 25183836,
       "versions": [
@@ -17,7 +17,7 @@
           "version": "1.5",
           "date": "2026-11-21T00:00:00Z",
           "localizedDescription": "Meet Tomomix, an original virtual pet built into the app: free, no ROM needed. Catch a shooting star, name your baby and raise it through 19 characters, with care icons, a memory game, a room and a meadow under the real sky, notifications, a retro screen option, and free screenshots and video. Also: per-model icons for first-generation Tamas, lit care buttons for the Yasashii and a new app icon. Everything is unlocked in this build.",
-          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.5/TamaEmu.ipa",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.5/TamaEmu.ipa",
           "size": 25183836,
           "minOSVersion": "18.0"
         },
@@ -25,7 +25,7 @@
           "version": "1.4",
           "date": "2026-11-16T00:00:00Z",
           "localizedDescription": "Connect Nearby (Plus Color, iD, iD L, P's), Downloads (DLC) for the color Tamas, more first-generation models, a custom Screen Style for the original Tamagotchi, automatic backups, reworked sound with Respect Silent Mode and Mix/Pause for other audio, much faster play on older devices, and fixed A/B/C buttons on iOS 26. Everything is unlocked in this build.",
-          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.4/TamaEmu.ipa",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.4/TamaEmu.ipa",
           "size": 6719346,
           "minOSVersion": "17.0"
         },
@@ -33,7 +33,7 @@
           "version": "1.3",
           "date": "2026-11-04T00:00:00Z",
           "localizedDescription": "Live translation (reads the LCD's Japanese UI text and shows an English translation, on-device or via your own Gemini/OpenAI/Anthropic API key), plus reduced GPU/CPU work around the live screen for noticeably less heat during normal play.",
-          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.3/TamaEmu.ipa",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.3/TamaEmu.ipa",
           "size": 6351518,
           "minOSVersion": "17.0"
         },
@@ -41,7 +41,7 @@
           "version": "1.2",
           "date": "2026-11-01T00:00:00Z",
           "localizedDescription": "Opt-in reminder notification, an Appearance setting replacing the separate color pickers, Mute toggle removed in favor of the volume slider, button tray polish, and a bolder ambient-mode device label.",
-          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.2/TamaEmu.ipa",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.2/TamaEmu.ipa",
           "size": 6282222,
           "minOSVersion": "17.0"
         },
@@ -49,7 +49,7 @@
           "version": "1.1",
           "date": "2026-11-01T00:00:00Z",
           "localizedDescription": "Multi-Tama swipeable gallery with drag-to-reorder, full-bleed ambient background during play, widget picker fix, perceptual volume curve, and a Plus Color animation/tempo tuning pass.",
-          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.1/TamaEmu.ipa",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.1/TamaEmu.ipa",
           "size": 6279831,
           "minOSVersion": "17.0"
         },
@@ -57,7 +57,7 @@
           "version": "1.0",
           "date": "2026-10-31T00:00:00Z",
           "localizedDescription": "Initial release.",
-          "downloadURL": "https://github.com/Salvichito/tamaemu-ios/releases/download/v1.0/TamaEmu.ipa",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.0/TamaEmu.ipa",
           "size": 6228039,
           "minOSVersion": "17.0"
         }

@@ -1,4 +1,4 @@
-# TamaEmu
+# Tomomix: Virtual Pets
 
 An iOS app that emulates Tamagotchi-family devices, built on the emulator
 core from [maragotchi/tamaemu](https://github.com/maragotchi/tamaemu).
@@ -8,13 +8,13 @@ firmware/ROM. You need to supply your own, obtained legally.
 
 ## Installing
 
-TamaEmu isn't on the App Store (see [NOTICE.md](NOTICE.md) for why) — it's
+Tomomix isn't on the App Store yet (see [NOTICE.md](NOTICE.md) for why) — it's
 distributed as a sideloaded `.ipa` via an AltStore/SideStore source. If you
 already use [AltStore](https://altstore.io) or [SideStore](https://sidestore.io),
 add this source URL:
 
 ```
-https://raw.githubusercontent.com/Salvichito/tamaemu-ios/main/apps.json
+https://raw.githubusercontent.com/Salvichito/tomomix/main/apps.json
 ```
 
 New releases will then show up as updates in the app automatically. If
@@ -33,7 +33,7 @@ local Swift package.
 
 ## License and attribution
 
-TamaEmu is licensed under the GNU GPLv3 — see [LICENSE](LICENSE) and
+Tomomix is licensed under the GNU GPLv3 — see [LICENSE](LICENSE) and
 [NOTICE.md](NOTICE.md) for what that means for this repo, and
 [`Packages/TamaCore/CREDITS.md`](Packages/TamaCore/CREDITS.md) for the
 itemized changes made to the upstream emulator core for this iOS port.
