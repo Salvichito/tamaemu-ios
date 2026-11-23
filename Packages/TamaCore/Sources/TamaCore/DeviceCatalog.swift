@@ -91,16 +91,13 @@ private let t7Devices: [TamaDevice] = [
     TamaDevice(id: "tamagotchi-friends", title: "Tamagotchi Friends", romSize: 768 * 1024, family: .t7),
 ]
 
-/// Temporarily off while the T7 (Tama-Go/Tamagotchi Friends) integration
-/// gets more polish before shipping -- flip back to `true` when it's ready.
-/// Leaving `t7Devices` out of `all()` is enough on its own: `DeviceDetector`
-/// only ever matches against whatever `all()` hands it, so a Tama-Go/Friends
-/// `.bin` simply won't match any candidate during import (same as any other
-/// unrecognized file) while every other device keeps working unchanged.
-/// `find(name:)` deliberately still resolves `.t7` ids regardless of this
-/// flag, so the rest of the T7 code (engine, views, save paths) stays fully
-/// intact and compiling, not half-ripped-out.
-private let t7Enabled = false
+/// On since 2026-11-23, after a play-test pass fixed saving/resuming,
+/// timing and catch-up speed (see Packages/T7EmuCore/CREDITS.md). Kept
+/// as a switch: setting it to `false` hides Tama-Go/Friends from import
+/// again (`DeviceDetector` only matches against `all()`), while
+/// `find(name:)` still resolves `.t7` ids, so the rest of the T7 code
+/// stays intact and compiling.
+private let t7Enabled = true
 
 public enum DeviceCatalog {
     /// The built-in pet. Not part of `all()`, which lists devices a ROM
