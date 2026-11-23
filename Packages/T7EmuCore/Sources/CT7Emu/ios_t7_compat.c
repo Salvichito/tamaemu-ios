@@ -172,10 +172,15 @@ unsigned int figure_rom_length(void) { return 0; }
 
 /* ----- ios_t7.h entry points ------------------------------------------- */
 
+/* See ios_t7_step_frame. */
+static int64_t s_cycle_debt = 0;   /* cycles run beyond what was owed so far */
+static uint32_t s_frac = 0;        /* 0..59: sixtieths of a cycle owed */
+
 bool ios_t7_start(const uint8_t *romBytes, uint32_t romLen)
 {
   if (!rom_load(romBytes, romLen)) return false;
   memset(s_persist, 0, sizeof(s_persist));
+  s_cycle_debt = 0; s_frac = 0;
   return t7_init();
 }
 
@@ -192,10 +197,23 @@ bool ios_t7_is_friends(void)
 
 static uint64_t s_frame_count = 0;
 
+/* One 60 Hz frame is 66666.67 cycles, and the core may run a few cycles
+ * past what it was asked for (it finishes the instruction). Both leftovers
+ * are carried into the next frame, so 60 frames are exactly T7_CLOCK_RATE
+ * cycles -- the game clock is driven by cycles, so without this it drifted
+ * by a few seconds a day. */
+
 uint32_t ios_t7_step_frame(void)
 {
   s_frame_count++;
-  return t7_step_cycles(T7_CLOCK_RATE / 60);
+  int64_t want = T7_CLOCK_RATE / 60;
+  s_frac += T7_CLOCK_RATE % 60;
+  if (s_frac >= 60) { s_frac -= 60; want++; }
+  want -= s_cycle_debt;
+  if (want < 1) { s_cycle_debt = -want; return 0; }   /* already ran this frame's share */
+  uint32_t spent = t7_step_cycles((uint32_t)want);
+  s_cycle_debt = (int64_t)spent - want;
+  return spent;
 }
 
 void ios_t7_reset(void)

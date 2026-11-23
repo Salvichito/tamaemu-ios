@@ -158,6 +158,8 @@ final class T7EmulatorEngine {
         var nextDeadlineNanos = DispatchTime.now().uptimeNanoseconds + frameNanos
         var pixels = [UInt8](repeating: 0, count: Int(IOS_T7_LCD_WIDTH * IOS_T7_LCD_HEIGHT))
         var icons = [UInt8](repeating: 0, count: Int(IOS_T7_ICON_COUNT))
+        var lastPixels: [UInt8] = []
+        var lastIcons: [UInt8] = []
 
         while true {
             stopLock.lock(); let stop = shouldStop; stopLock.unlock()
@@ -184,10 +186,18 @@ final class T7EmulatorEngine {
                     ios_t7_get_frame(p.baseAddress, i.baseAddress)
                 }
             }
-            let state = T7ScreenState(pixels: pixels, icons: icons)
-            let callback = onFrame
-            DispatchQueue.main.async {
-                callback?(state)
+            // Only hand a frame to the UI when it differs from the last one:
+            // most frames are identical, and each publish redraws the whole
+            // screen bitmap on the main thread (same fix as the color
+            // models' FrameStore).
+            if pixels != lastPixels || icons != lastIcons {
+                lastPixels = pixels
+                lastIcons = icons
+                let state = T7ScreenState(pixels: pixels, icons: icons)
+                let callback = onFrame
+                DispatchQueue.main.async {
+                    callback?(state)
+                }
             }
 
             let nowNanos = DispatchTime.now().uptimeNanoseconds
