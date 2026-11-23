@@ -798,6 +798,11 @@ uint8_t t7_cpu_step(void)
 }
 #endif
 uint8_t t7_dbg_p(void) { return pack_p(); }
+/* iOS port: restore the flags from a P byte. The flags live in the statics
+ * above, not in g_cpu.p (only written at reset), so t7_deserialize_state
+ * alone left them at their reset values -- IRQs masked, game frozen after
+ * every resume. ios_t7_load_state calls this after deserializing. */
+void t7_cpu_set_p(uint8_t p) { unpack_p(p); }
 /* ---- 1.6.9 (test12) battery, taken over from TamaGo-Pebble v0.3.0 (tamago_cpu_idle_skip) ----
  * The Tama-Go main loop waits at $CE66: JSR to 5 seed routines ($D2ED + 8 i: LDA $C4+i, CLC, ADC #k, STA $C4+i, RTS),
  * LDA $2D, BEQ $CE66. Until an interrupt nothing ends it, so whole passes are added up at once: seeds + n k, the

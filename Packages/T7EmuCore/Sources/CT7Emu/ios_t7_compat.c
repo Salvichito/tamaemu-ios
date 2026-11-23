@@ -12,6 +12,7 @@
 #include "t7_eeprom.h"
 #include "t7_sound.h"
 #include "ios_t7.h"
+#include "t7_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -279,14 +280,22 @@ bool ios_t7_eeprom_load(const uint8_t *data, uint32_t len)
   return true;
 }
 
+/* t7_cpu.c keeps the live flags outside g_cpu (see t7_cpu_set_p there):
+ * copy them into g_cpu.p before serializing, and back out after loading. */
+uint8_t t7_dbg_p(void);
+void t7_cpu_set_p(uint8_t p);
+
 uint32_t ios_t7_save_state(uint8_t *out, uint32_t bufsize)
 {
+  if (out && g_initialised) g_cpu.p = t7_dbg_p();
   return t7_serialize_state(out, bufsize);
 }
 
 bool ios_t7_load_state(const uint8_t *data, uint32_t len)
 {
-  return t7_deserialize_state(data, len);
+  if (!t7_deserialize_state(data, len)) return false;
+  t7_cpu_set_p(g_cpu.p);
+  return true;
 }
 
 uint64_t ios_t7_step_count(void)

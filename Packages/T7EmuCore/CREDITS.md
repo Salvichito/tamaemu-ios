@@ -26,8 +26,14 @@ Not vendored, and not needed by this port:
   plugged in" (see `ios_t7_compat.c`) rather than vendoring that file.
 
 As required by the license, every change made to the vendored core files for this port
-would be listed here and marked with an `// iOS port:` comment at the change site — there
-are none; every file under `Sources/CT7Emu/` other than `ios_t7_compat.c` and the new
+is listed here and marked with an `// iOS port:` comment at the change site:
+
+- `t7_cpu.c`: added `t7_cpu_set_p()`, which restores the CPU flags from a status byte.
+  Upstream keeps the live flags in file-private variables and never writes them to
+  `g_cpu.p` except at reset, so a saved-and-restored state came back with interrupts
+  masked and the game frozen. `ios_t7_save_state`/`ios_t7_load_state` use it.
+
+Every other file under `Sources/CT7Emu/` other than `ios_t7_compat.c` and the new
 header `include/ios_t7.h` is byte-for-byte what was vendored, including
 `include/pebble_compat.h`, which turned out to already be a pure declarations-only
 header (no Pebble-specific code in it) describing exactly the small logging/resource/
