@@ -22,6 +22,9 @@ struct TamaGalleryView: View {
     @State private var recordingStartDate: Date?
     @State private var showingPaywall = false
     @State private var showingBackups = false
+    @State private var showingT7SaveImporter = false
+    @State private var showingT7SaveExporter = false
+    @State private var t7ExportURL: URL?
     @State private var showingP1ScreenStyle = false
     /// One connection to another phone at a time, for the whole gallery --
     /// it outlives the sheet that sets it up (see NearbyLinkView).
@@ -432,6 +435,23 @@ struct TamaGalleryView: View {
                 } label: {
                     Label("Backups", systemImage: "clock.arrow.circlepath")
                 }
+                if let device = selectedDevice, device.family == .t7 {
+                    Button {
+                        t7ExportURL = gallery.t7ViewModel(for: device).prepareExportURL()
+                        if t7ExportURL != nil {
+                            showingT7SaveExporter = true
+                        } else {
+                            toast = "There's no save to export yet."
+                        }
+                    } label: {
+                        Label("Export Save…", systemImage: "square.and.arrow.up")
+                    }
+                    Button {
+                        showingT7SaveImporter = true
+                    } label: {
+                        Label("Import Save…", systemImage: "square.and.arrow.down")
+                    }
+                }
                 Button(role: .destructive) {
                     showingDeleteConfirm = true
                 } label: {
@@ -670,6 +690,32 @@ struct TamaGalleryView: View {
                         nearbyLink.end()
                     }
                 }
+                // Tama-Go/Friends save export/import (their ⋯ menu). Kept on
+                // separate background views: two file dialogs on one view
+                // can stop either from presenting.
+                .background(
+                    Color.clear.fileImporter(isPresented: $showingT7SaveImporter, allowedContentTypes: [.data]) { result in
+                        guard let device = selectedDevice, device.family == .t7 else { return }
+                        switch result {
+                        case .success(let url):
+                            do {
+                                try gallery.t7ViewModel(for: device).importSave(from: url)
+                                toast = "Save imported. The save it replaced is in Backups."
+                            } catch {
+                                toast = error.localizedDescription
+                            }
+                        case .failure(let error):
+                            toast = error.localizedDescription
+                        }
+                    }
+                )
+                .background(
+                    Color.clear.fileMover(isPresented: $showingT7SaveExporter, file: t7ExportURL) { result in
+                        if case .failure(let error) = result {
+                            toast = error.localizedDescription
+                        }
+                    }
+                )
                 .sheet(isPresented: $showingBackups) {
                     if let device = selectedDevice, let host = gallery.backupHost(for: device) {
                         NavigationStack {

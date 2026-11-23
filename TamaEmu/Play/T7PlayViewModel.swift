@@ -80,6 +80,67 @@ final class T7PlayViewModel: SaveBackupHost {
         }
     }
 
+    // MARK: - Export / import
+
+    /// A copy of this Tama's save as one file, for the system's "save to
+    /// Files" sheet (never the live files: that sheet moves what it's
+    /// given, see PlayViewModel.prepareExportURL). Stops the engine first
+    /// so the export is current to this moment, then starts it again.
+    func prepareExportURL() -> URL? {
+        let wasRunning = engine != nil
+        if wasRunning { stopEngine() }
+        defer { if wasRunning { startEngine() } }
+        let paths = SavePaths(device: selectedDevice)
+        guard let eeprom = try? Data(contentsOf: paths.t7EepromPath) else { return nil }
+        let state = try? Data(contentsOf: paths.t7StatePath)
+        let file = T7SaveFile.encode(deviceID: selectedDevice.id, eeprom: eeprom, state: state)
+
+        let fm = FileManager.default
+        let folder = fm.temporaryDirectory.appendingPathComponent("SaveExport", isDirectory: true)
+        try? fm.removeItem(at: folder)
+        let stamp = Date().formatted(.iso8601.year().month().day().dateSeparator(.dash))
+        let name = "\(selectedDevice.title) \(stamp)".replacingOccurrences(of: "/", with: "-")
+        let url = folder.appendingPathComponent(name).appendingPathExtension(T7SaveFile.fileExtension)
+        do {
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+            try file.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    /// Replaces this Tama's save with an exported one. The current save is
+    /// backed up first, so an import can be undone from Backups. The Tama
+    /// resumes exactly where the file left it, with no time owed (same as
+    /// restoring a backup).
+    func importSave(from url: URL) throws {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        // Read and check the whole file before touching anything.
+        let save = try T7SaveFile.decode(try Data(contentsOf: url))
+        guard save.deviceID == selectedDevice.id else {
+            let from = DeviceCatalog.find(name: save.deviceID)?.title ?? "another device"
+            throw T7SaveFile.Failure("This save is from \(from), not \(selectedDevice.title).")
+        }
+        // Stopped before writing: stopping saves, and that save would
+        // otherwise land on top of the imported files.
+        stopEngine()
+        defer { startEngine() }
+        let paths = SavePaths(device: selectedDevice)
+        try paths.ensureDirectoriesExist()
+        paths.makeBackup(reason: .beforeImport)
+        try save.eeprom.write(to: paths.t7EepromPath, options: .atomic)
+        if let state = save.state {
+            try state.write(to: paths.t7StatePath, options: .atomic)
+        } else {
+            // A game save on its own: boots fresh from it, like a real toy
+            // after a battery change.
+            try? FileManager.default.removeItem(at: paths.t7StatePath)
+        }
+        paths.markSyncedNow()
+    }
+
     /// See V1PlayViewModel.backupNow().
     func backupNow() {
         guard engine != nil else {
@@ -193,5 +254,71 @@ final class T7PlayViewModel: SaveBackupHost {
                 self.engine = newEngine
             }
         }
+    }
+}
+
+/// The one-file export format for a Tama-Go/Tamagotchi Friends save: the
+/// emulated EEPROM (the game save itself) plus, optionally, the CPU/RAM
+/// snapshot that resumes play mid-moment. Layout (little-endian):
+///   "TAMAT7SV", version (1 byte), device id length (1 byte) + UTF-8 id,
+///   EEPROM length (4 bytes) + bytes, state length (4 bytes, 0 = none) + bytes.
+enum T7SaveFile {
+    static let fileExtension = "t7save"
+    private static let magic = Array("TAMAT7SV".utf8)
+    private static let version: UInt8 = 1
+
+    struct Contents {
+        var deviceID: String
+        var eeprom: Data
+        var state: Data?
+    }
+
+    struct Failure: LocalizedError {
+        let message: String
+        init(_ message: String) { self.message = message }
+        var errorDescription: String? { message }
+    }
+
+    static func encode(deviceID: String, eeprom: Data, state: Data?) -> Data {
+        var out = Data(magic)
+        out.append(version)
+        let id = Data(deviceID.utf8.prefix(255))
+        out.append(UInt8(id.count))
+        out.append(id)
+        func appendLength(_ n: Int) {
+            var v = UInt32(n).littleEndian
+            out.append(Data(bytes: &v, count: 4))
+        }
+        appendLength(eeprom.count)
+        out.append(eeprom)
+        appendLength(state?.count ?? 0)
+        if let state { out.append(state) }
+        return out
+    }
+
+    static func decode(_ data: Data) throws -> Contents {
+        let bytes = [UInt8](data)
+        let notASave = Failure("This isn't a Tama-Go or Tamagotchi Friends save file.")
+        var i = 0
+        func take(_ n: Int) throws -> ArraySlice<UInt8> {
+            guard n >= 0, i + n <= bytes.count else { throw notASave }
+            defer { i += n }
+            return bytes[i..<(i + n)]
+        }
+        func length() throws -> Int {
+            let b = try take(4)
+            return b.reversed().reduce(0) { $0 << 8 | Int($1) }
+        }
+        guard Array(try take(magic.count)) == magic else { throw notASave }
+        guard try take(1).first == version else {
+            throw Failure("This save was made by a newer version of the app.")
+        }
+        let idLength = Int(try take(1).first!)
+        guard let deviceID = String(bytes: try take(idLength), encoding: .utf8) else { throw notASave }
+        let eeprom = Data(try take(try length()))
+        guard !eeprom.isEmpty else { throw notASave }
+        let stateLength = try length()
+        let state = stateLength > 0 ? Data(try take(stateLength)) : nil
+        return Contents(deviceID: deviceID, eeprom: eeprom, state: state)
     }
 }
