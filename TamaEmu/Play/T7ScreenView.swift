@@ -1,23 +1,19 @@
 import CT7Emu
 import SwiftUI
 
-/// The Tama-Go/Tamagotchi Friends screen: a plain dark bezel with the real
-/// 48x31, 4-grayscale-level pixel grid and 10 status icons as generic SF
-/// Symbols. Deliberately simple for now, same starting point P1ScreenView
-/// itself had before real reference artwork/background existed for it
-/// (see that view's own history) -- nothing here is traced from or
-/// matched against real device photos yet, just a functional first pass.
-/// Icon order/meaning is confirmed from T7Emu's own source comment
-/// (t7.c's t7_get_icons), not guessed.
+/// The Tama-Go/Tamagotchi Friends screen, laid out like the real toy's
+/// LCD: the 48x31, 4-gray-level dot-matrix full width in the middle, and
+/// the 10 status icons (generic SF Symbols for now) floating on the same
+/// glass, five above and five below. Icon order is from T7Emu's own source
+/// comment (t7.c's t7_get_icons), not guessed.
 struct T7ScreenView: View {
     let state: T7ScreenState
 
     private static let cornerRadius: CGFloat = 16
-    private static let iconSize: CGFloat = 20
-    private static let bezelColor = Color(red: 0.169, green: 0.165, blue: 0.157)
-    private static let onColor = Color(red: 0.43, green: 0.42, blue: 0.40)
+    private static let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
 
-    /// t7.c's t7_get_icons doc comment, in order.
+    /// t7.c's t7_get_icons doc comment, in order: 0-4 sit above the
+    /// dot-matrix, 5-9 below it, five per row like the real toy.
     private static let iconSymbolNames = [
         "square.grid.2x2", // 0 dashboard
         "fork.knife", // 1 food
@@ -41,31 +37,39 @@ struct T7ScreenView: View {
         .aspectRatio(1, contentMode: .fit)
     }
 
+    /// One LCD, like the real Tama-Go: a single gray glass with the
+    /// dot-matrix running edge to edge across the middle and the ten
+    /// icons printed straight onto it, five above and five below -- no
+    /// bezel or panels between them. Same structure as P1ScreenView.
     private func screenContent(side: CGFloat) -> some View {
-        VStack(spacing: side * 0.03) {
-            iconRow
-            pixelGrid
-                .aspectRatio(CGFloat(IOS_T7_LCD_WIDTH) / CGFloat(IOS_T7_LCD_HEIGHT), contentMode: .fit)
-                .frame(width: side * 0.92)
-        }
-        .padding(side * 0.04)
-        .frame(width: side, height: side)
-        .background(Self.bezelColor)
-        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
-    }
+        let gridHeight = side * CGFloat(IOS_T7_LCD_HEIGHT) / CGFloat(IOS_T7_LCD_WIDTH)
+        let band = (side - gridHeight) / 2
+        let iconSize = band * 0.5
+        return ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.80, green: 0.80, blue: 0.78), Color(red: 0.69, green: 0.69, blue: 0.67)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
-    private var iconRow: some View {
-        HStack(spacing: 0) {
+            pixelGrid
+                .frame(width: side, height: gridHeight)
+
             ForEach(0..<Int(IOS_T7_ICON_COUNT), id: \.self) { i in
+                let column = CGFloat(i % 5)
+                let x = side * (0.1 + column * 0.2)
+                let y = i < 5 ? band / 2 : side - band / 2
                 Image(systemName: Self.iconSymbolNames[i])
                     .resizable()
                     .scaledToFit()
-                    .frame(width: Self.iconSize, height: Self.iconSize)
+                    .frame(width: iconSize, height: iconSize)
                     .foregroundStyle(Self.onColor)
-                    .opacity(state.icons[i] > 0 ? Double(state.icons[i]) / 3.0 * 0.7 + 0.3 : 0.2)
-                    .frame(maxWidth: .infinity)
+                    .opacity(state.icons[i] > 0 ? Double(state.icons[i]) / 3.0 * 0.65 + 0.35 : 0.12)
+                    .position(x: x, y: y)
             }
         }
+        .frame(width: side, height: side)
+        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
     }
 
     private var pixelGrid: some View {
@@ -81,40 +85,32 @@ struct T7ScreenView: View {
 
     private static let cols = Int(IOS_T7_LCD_WIDTH), rows = Int(IOS_T7_LCD_HEIGHT)
     /// Each logical LCD pixel is rendered as an oversample x oversample
-    /// block, with its rightmost/bottommost texel left as background --
-    /// same thin-gap-line trick P1ScreenView uses, so adjacent "on" pixels
-    /// read as separate squares instead of one solid blob.
+    /// block, with its rightmost/bottommost texel left transparent -- the
+    /// same thin gap line P1ScreenView uses.
     private static let oversample = 16
+    /// "Off" pixels are transparent so the LCD glass shows through, as on
+    /// P1. The three "on" levels are the same ink at 1/3, 2/3 and full
+    /// strength -- evenly spaced like the reference tamago palette.
     private func makeBitmapImage() -> CGImage? {
         let scale = Self.oversample
         let w = Self.cols * scale, h = Self.rows * scale
-        // Background "off" color for the LCD itself (not transparent --
-        // unlike P1, there's no decorative artwork behind this yet).
-        let bgR: UInt8 = 150, bgG: UInt8 = 168, bgB: UInt8 = 140
+        let ink = 34.0
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
         for y in 0..<h {
             let localY = y % scale
+            guard localY < scale - 1 else { continue }
             let py = y / scale
             for x in 0..<w {
                 let localX = x % scale
-                let px = x / scale
-                let gap = localY >= scale - 1 || localX >= scale - 1
-                let level = state.pixel(px, py) // 0...3
+                guard localX < scale - 1 else { continue }
+                let level = state.pixel(x / scale, py) // 0...3
+                guard level > 0 else { continue }
+                // Premultiplied alpha, so RGB is scaled by alpha too.
+                let alpha = Double(level) / 3.0 * 0.92
+                let c = UInt8((ink * alpha).rounded())
                 let i = (y * w + x) * 4
-                if gap || level == 0 {
-                    pixels[i] = bgR; pixels[i + 1] = bgG; pixels[i + 2] = bgB; pixels[i + 3] = 255
-                } else {
-                    // Evenly spaced between the LCD background (level 0)
-                    // and near-black (level 3), like the reference tamago
-                    // palette (dd/9e/60/22). The old 50/30/10 mapping put
-                    // all three "on" levels near black, hiding the grays.
-                    let t = Int(level)
-                    let dark = 34
-                    pixels[i] = UInt8((Int(bgR) * (3 - t) + dark * t) / 3)
-                    pixels[i + 1] = UInt8((Int(bgG) * (3 - t) + dark * t) / 3)
-                    pixels[i + 2] = UInt8((Int(bgB) * (3 - t) + dark * t) / 3)
-                    pixels[i + 3] = 255
-                }
+                pixels[i] = c; pixels[i + 1] = c; pixels[i + 2] = c
+                pixels[i + 3] = UInt8((alpha * 255).rounded())
             }
         }
         let colorSpace = CGColorSpaceCreateDeviceRGB()
