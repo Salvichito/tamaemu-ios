@@ -60,7 +60,7 @@ img { max-width: 100%; display: block; }
 
 /* hero */
 .hero, .page-head {
-  background: var(--brand) url("img/pattern.svg") center top / 1100px auto repeat;
+  background: var(--brand) url("img/pattern.svg") center top / 713px 713px repeat;
   color: var(--hero-text);
   padding-bottom: 56px;
 }
