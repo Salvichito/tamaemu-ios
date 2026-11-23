@@ -22,7 +22,7 @@ enum ReminderNotificationScheduler {
         guard AppSettings.reminderNotificationsEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = "Check on your Tama"
-        content.body = "It's been a while since you last opened TamaEmu."
+        content.body = "It's been a while since you last opened Tomomix."
         content.sound = .default
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: AppSettings.reminderIntervalHours * 3600,

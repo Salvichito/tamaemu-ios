@@ -17,7 +17,7 @@ struct WelcomeView: View {
             VStack(spacing: 18) {
                 Spacer(minLength: 20)
                 VStack(spacing: 8) {
-                    Text("TamaEmu")
+                    Text("Tomomix")
                         .font(.system(size: 40, weight: .heavy, design: .rounded))
                     Text("Make a choice")
                         .font(.headline)

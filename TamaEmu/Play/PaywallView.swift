@@ -50,7 +50,7 @@ struct PaywallView: View {
                     }
                 }
             }
-            .navigationTitle("TamaEmu Premium")
+            .navigationTitle("Tomomix Premium")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

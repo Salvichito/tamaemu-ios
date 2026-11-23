@@ -193,7 +193,7 @@ struct TamaGalleryView: View {
         let uiImage = UIImage(cgImage: cgImage)
         requestPhotoAddAccess { granted in
             guard granted else {
-                toast = "TamaEmu needs permission to add photos. Enable it in Settings."
+                toast = "Tomomix needs permission to add photos. Enable it in Settings."
                 return
             }
             PHPhotoLibrary.shared().performChanges({
@@ -247,7 +247,7 @@ struct TamaGalleryView: View {
     private func saveVideo(at url: URL) {
         requestPhotoAddAccess { granted in
             guard granted else {
-                toast = "TamaEmu needs permission to add photos. Enable it in Settings."
+                toast = "Tomomix needs permission to add photos. Enable it in Settings."
                 try? FileManager.default.removeItem(at: url)
                 return
             }

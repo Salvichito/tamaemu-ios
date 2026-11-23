@@ -411,7 +411,7 @@ struct BackupListView: View {
                     reload()
                 }
             } footer: {
-                Text("TamaEmu keeps a backup of \(device.title) automatically, about once an hour while you play, and before anything that replaces its save. The 3 most recent are kept, plus one per day for the last week.")
+                Text("Tomomix keeps a backup of \(device.title) automatically, about once an hour while you play, and before anything that replaces its save. The 3 most recent are kept, plus one per day for the last week.")
             }
 
             Section {

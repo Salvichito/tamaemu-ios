@@ -137,7 +137,7 @@ struct NearbyLinkView: View {
         ContentUnavailableView {
             Label("Not connected", systemImage: "antenna.radiowaves.left.and.right.slash")
         } description: {
-            Text(session.notice ?? "Look for another TamaEmu player nearby.")
+            Text(session.notice ?? "Look for another Tomomix player nearby.")
         } actions: {
             Button("Look Again") { search() }
                 .buttonStyle(.borderedProminent)

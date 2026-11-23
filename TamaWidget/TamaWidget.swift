@@ -6,7 +6,7 @@ struct TamaWidget: Widget {
         AppIntentConfiguration(kind: WidgetSharedState.widgetKind, intent: SelectTamaIntent.self, provider: TamaProvider()) { entry in
             TamaWidgetView(entry: entry)
         }
-        .configurationDisplayName("TamaEmu")
+        .configurationDisplayName("Tomomix")
         .description("Shows one of your Tamagotchis. Long-press to choose which.")
         .supportedFamilies([.systemSmall])
         // Without this, WidgetKit insets our content with its own system

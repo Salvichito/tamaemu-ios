@@ -118,8 +118,8 @@ struct TamaNeglectWidget: Widget {
         StaticConfiguration(kind: WidgetSharedState.neglectWidgetKind, provider: TamaNeglectProvider()) { entry in
             TamaNeglectWidgetView(entry: entry)
         }
-        .configurationDisplayName("TamaEmu")
-        .description("Shows how long it's been since you last opened TamaEmu.")
+        .configurationDisplayName("Tomomix")
+        .description("Shows how long it's been since you last opened Tomomix.")
         .supportedFamilies([.accessoryCircular])
     }
 }

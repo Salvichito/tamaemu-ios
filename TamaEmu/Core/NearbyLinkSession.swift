@@ -322,7 +322,7 @@ extension NearbyLinkSession: MCNearbyServiceBrowserDelegate {
     nonisolated func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
         Task { @MainActor in
             guard browser === self.browser else { return }
-            self.didFail("Couldn't look for nearby phones. Check that Local Network access is allowed for TamaEmu in Settings.")
+            self.didFail("Couldn't look for nearby phones. Check that Local Network access is allowed for Tomomix in Settings.")
         }
     }
 }
@@ -341,7 +341,7 @@ extension NearbyLinkSession: MCNearbyServiceAdvertiserDelegate {
     nonisolated func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: Error) {
         Task { @MainActor in
             guard advertiser === self.advertiser else { return }
-            self.didFail("Couldn't make this phone visible to others nearby. Check that Local Network access is allowed for TamaEmu in Settings.")
+            self.didFail("Couldn't make this phone visible to others nearby. Check that Local Network access is allowed for Tomomix in Settings.")
         }
     }
 }
