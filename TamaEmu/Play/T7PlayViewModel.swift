@@ -69,6 +69,7 @@ final class T7PlayViewModel: SaveBackupHost {
         if let eeprom = engine.saveEeprom() {
             try? eeprom.write(to: paths.t7EepromPath, options: .atomic)
         }
+        engine.release()
         // See PlayViewModel.stopEngine(): at most hourly, and still inside
         // the gate.
         paths.makeBackup(reason: .automatic)

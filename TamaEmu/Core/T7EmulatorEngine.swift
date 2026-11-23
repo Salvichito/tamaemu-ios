@@ -142,6 +142,14 @@ final class T7EmulatorEngine {
         thread = nil
         stoppedSemaphore.wait()
         audioOutput.stop()
+        // The core is NOT shut down here: saveState()/saveEeprom() still
+        // need it alive (t7_serialize_state returns 0 once released, which
+        // silently dropped every save and made each resume a cold boot).
+        // Call release() after saving.
+    }
+
+    /// Shuts the core down. Call after stop() and after saving.
+    func release() {
         ios_t7_stop()
     }
 

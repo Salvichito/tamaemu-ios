@@ -104,10 +104,16 @@ struct T7ScreenView: View {
                 if gap || level == 0 {
                     pixels[i] = bgR; pixels[i + 1] = bgG; pixels[i + 2] = bgB; pixels[i + 3] = 255
                 } else {
-                    // Darker as the level rises, matching a 4-level
-                    // grayscale LCD's own on-shades (level 3 = darkest).
-                    let shade = UInt8(max(0, 70 - Int(level) * 20))
-                    pixels[i] = shade; pixels[i + 1] = shade; pixels[i + 2] = shade; pixels[i + 3] = 255
+                    // Evenly spaced between the LCD background (level 0)
+                    // and near-black (level 3), like the reference tamago
+                    // palette (dd/9e/60/22). The old 50/30/10 mapping put
+                    // all three "on" levels near black, hiding the grays.
+                    let t = Int(level)
+                    let dark = 34
+                    pixels[i] = UInt8((Int(bgR) * (3 - t) + dark * t) / 3)
+                    pixels[i + 1] = UInt8((Int(bgG) * (3 - t) + dark * t) / 3)
+                    pixels[i + 2] = UInt8((Int(bgB) * (3 - t) + dark * t) / 3)
+                    pixels[i + 3] = 255
                 }
             }
         }
