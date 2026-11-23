@@ -123,3 +123,4 @@ footer a { color: inherit; }
   .nav { gap: 12px; font-size: 14px; }
   section { padding: 40px 0; }
 }
+footer .credit { flex-basis: 100%; order: 3; font-size: 13px; }
