@@ -54,14 +54,11 @@ struct TamaNeglectProvider: TimelineProvider {
     }
 }
 
-/// Lock screen / StandBy accessory — the system renders this as a
-/// single-color tinted mask (no custom colors survive), so this is just the
-/// flattened egg glyph (WidgetEggGlyph, a template image with the face/feet
-/// already punched out as transparent cutouts in the source art), sized to
-/// fill most of the circle, with the neglect timer in its own row below —
-/// not overlapping the glyph, since the system renders everything in one
-/// flat tint and white-on-white text over the glyph's solid body would be
-/// unreadable.
+/// Lock screen / StandBy accessory — the system drops hue but keeps
+/// brightness (vibrant mode), so the Tomo glyph (WidgetEggGlyph, a white +
+/// grey vector) shows as a bright layer and a dimmer layer. It's sized to
+/// fill most of the circle, with the neglect timer in its own row below
+/// rather than overlaid on the glyph, where it would be hard to read.
 struct TamaNeglectWidgetView: View {
     let entry: TamaNeglectEntry
 
@@ -85,7 +82,11 @@ struct TamaNeglectWidgetView: View {
                     VStack(spacing: 0) {
                         Image("WidgetEggGlyph")
                             .resizable()
-                            .renderingMode(.template)
+                            // .original, not .template: the art uses white +
+                            // grey on purpose, and the lock screen's vibrant
+                            // mode keeps brightness differences as separate
+                            // layers. .template would flatten it to one tone.
+                            .renderingMode(.original)
                             .aspectRatio(contentMode: .fit)
                             .frame(height: geo.size.height * 0.72)
                         Text(label)
