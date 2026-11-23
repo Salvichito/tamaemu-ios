@@ -8,8 +8,9 @@ import UniformTypeIdentifiers
 /// Device identity is asked for AFTER the file is picked, not before: ROM
 /// size narrows the real device down to a short list (several devices share
 /// the same size, so it can't fully identify one — see the comment at the
-/// top of device.c), and only that short list is shown, pre-selected to its
-/// first match, matching how the original emulator's own import flow works.
+/// top of device.c), then DeviceDetector looks inside the file to pick the
+/// exact one. Only when that isn't certain is the user asked, with the best
+/// guess pre-selected.
 struct FirmwareImportView: View {
     let devices: [TamaDevice]
     var onImported: (TamaDevice, URL) -> Void
@@ -23,6 +24,9 @@ struct FirmwareImportView: View {
         let url: URL
         let candidates: [TamaDevice]
         var selected: TamaDevice
+        /// The first candidate is a real best guess from the file's
+        /// contents, not just the first device of that size.
+        let hasGuess: Bool
     }
 
     private struct PendingOverwrite {
@@ -38,7 +42,9 @@ struct FirmwareImportView: View {
                 .multilineTextAlignment(.center)
 
             if let pending = pendingImport {
-                Text("This file's size matches more than one device. Which one is it?")
+                Text(pending.hasGuess
+                     ? "This looks like a \(pending.candidates[0].title), but this version isn't one the app knows for sure. Please check it's right."
+                     : "This file's size matches more than one device. Which one is it?")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -98,16 +104,12 @@ struct FirmwareImportView: View {
             errorMessage = "Could not read the selected file."
             return
         }
-        var candidates = DeviceDetector.candidates(forFileSize: size, in: devices)
-        // The first-generation toys' ROMs all share a size, but each known
-        // dump has a fingerprint -- so the user isn't asked to tell ten
-        // look-alike files apart by hand.
-        if candidates.count > 1, candidates.allSatisfy({ $0.family == .v1 }),
-           let data = try? Data(contentsOf: url),
-           let id = DeviceCatalog.v1DeviceID(forROM: data),
-           let match = candidates.first(where: { $0.id == id }) {
-            candidates = [match]
-        }
+        // Size narrows it down; the file's contents usually settle it (see
+        // DeviceDetector). Only read the file when size alone isn't enough.
+        let sizeMatches = DeviceDetector.candidates(forFileSize: size, in: devices)
+        let rom = sizeMatches.count > 1 ? try? Data(contentsOf: url, options: .mappedIfSafe) : nil
+        let detection = DeviceDetector.detect(size: size, rom: rom, in: devices)
+        let candidates = detection.candidates
         errorMessage = nil
         switch candidates.count {
         case 0:
@@ -122,7 +124,9 @@ struct FirmwareImportView: View {
         default:
             // Ambiguous: several devices share this ROM size. Access stays
             // open until the user confirms or cancels.
-            pendingImport = PendingImport(url: url, candidates: candidates, selected: candidates[0])
+            // The list is ordered best guess first.
+            pendingImport = PendingImport(url: url, candidates: candidates, selected: candidates[0],
+                                          hasGuess: rom != nil && candidates[0].family == .ctama)
         }
     }
 
