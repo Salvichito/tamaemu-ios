@@ -303,16 +303,55 @@ bool ios_t7_eeprom_load(const uint8_t *data, uint32_t len)
 uint8_t t7_dbg_p(void);
 void t7_cpu_set_p(uint8_t p);
 
+/* After t7_serialize_state's own bytes, this port appends a small trailer
+ * with timing state the core's format leaves out: this file's cycle debt and
+ * fraction (ios_t7_step_frame) and t7.c's two timer accumulators. Without it
+ * every resume dropped a few cycles, enough for the game's randomness to take
+ * a different path after ~100 resumes. Older saves without the trailer still
+ * load (the core accepts a longer buffer; the trailer is then just absent). */
+#define IOS_T7_TRAILER_MAGIC 0x31534F69u  /* "iOS1" */
+#define IOS_T7_TRAILER_SIZE  24u
+void t7_get_timer_acc(uint32_t *video, uint32_t *tbh);
+void t7_set_timer_acc(uint32_t video, uint32_t tbh);
+
 uint32_t ios_t7_save_state(uint8_t *out, uint32_t bufsize)
 {
-  if (out && g_initialised) g_cpu.p = t7_dbg_p();
-  return t7_serialize_state(out, bufsize);
+  uint32_t core = t7_serialize_state(NULL, 0);
+  uint32_t needed = core + IOS_T7_TRAILER_SIZE;
+  if (!out || bufsize < needed) return needed;
+  if (!g_initialised) return 0;
+  g_cpu.p = t7_dbg_p();
+  if (t7_serialize_state(out, core) != core) return 0;
+  uint8_t *p = out + core;
+  uint32_t magic = IOS_T7_TRAILER_MAGIC, video, tbh;
+  t7_get_timer_acc(&video, &tbh);
+  memcpy(p, &magic, 4); p += 4;
+  memcpy(p, &s_cycle_debt, 8); p += 8;
+  memcpy(p, &s_frac, 4); p += 4;
+  memcpy(p, &video, 4); p += 4;
+  memcpy(p, &tbh, 4);
+  return needed;
 }
 
 bool ios_t7_load_state(const uint8_t *data, uint32_t len)
 {
   if (!t7_deserialize_state(data, len)) return false;
   t7_cpu_set_p(g_cpu.p);
+  uint32_t core = t7_serialize_state(NULL, 0);
+  uint32_t magic = 0;
+  if (len >= core + IOS_T7_TRAILER_SIZE) memcpy(&magic, data + core, 4);
+  if (magic == IOS_T7_TRAILER_MAGIC) {
+    const uint8_t *p = data + core + 4;
+    uint32_t video, tbh;
+    memcpy(&s_cycle_debt, p, 8); p += 8;
+    memcpy(&s_frac, p, 4); p += 4;
+    memcpy(&video, p, 4); p += 4;
+    memcpy(&tbh, p, 4);
+    if (s_frac >= 60) s_frac = 0;
+    t7_set_timer_acc(video, tbh);
+  } else {
+    s_cycle_debt = 0; s_frac = 0;
+  }
   return true;
 }
 

@@ -194,6 +194,11 @@ uint32_t T7_HOT t7_step_cycles(uint32_t target_cycles)
 #endif
   return spent;
 }
+/* iOS port: the two timer accumulators above are part of the emulated state but are
+ * not in t7_serialize_state, so a resume in a fresh process restarted both at 0 (up to
+ * half a game second lost per app launch). ios_t7_save_state/load_state carry them. */
+void t7_get_timer_acc(uint32_t *video, uint32_t *tbh) { *video = s_video_accumulator; *tbh = s_tbh_accumulator; }
+void t7_set_timer_acc(uint32_t video, uint32_t tbh) { s_video_accumulator = video; s_tbh_accumulator = tbh; }
 #else
 
 

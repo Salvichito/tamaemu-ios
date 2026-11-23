@@ -32,6 +32,13 @@ is listed here and marked with an `// iOS port:` comment at the change site:
   Upstream keeps the live flags in file-private variables and never writes them to
   `g_cpu.p` except at reset, so a saved-and-restored state came back with interrupts
   masked and the game frozen. `ios_t7_save_state`/`ios_t7_load_state` use it.
+- `t7.c`: added `t7_get_timer_acc()`/`t7_set_timer_acc()` (in the `T7_VIDEO_CYCLES`
+  branch), exposing the video and 2 Hz timer accumulators, which are emulated state but
+  not part of `t7_serialize_state`. `ios_t7_save_state` stores them in a small trailer
+  after the core's own bytes so a resume in a fresh process keeps exact timing.
+
+Build switches (Package.swift, not code changes): `T7_VIDEO_CYCLES`, `T7_FASTRUN`,
+`T7_IDLE`, the timing/speed subset of upstream's own Paradise build flags.
 
 Every other file under `Sources/CT7Emu/` other than `ios_t7_compat.c` and the new
 header `include/ios_t7.h` is byte-for-byte what was vendored, including
