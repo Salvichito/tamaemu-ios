@@ -163,12 +163,8 @@ enum BackgroundRefresh {
             }
 
         case .t7:
-            // No widget image and no call-detection notification yet,
-            // same reasoning as .v1 above for the image, plus T7's
-            // 10 icons have no confirmed "needs attention" equivalent
-            // yet either (see T7EmulatorEngine's own doc comment) --
-            // catch-up alone still runs so the Tama isn't frozen in
-            // time the next time its page is opened.
+            // No widget image yet, same reasoning as .v1 above. Calls
+            // come from the attention icon (see ios_t7_attention_on).
             guard let romData = try? Data(contentsOf: paths.importedROMPath),
                   let savedState = try? Data(contentsOf: paths.t7StatePath),
                   let caughtUpTo = paths.lastSavedAt else { return }
@@ -181,7 +177,8 @@ enum BackgroundRefresh {
                 from: savedState,
                 backlogSeconds: owed,
                 wallClockBudget: budget,
-                shouldAbort: shouldAbort
+                shouldAbort: shouldAbort,
+                onCallDetected: notifyCall
             )
             guard result.advancedSeconds > 0 else { return }
             try? paths.ensureDirectoriesExist()

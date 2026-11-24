@@ -50,6 +50,27 @@ void ios_t7_get_frame(uint8_t *out_pixels, uint8_t *out_icons);
 bool ios_t7_tone_on(void);
 uint32_t ios_t7_tone_freq_hz(void);
 
+/* Real sound (the core's own timer + DAC emulation). Off after
+ * ios_t7_start (catch-up: much faster without it). ios_t7_sound_live(true,
+ * rate): live play -- emulate the sound hardware and make a clean 16-bit
+ * mono stream at `rate` Hz; call it before ios_t7_load_state so the saved
+ * sound-timer phase is restored. false: back off.
+ * ios_t7_sound_capture: pause/resume making samples (audio engine idle).
+ * ios_t7_sound_pull/skip_to: audio thread only (single reader); pull is
+ * rate-controlled toward `target` buffered samples. ios_t7_sound_busy: a
+ * melody or tone is playing right now. */
+void ios_t7_sound_live(bool on, uint32_t sample_rate);
+void ios_t7_sound_capture(bool on);
+uint32_t ios_t7_sound_pull(int16_t *out, uint32_t n, uint32_t target);
+void ios_t7_sound_skip_to(uint32_t keep);
+bool ios_t7_sound_busy(void);
+
+/* The attention ("bell", bottom-right) icon is lit: the Tama is calling.
+ * Icon 9 in t7.h's layout; fan guides put the Tama-Go's attention icon
+ * bottom right, lit until answered or 15 minutes pass (a care miss).
+ * Not yet seen lit in this port's own testing. */
+bool ios_t7_attention_on(void);
+
 /* The emulated 4 KB I2C EEPROM -- the Tama's own game save (character,
  * growth stage, stats). Same split as real hardware: this is what
  * survives a power-loss there, independent of CPU/RAM state below.

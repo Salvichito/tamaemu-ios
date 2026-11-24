@@ -17,6 +17,15 @@ final class T7PlayViewModel: SaveBackupHost {
     /// True while a resume's catch-up pass (time spent away) is running
     /// off the main thread -- same meaning as V1PlayViewModel's own flag.
     private(set) var isLoading = false
+    /// Mirrors DevicePauseState, same as V1PlayViewModel's own: a paused
+    /// Tama has no live engine and is skipped by catch-up, so no time
+    /// passes for it until it's unpaused.
+    private(set) var isPaused: Bool
+    /// True while the screen is held down. Never persisted.
+    private(set) var isFastForwarding = false
+    /// Whether `screenState` has ever been given a real frame -- see
+    /// V1PlayViewModel's own.
+    private var hasShownFrame = false
 
     private var engine: T7EmulatorEngine?
     private var startGeneration = 0
@@ -34,15 +43,70 @@ final class T7PlayViewModel: SaveBackupHost {
 
     init(device: TamaDevice) {
         selectedDevice = device
+        isPaused = DevicePauseState.isPaused(device)
     }
 
     static func removeDeviceData(_ device: TamaDevice) {
         SavePaths(device: device).deleteAll()
+        DevicePauseState.clear(device)
     }
 
     func resumeIfNeeded() {
         guard engine == nil, !isLoading else { return }
+        guard !isPaused else {
+            showSavedScreenIfNeeded()
+            return
+        }
         startEngine()
+    }
+
+    /// Tapping the screen, or Pause/Resume in the ⋯ menu -- see
+    /// V1PlayViewModel.togglePause().
+    func togglePause() {
+        isPaused.toggle()
+        DevicePauseState.setPaused(isPaused, for: selectedDevice)
+        if isPaused {
+            stopEngine()
+        } else {
+            // Nothing is owed for the time spent paused.
+            startEngine(discardingGap: true)
+        }
+    }
+
+    /// Holding the screen down. A no-op without a running engine.
+    func beginFastForward() {
+        guard !isPaused, !isFastForwarding, let engine else { return }
+        isFastForwarding = true
+        engine.setFastForward(true)
+    }
+
+    func endFastForward() {
+        guard isFastForwarding else { return }
+        isFastForwarding = false
+        engine?.setFastForward(false)
+    }
+
+    /// See V1PlayViewModel.showSavedScreenIfNeeded().
+    private func showSavedScreenIfNeeded() {
+        guard !hasShownFrame else { return }
+        hasShownFrame = true
+        let paths = SavePaths(device: selectedDevice)
+        let gate = EngineGate.gate(for: selectedDevice)
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard gate.acquire(timeout: 15) else { return }
+            var screen: T7ScreenState?
+            if let romData = try? Data(contentsOf: paths.importedROMPath),
+               let state = try? Data(contentsOf: paths.t7StatePath) {
+                let eeprom = try? Data(contentsOf: paths.t7EepromPath)
+                screen = T7EmulatorEngine.peekScreen(romData: romData, eepromData: eeprom, state: state)
+            }
+            gate.release()
+            guard let screen, let self else { return }
+            await MainActor.run {
+                guard self.isPaused, self.engine == nil else { return }
+                self.screenState = screen
+            }
+        }
     }
 
     /// Stops the engine and persists both save files -- stop() itself
@@ -56,6 +120,7 @@ final class T7PlayViewModel: SaveBackupHost {
         // See V1PlayViewModel.stopEngine(): left set, this Tama could
         // never be resumed again after being stopped mid-catch-up.
         isLoading = false
+        isFastForwarding = false
         guard let engine else { return }
         engine.stop()
         let paths = SavePaths(device: selectedDevice)
@@ -64,7 +129,12 @@ final class T7PlayViewModel: SaveBackupHost {
            (try? state.write(to: paths.t7StatePath, options: .atomic)) != nil {
             let now = Date()
             let caughtUpTo = liveStartCaughtUpTo?.addingTimeInterval(engine.liveSecondsAdvanced) ?? now
-            paths.lastSavedAt = min(caughtUpTo, now)
+            // Fast-forwarding put the Tama's clock ahead of real time by
+            // that much, so the save counts as caught up that far into the
+            // future and the next time away is shortened by it (same as
+            // V1PlayViewModel). Never further than that: a live loop
+            // can't otherwise get ahead of real time.
+            paths.lastSavedAt = min(caughtUpTo, now.addingTimeInterval(engine.fastForwardExtraSeconds))
         }
         if let eeprom = engine.saveEeprom() {
             try? eeprom.write(to: paths.t7EepromPath, options: .atomic)
@@ -126,6 +196,7 @@ final class T7PlayViewModel: SaveBackupHost {
         // Stopped before writing: stopping saves, and that save would
         // otherwise land on top of the imported files.
         stopEngine()
+        unpauseQuietly()
         defer { startEngine() }
         let paths = SavePaths(device: selectedDevice)
         try paths.ensureDirectoriesExist()
@@ -155,7 +226,15 @@ final class T7PlayViewModel: SaveBackupHost {
     func restoreBackup(_ backup: SaveBackup) throws {
         stopEngine()
         try SavePaths(device: selectedDevice).restore(backup)
+        // Same as V1PlayViewModel: restoring implies playing it.
+        unpauseQuietly()
         startEngine()
+    }
+
+    private func unpauseQuietly() {
+        guard isPaused else { return }
+        isPaused = false
+        DevicePauseState.setPaused(false, for: selectedDevice)
     }
 
     func pressButton(_ button: InputController.Button) {
@@ -166,7 +245,9 @@ final class T7PlayViewModel: SaveBackupHost {
         engine?.input.release(button)
     }
 
-    private func startEngine() {
+    /// `discardingGap` is for unpausing: the time spent paused is not
+    /// owed (see V1PlayViewModel.startEngine(discardingGap:)).
+    private func startEngine(discardingGap: Bool = false) {
         let device = selectedDevice
         let paths = SavePaths(device: device)
         guard let romData = try? Data(contentsOf: paths.importedROMPath) else {
@@ -186,6 +267,9 @@ final class T7PlayViewModel: SaveBackupHost {
             let holdsGate = gate.acquire(timeout: 15)
             @Sendable func releaseGate() { if holdsGate { gate.release() } }
             guard !cancel.isCancelled else { releaseGate(); return }
+
+            // Inside the gate, same reason as V1PlayViewModel's.
+            if discardingGap { paths.markSyncedNow() }
 
             var state = try? Data(contentsOf: paths.t7StatePath)
             var eeprom = try? Data(contentsOf: paths.t7EepromPath)
@@ -237,6 +321,9 @@ final class T7PlayViewModel: SaveBackupHost {
                 guard self.startGeneration == generation else { releaseGate(); return }
                 let newEngine = T7EmulatorEngine(onFrame: { [weak self] state in
                     self?.screenState = state
+                    self?.hasShownFrame = true
+                }, onCallDetected: {
+                    NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
                 })
                 guard newEngine.start(romData: romData, eepromData: eepromToLoad, stateData: stateToLoad) else {
                     releaseGate()

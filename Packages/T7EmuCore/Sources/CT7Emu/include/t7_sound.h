@@ -29,6 +29,10 @@ int      t7_snd_tone_peek(uint64_t *cyc, uint32_t *hz);
 void     t7_snd_tone_pop(void);
 uint64_t t7_snd_cycles(void);
 int      t7_snd_busy(void);
+// iOS port: save-state timer phase + reader-side latency trim (see t7_sound.c)
+void     t7_snd_get_timers(uint8_t run[2], int64_t remain[2]);
+void     t7_snd_set_timers(const uint8_t run[2], const int64_t remain[2]);
+void     t7_snd_skip_to(uint32_t keep);
 #ifdef __cplusplus
 }
 #endif

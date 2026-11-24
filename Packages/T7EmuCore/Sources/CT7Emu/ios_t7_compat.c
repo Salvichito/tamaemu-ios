@@ -181,7 +181,59 @@ bool ios_t7_start(const uint8_t *romBytes, uint32_t romLen)
   if (!rom_load(romBytes, romLen)) return false;
   memset(s_persist, 0, sizeof(s_persist));
   s_cycle_debt = 0; s_frac = 0;
-  return t7_init();
+  if (!t7_init()) return false;
+  /* Sound starts off: catch-up runs without it. With the sound hardware on,
+   * the melody sequencer's timer IRQ fires 512 times a second even in
+   * silence, which defeats T7_IDLE (Tama-Go catch-up ~1800x -> ~200x real
+   * time). Live play turns it on with ios_t7_sound_live. Upstream supports
+   * switching this at runtime (t7_snd_set_mode). */
+  t7_snd_set_mode(0);
+  t7_snd_capture(0);
+  t7_snd_synth(0);
+  return true;
+}
+
+void ios_t7_sound_live(bool on, uint32_t sample_rate)
+{
+  if (on) {
+    t7_snd_config(T7_CLOCK_RATE, sample_rate ? sample_rate : 48000);
+    t7_snd_volume(100);
+    t7_snd_set_mode(1); /* timers re-derived from the registers */
+    t7_snd_synth(1);    /* clean band-limited square, as upstream's Android build */
+    t7_snd_capture(1);
+  } else {
+    t7_snd_capture(0);
+    t7_snd_synth(0);
+    t7_snd_set_mode(0);
+  }
+}
+
+void ios_t7_sound_capture(bool on)
+{
+  t7_snd_capture(on ? 1 : 0);
+}
+
+uint32_t ios_t7_sound_pull(int16_t *out, uint32_t n, uint32_t target)
+{
+  __atomic_thread_fence(__ATOMIC_ACQUIRE);
+  return t7_snd_pull(out, n, target);
+}
+
+void ios_t7_sound_skip_to(uint32_t keep)
+{
+  t7_snd_skip_to(keep);
+}
+
+bool ios_t7_attention_on(void)
+{
+  uint8_t icons[IOS_T7_ICON_COUNT];
+  t7_get_icons(icons);
+  return icons[9] != 0;
+}
+
+bool ios_t7_sound_busy(void)
+{
+  return t7_snd_busy() != 0;
 }
 
 void ios_t7_stop(void)
@@ -213,6 +265,7 @@ uint32_t ios_t7_step_frame(void)
   if (want < 1) { s_cycle_debt = -want; return 0; }   /* already ran this frame's share */
   uint32_t spent = t7_step_cycles((uint32_t)want);
   s_cycle_debt = (int64_t)spent - want;
+  __atomic_thread_fence(__ATOMIC_RELEASE);   /* audio samples visible to the audio thread */
   return spent;
 }
 
@@ -311,25 +364,34 @@ void t7_cpu_set_p(uint8_t p);
  * load (the core accepts a longer buffer; the trailer is then just absent). */
 #define IOS_T7_TRAILER_MAGIC 0x31534F69u  /* "iOS1" */
 #define IOS_T7_TRAILER_SIZE  24u
+/* "iOS2" = iOS1 + the two sound timers' phase (t7_snd_get_timers): run flags
+ * (2 bytes, padded to 8) and cycles left to the next overflow (2 x int64,
+ * 16.16 fixed point). iOS1 saves still load; their sound timers restart. */
+#define IOS_T7_TRAILER2_MAGIC 0x32534F69u /* "iOS2" */
+#define IOS_T7_TRAILER2_SIZE  48u
 void t7_get_timer_acc(uint32_t *video, uint32_t *tbh);
 void t7_set_timer_acc(uint32_t video, uint32_t tbh);
 
 uint32_t ios_t7_save_state(uint8_t *out, uint32_t bufsize)
 {
   uint32_t core = t7_serialize_state(NULL, 0);
-  uint32_t needed = core + IOS_T7_TRAILER_SIZE;
+  uint32_t needed = core + IOS_T7_TRAILER2_SIZE;
   if (!out || bufsize < needed) return needed;
   if (!g_initialised) return 0;
   g_cpu.p = t7_dbg_p();
   if (t7_serialize_state(out, core) != core) return 0;
   uint8_t *p = out + core;
-  uint32_t magic = IOS_T7_TRAILER_MAGIC, video, tbh;
+  uint32_t magic = IOS_T7_TRAILER2_MAGIC, video, tbh;
   t7_get_timer_acc(&video, &tbh);
   memcpy(p, &magic, 4); p += 4;
   memcpy(p, &s_cycle_debt, 8); p += 8;
   memcpy(p, &s_frac, 4); p += 4;
   memcpy(p, &video, 4); p += 4;
-  memcpy(p, &tbh, 4);
+  memcpy(p, &tbh, 4); p += 4;
+  uint8_t run[8] = {0}; int64_t remain[2];
+  t7_snd_get_timers(run, remain);
+  memcpy(p, run, 8); p += 8;
+  memcpy(p, remain, 16);
   return needed;
 }
 
@@ -340,7 +402,8 @@ bool ios_t7_load_state(const uint8_t *data, uint32_t len)
   uint32_t core = t7_serialize_state(NULL, 0);
   uint32_t magic = 0;
   if (len >= core + IOS_T7_TRAILER_SIZE) memcpy(&magic, data + core, 4);
-  if (magic == IOS_T7_TRAILER_MAGIC) {
+  if (magic == IOS_T7_TRAILER2_MAGIC && len < core + IOS_T7_TRAILER2_SIZE) magic = 0;
+  if (magic == IOS_T7_TRAILER_MAGIC || magic == IOS_T7_TRAILER2_MAGIC) {
     const uint8_t *p = data + core + 4;
     uint32_t video, tbh;
     memcpy(&s_cycle_debt, p, 8); p += 8;
@@ -349,6 +412,13 @@ bool ios_t7_load_state(const uint8_t *data, uint32_t len)
     memcpy(&tbh, p, 4);
     if (s_frac >= 60) s_frac = 0;
     t7_set_timer_acc(video, tbh);
+    if (magic == IOS_T7_TRAILER2_MAGIC) {
+      uint8_t run[8]; int64_t remain[2];
+      p += 4;
+      memcpy(run, p, 8); p += 8;
+      memcpy(remain, p, 16);
+      t7_snd_set_timers(run, remain);
+    }
   } else {
     s_cycle_debt = 0; s_frac = 0;
   }

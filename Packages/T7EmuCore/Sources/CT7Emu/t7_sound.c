@@ -539,3 +539,32 @@ int t7_snd_busy(void)
   if (g_wram[0xA3] & 0x80) return 1;                      // Sequenzer laeuft ($FC4C setzt $A3=$80)
   return s_tev_last != 0 || s_tev_r != s_tev_w;
 }
+
+/* iOS port: save-state support for the two sound timers. Their phase (cycles
+ * left until the next overflow) is emulated state -- timer 1 drives the melody
+ * sequencer IRQ, timer 0 the tone IRQ -- but t7_serialize_state leaves it out,
+ * and t7_snd_resync restarts both with a full period. ios_t7_save_state stores
+ * it in its trailer so a resume fires the IRQs at exactly the same cycles. */
+void t7_snd_get_timers(uint8_t run[2], int64_t remain[2])
+{
+  uint64_t now = snd_now() << 16;
+  for (int t = 0; t < 2; t++) {
+    run[t] = s_run[t];
+    remain[t] = (int64_t)(s_due[t] - now);
+  }
+}
+void t7_snd_set_timers(const uint8_t run[2], const int64_t remain[2])
+{
+  uint64_t now = snd_now() << 16;
+  for (int t = 0; t < 2; t++) {
+    if (s_run[t] && run[t]) s_due[t] = (uint64_t)((int64_t)now + remain[t]);
+  }
+  reschedule();
+}
+/* iOS port: reader side only. Drops all but the newest `keep` samples, so a
+ * paused-then-woken audio engine starts with low latency. */
+void t7_snd_skip_to(uint32_t keep)
+{
+  uint32_t have = s_w - s_r;
+  if (have > keep) { s_r = s_w - keep; s_rfrac = 0; }
+}

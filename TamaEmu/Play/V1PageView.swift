@@ -45,11 +45,14 @@ struct V1PageView: View {
                     }
                 )
                 .frame(maxWidth: 280)
+                .overlay(alignment: .topTrailing) {
+                    if viewModel.isFastForwarding && !viewModel.isPaused {
+                        FastForwardIndicator()
+                    }
+                }
 
                 if viewModel.isPaused {
                     badge(systemImage: "pause.circle.fill", text: "Paused — tap to resume")
-                } else if viewModel.isFastForwarding {
-                    badge(systemImage: "forward.fill", text: "2× speed")
                 } else if viewModel.isLoading {
                     VStack(spacing: 6) {
                         ProgressView()

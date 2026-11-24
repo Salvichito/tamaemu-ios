@@ -37,6 +37,12 @@ is listed here and marked with an `// iOS port:` comment at the change site:
   not part of `t7_serialize_state`. `ios_t7_save_state` stores them in a small trailer
   after the core's own bytes so a resume in a fresh process keeps exact timing.
 
+- `t7_sound.c` / `t7_sound.h`: added `t7_snd_get_timers()`/`t7_snd_set_timers()` (the
+  two sound timers' phase, which is emulated state -- timer 1 drives the melody
+  sequencer IRQ -- but not part of `t7_serialize_state`; `ios_t7_save_state` stores it
+  in its trailer, version "iOS2") and `t7_snd_skip_to()` (audio-thread side: drops
+  stale buffered samples when the audio engine wakes). Appended at the end of the file.
+
 Build switches (Package.swift, not code changes): `T7_VIDEO_CYCLES`, `T7_FASTRUN`,
 `T7_IDLE`, the timing/speed subset of upstream's own Paradise build flags.
 

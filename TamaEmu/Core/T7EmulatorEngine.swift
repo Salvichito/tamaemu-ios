@@ -27,10 +27,8 @@ struct T7ScreenState {
 /// video IRQ/NMI at the right point internally, so this loop only needs to
 /// call it once per real 1/60s tick.
 ///
-/// No call-detection wiring yet (unlike the other two engines' onCallDetected):
-/// T7Emu's 10 status icons don't have a confirmed "needs attention"
-/// equivalent to TamaLib's icon 7 the way the P1 integration verified
-/// against two independent sources -- better to ship nothing than guess.
+/// Calls: `onCallDetected` fires when the attention ("bell") icon lights
+/// up -- see ios_t7_attention_on for how sure that mapping is.
 final class T7EmulatorEngine {
     let input = InputController()
 
@@ -41,6 +39,9 @@ final class T7EmulatorEngine {
     private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
     private(set) var onFrame: ((T7ScreenState) -> Void)?
+    /// Invoked (from the stepping thread) once per off->on edge of the
+    /// attention icon -- same contract as V1EmulatorEngine.onCallDetected.
+    private(set) var onCallDetected: (() -> Void)?
 
     /// How many 1/60s frames the live loop has actually stepped since
     /// start() -- i.e. how much emulated time really passed, as opposed
@@ -52,17 +53,45 @@ final class T7EmulatorEngine {
     /// after stop().
     var liveSecondsAdvanced: TimeInterval { Double(liveFramesStepped) / 60 }
 
+    /// Hold-to-fast-forward: two emulated frames per real 1/60 s tick.
+    /// Read by the stepping thread under stopLock.
+    private var fastForward = false
+    /// Frames stepped beyond real time while fast-forwarding -- the Tama's
+    /// clock is ahead of real time by this much. Same role as
+    /// V1EmulatorEngine.fastForwardExtraSeconds. Only meaningful after stop().
+    private var fastForwardExtraFrames: UInt64 = 0
+    var fastForwardExtraSeconds: TimeInterval { Double(fastForwardExtraFrames) / 60 }
+
+    func setFastForward(_ on: Bool) {
+        stopLock.lock(); fastForward = on; stopLock.unlock()
+    }
+
+    /// Plays the core's own sound stream (t7_sound.c's timer + DAC
+    /// emulation, rendered as a clean square wave), not the tone-polling
+    /// the other two cores use: these toys change notes faster than a
+    /// 60 Hz poll can follow. toneProvider is only "is anything playing",
+    /// which lets the audio engine sleep when the Tama is quiet.
     private lazy var audioOutput = AudioOutput(
         toneProvider: {
-            (ios_t7_tone_on(), Float(ios_t7_tone_freq_hz()))
+            (ios_t7_sound_busy(), 0)
         },
         volumeProvider: {
             Float(AppSettings.volume)
+        },
+        pcmProvider: { out, count, restarted in
+            if restarted { ios_t7_sound_skip_to(T7EmulatorEngine.audioTargetSamples) }
+            _ = ios_t7_sound_pull(out, UInt32(count), T7EmulatorEngine.audioTargetSamples)
         }
     )
+    /// Audio kept buffered between the emulator (which delivers 1/60 s at a
+    /// time) and the speaker: ~40 ms at 48 kHz. The core's pull stretches
+    /// or squeezes playback by a few percent to hold this level.
+    private static let audioTargetSamples: UInt32 = 1920
+    private var audioCapturing = false
 
-    init(onFrame: @escaping (T7ScreenState) -> Void) {
+    init(onFrame: @escaping (T7ScreenState) -> Void, onCallDetected: (() -> Void)? = nil) {
         self.onFrame = onFrame
+        self.onCallDetected = onCallDetected
     }
 
     /// romData is a raw Tama-Go (640 KB) or Tamagotchi Friends (768 KB)
@@ -79,6 +108,11 @@ final class T7EmulatorEngine {
             ios_t7_start(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(romData.count))
         }
         guard started else { return false }
+        // Sound hardware on before load_state, so the save's sound-timer
+        // phase is restored (see ios_t7.h). Live play only: catch-up runs
+        // without it, much faster.
+        ios_t7_sound_live(true, UInt32(audioOutput.outputFormat.sampleRate.rounded()))
+        audioCapturing = true
 
         if let eepromData {
             _ = eepromData.withUnsafeBytes { raw in
@@ -93,7 +127,8 @@ final class T7EmulatorEngine {
 
         lastButtonMask = 0
         liveFramesStepped = 0
-        stopLock.lock(); shouldStop = false; stopLock.unlock()
+        fastForwardExtraFrames = 0
+        stopLock.lock(); shouldStop = false; fastForward = false; stopLock.unlock()
         let t = Thread { [weak self] in
             self?.runLoop()
             self?.stoppedSemaphore.signal()
@@ -109,6 +144,35 @@ final class T7EmulatorEngine {
         audioOutput.start()
         t.start()
         return true
+    }
+
+    /// What a saved Tama's screen was showing, without running it -- for a
+    /// paused Tama, which has no live engine (same role as
+    /// V1EmulatorEngine.peekScreen). The caller must hold this family's
+    /// EngineGate: there is only one T7 core in the process.
+    static func peekScreen(romData: Data, eepromData: Data?, state: Data) -> T7ScreenState? {
+        let started = romData.withUnsafeBytes { raw in
+            ios_t7_start(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(romData.count))
+        }
+        guard started else { return nil }
+        defer { ios_t7_stop() }
+        if let eepromData {
+            _ = eepromData.withUnsafeBytes { raw in
+                ios_t7_eeprom_load(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(eepromData.count))
+            }
+        }
+        let loaded = state.withUnsafeBytes { raw in
+            ios_t7_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(state.count))
+        }
+        guard loaded else { return nil }
+        var pixels = [UInt8](repeating: 0, count: Int(IOS_T7_LCD_WIDTH * IOS_T7_LCD_HEIGHT))
+        var icons = [UInt8](repeating: 0, count: Int(IOS_T7_ICON_COUNT))
+        pixels.withUnsafeMutableBufferPointer { p in
+            icons.withUnsafeMutableBufferPointer { i in
+                ios_t7_get_frame(p.baseAddress, i.baseAddress)
+            }
+        }
+        return T7ScreenState(pixels: pixels, icons: icons)
     }
 
     /// Snapshots of the live core's CPU/RAM/DRAM/bank state and its
@@ -160,9 +224,12 @@ final class T7EmulatorEngine {
         var icons = [UInt8](repeating: 0, count: Int(IOS_T7_ICON_COUNT))
         var lastPixels: [UInt8] = []
         var lastIcons: [UInt8] = []
+        // nil until the first frame: a call already on when the engine
+        // starts doesn't fire again, a new one does (as in V1EmulatorEngine).
+        var lastAttentionOn: Bool?
 
         while true {
-            stopLock.lock(); let stop = shouldStop; stopLock.unlock()
+            stopLock.lock(); let stop = shouldStop; let fast = fastForward; stopLock.unlock()
             if stop { break }
 
             let mask = input.currentMask()
@@ -179,13 +246,33 @@ final class T7EmulatorEngine {
 
             _ = ios_t7_step_frame()
             liveFramesStepped += 1
+            if fast {
+                _ = ios_t7_step_frame()
+                liveFramesStepped += 1
+                fastForwardExtraFrames += 1
+            }
             audioOutput.tick(buttonsDown: mask != 0)
+            // No samples while the audio engine sleeps: they would pile up
+            // and play late when it wakes. None while fast-forwarding
+            // either: twice the audio per tick can't be played at the
+            // right pitch, so it's muted instead of garbled.
+            let wantAudio = audioOutput.isEngineWanted && !fast
+            if wantAudio != audioCapturing {
+                ios_t7_sound_capture(wantAudio)
+                audioCapturing = wantAudio
+            }
 
             pixels.withUnsafeMutableBufferPointer { p in
                 icons.withUnsafeMutableBufferPointer { i in
                     ios_t7_get_frame(p.baseAddress, i.baseAddress)
                 }
             }
+            let attentionOn = icons[9] != 0
+            if let last = lastAttentionOn, attentionOn, !last {
+                onCallDetected?()
+            }
+            lastAttentionOn = attentionOn
+
             // Only hand a frame to the UI when it differs from the last one:
             // most frames are identical, and each publish redraws the whole
             // screen bitmap on the main thread (same fix as the color
@@ -240,7 +327,8 @@ extension T7EmulatorEngine {
         from stateData: Data,
         backlogSeconds: TimeInterval,
         wallClockBudget: TimeInterval,
-        shouldAbort: (() -> Bool)? = nil
+        shouldAbort: (() -> Bool)? = nil,
+        onCallDetected: (() -> Void)? = nil
     ) -> (state: Data, eeprom: Data?, advancedSeconds: TimeInterval) {
         guard backlogSeconds >= 1.0 / 60 else { return (stateData, eepromData, 0) }
 
@@ -265,9 +353,18 @@ extension T7EmulatorEngine {
         // picked up next time, rather than being rounded away each pass.
         let targetFrames = Int(backlogSeconds * 60)
         var frame = 0
+        var lastAttentionOn: Bool?
         while frame < targetFrames {
             _ = ios_t7_step_frame()
             frame += 1
+            // A call stays lit for minutes, so twice a second can't miss one.
+            if onCallDetected != nil, frame % 30 == 0 {
+                let attentionOn = ios_t7_attention_on()
+                if let last = lastAttentionOn, attentionOn, !last {
+                    onCallDetected?()
+                }
+                lastAttentionOn = attentionOn
+            }
             if frame % 16 == 0,
                DispatchTime.now().uptimeNanoseconds >= deadline || shouldAbort?() == true {
                 break

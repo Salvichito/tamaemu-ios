@@ -46,22 +46,17 @@ struct TamaPageView: View {
         VStack(spacing: 16) {
             ZStack {
                 LiveLCD(viewModel: viewModel)
+                    .overlay(alignment: .topTrailing) {
+                        if viewModel.isFastForwarding && !viewModel.isPaused {
+                            FastForwardIndicator()
+                        }
+                    }
 
                 if viewModel.isPaused {
                     VStack(spacing: 6) {
                         Image(systemName: "pause.circle.fill")
                             .font(.title2)
                         Text("Paused — tap to resume")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(10)
-                    .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                } else if viewModel.isFastForwarding {
-                    VStack(spacing: 6) {
-                        Image(systemName: "forward.fill")
-                            .font(.title2)
-                        Text("2× speed")
                             .font(.caption2)
                     }
                     .foregroundStyle(.white)
@@ -193,5 +188,22 @@ private struct LiveLCD: View {
         LCDView(image: viewModel.lcdImage)
             .frame(maxWidth: 280)
             .screenGlow(color: viewModel.lcdGlowColor)
+    }
+}
+
+/// Small "»" chip shown in the screen's top-right corner while
+/// fast-forwarding. Kept tiny and off-center so the animations stay
+/// visible. Shared by every model's page.
+struct FastForwardIndicator: View {
+    var body: some View {
+        Image(systemName: "forward.fill")
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(.black.opacity(0.45), in: Capsule())
+            .padding(6)
+            .allowsHitTesting(false)
+            .accessibilityLabel("Fast-forwarding")
     }
 }

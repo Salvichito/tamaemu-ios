@@ -413,6 +413,17 @@ struct TamaGalleryView: View {
     private func minimalToolbarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
+                if let device = selectedDevice, device.family == .t7 {
+                    let t7 = gallery.t7ViewModel(for: device)
+                    Button {
+                        t7.togglePause()
+                    } label: {
+                        Label(
+                            t7.isPaused ? "Resume" : "Pause",
+                            systemImage: t7.isPaused ? "play.fill" : "pause.fill"
+                        )
+                    }
+                }
                 Button {
                     requestAddTama()
                 } label: {

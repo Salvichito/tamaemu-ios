@@ -13,6 +13,15 @@ final class AudioOutput {
     private var phase: Double = 0
     private let toneProvider: () -> (on: Bool, freq: Float)
     private let volumeProvider: () -> Float
+    /// Set for a core that makes its own finished audio (T7Emu): fills the
+    /// buffer with 16-bit mono samples at `outputFormat`'s rate instead of
+    /// the square wave below. `restarted` is true on the first render after
+    /// the engine (re)starts, so the core can drop stale buffered audio.
+    /// toneProvider then only says whether anything is playing (idle pause).
+    typealias PCMProvider = (_ out: UnsafeMutablePointer<Int16>, _ count: Int, _ restarted: Bool) -> Void
+    private let pcmProvider: PCMProvider?
+    /// Read and cleared by the render thread; set on each engine start.
+    private var pcmRestarted = true
     /// Guards the small bits of state below, which are touched from the
     /// main thread (start/stop), the emulator thread (tick) and the
     /// session queue. Never held across an AVAudioEngine call.
@@ -56,19 +65,44 @@ final class AudioOutput {
     /// more evenly across the slider.
     init(
         toneProvider: @escaping () -> (on: Bool, freq: Float),
-        volumeProvider: @escaping () -> Float
+        volumeProvider: @escaping () -> Float,
+        pcmProvider: PCMProvider? = nil
     ) {
         self.toneProvider = toneProvider
         self.volumeProvider = volumeProvider
+        self.pcmProvider = pcmProvider
         let format = engine.mainMixerNode.outputFormat(forBus: 0)
         let sampleRate = format.sampleRate
+        // Preallocated so the real-time render thread never allocates.
+        let pcmCapacity = 4096
+        let pcmBuffer = UnsafeMutablePointer<Int16>.allocate(capacity: pcmCapacity)
+        pcmBuffer.initialize(repeating: 0, count: pcmCapacity)
 
         let sourceNode = AVAudioSourceNode(format: format) { [weak self] _, _, frameCount, audioBufferList in
             guard let self else { return noErr }
-            let (on, freq) = self.toneProvider()
             let volume = self.volumeProvider()
             let amplitude = Self.maxAmplitude * volume * volume
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
+            if let pcm = self.pcmProvider {
+                let restarted = self.pcmRestarted
+                self.pcmRestarted = false
+                let scale = amplitude / 32768
+                var done = 0
+                let total = Int(frameCount)
+                while done < total {
+                    let n = min(pcmCapacity, total - done)
+                    pcm(pcmBuffer, n, restarted && done == 0)
+                    for i in 0..<n {
+                        let sample = Float(pcmBuffer[i]) * scale
+                        for buffer in buffers {
+                            buffer.mData?.assumingMemoryBound(to: Float.self)[done + i] = sample
+                        }
+                    }
+                    done += n
+                }
+                return noErr
+            }
+            let (on, freq) = self.toneProvider()
             var localPhase = self.phase
             for frame in 0..<Int(frameCount) {
                 var sample: Float = 0
@@ -142,6 +176,13 @@ final class AudioOutput {
         }
     }
 
+    /// Whether the engine is (or is about to be) rendering. A PCM core
+    /// stops making samples while this is false, so nothing stale piles up.
+    var isEngineWanted: Bool {
+        stateLock.lock(); defer { stateLock.unlock() }
+        return started && engineWanted
+    }
+
     /// Brings the engine in line with `engineWanted`. Session queue only.
     private func syncEngine() {
         engineLock.lock()
@@ -159,6 +200,7 @@ final class AudioOutput {
             } catch {
                 Self.log.error("setActive failed: \(error.localizedDescription, privacy: .public)")
             }
+            pcmRestarted = true
             do {
                 try engine.start()
                 Self.log.info("engine started, running=\(self.engine.isRunning)")
