@@ -148,7 +148,12 @@ struct SavePaths {
     /// never changes after import, so copying it into every backup would
     /// only cost space.
     private var saveFiles: [URL] {
-        [liveFlashPath, stateFilePath, v1StatePath, t7StatePath, t7EepromPath]
+        // The tomomix keeps its one save file in its own folder (see
+        // TomomixStore). Only its own backups may include it: it isn't
+        // per-device, so any other device copying it would later restore
+        // it over the tomomix.
+        if device.family == .tomomix { return [TomomixStore.saveURL] }
+        return [liveFlashPath, stateFilePath, v1StatePath, t7StatePath, t7EepromPath]
     }
 
     private var backupsDir: URL {
@@ -320,7 +325,7 @@ struct SavePaths {
 /// `SavePaths.makeBackup(reason:)`.
 struct SaveBackup: Identifiable, Hashable {
     enum Reason: String {
-        case automatic, manual, beforeImport, beforeRestart, beforeRestore, beforeDownloads
+        case automatic, manual, beforeImport, beforeRestart, beforeRestore, beforeDownloads, beforeNewStar
 
         var label: String {
             switch self {
@@ -330,6 +335,7 @@ struct SaveBackup: Identifiable, Hashable {
             case .beforeRestart: return "Before a restart"
             case .beforeRestore: return "Before restoring a backup"
             case .beforeDownloads: return "Before changing downloads"
+            case .beforeNewStar: return "Before a new shooting star"
             }
         }
     }

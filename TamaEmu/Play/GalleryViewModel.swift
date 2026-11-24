@@ -126,13 +126,12 @@ final class GalleryViewModel {
 
     /// Whichever kind of view-model backs this device, as far as the
     /// backup/restore screen is concerned.
-    /// nil for the tomomix, which has no backups yet.
     func backupHost(for device: TamaDevice) -> SaveBackupHost? {
         switch device.family {
         case .ctama: return viewModel(for: device)
         case .v1: return v1ViewModel(for: device)
         case .t7: return t7ViewModel(for: device)
-        case .tomomix: return nil
+        case .tomomix: return tomomixViewModel()
         }
     }
 

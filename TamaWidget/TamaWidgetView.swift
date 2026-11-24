@@ -30,7 +30,7 @@ struct TamaWidgetView: View {
                     VStack(spacing: 4) {
                         Image(systemName: "pawprint.fill")
                             .font(.title2)
-                        Text(entry.isConfigured ? "Open Tomomix" : "Long-press to choose a Tama")
+                        Text(entry.isConfigured ? "Open Tomomix" : "Long-press to choose a pet")
                             .font(.caption2)
                             .multilineTextAlignment(.center)
                     }

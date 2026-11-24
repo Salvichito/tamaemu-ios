@@ -390,6 +390,33 @@ struct TamaGalleryView: View {
                     Label("Tomomix Settings", systemImage: "gearshape")
                 }
                 Button {
+                    showingBackups = true
+                } label: {
+                    Label("Backups", systemImage: "clock.arrow.circlepath")
+                }
+                Button {
+                    t7ExportURL = model.prepareExportURL()
+                    if t7ExportURL != nil {
+                        showingT7SaveExporter = true
+                    } else {
+                        toast = "There's no save to export yet."
+                    }
+                } label: {
+                    Label("Export Save…", systemImage: "square.and.arrow.up")
+                }
+                Button {
+                    showingT7SaveImporter = true
+                } label: {
+                    Label("Import Save…", systemImage: "square.and.arrow.down")
+                }
+                if !purchases.isPremium {
+                    Button {
+                        showingPaywall = true
+                    } label: {
+                        Label("Unlock Premium…", systemImage: "star.fill")
+                    }
+                }
+                Button {
                     requestAddTama()
                 } label: {
                     Label("Add a Device", systemImage: "plus")
@@ -701,16 +728,20 @@ struct TamaGalleryView: View {
                         nearbyLink.end()
                     }
                 }
-                // Tama-Go/Friends save export/import (their ⋯ menu). Kept on
+                // Tama-Go/Friends and Tomomix save export/import (their ⋯ menus). Kept on
                 // separate background views: two file dialogs on one view
                 // can stop either from presenting.
                 .background(
                     Color.clear.fileImporter(isPresented: $showingT7SaveImporter, allowedContentTypes: [.data]) { result in
-                        guard let device = selectedDevice, device.family == .t7 else { return }
+                        guard let device = selectedDevice, device.family == .t7 || device.family == .tomomix else { return }
                         switch result {
                         case .success(let url):
                             do {
-                                try gallery.t7ViewModel(for: device).importSave(from: url)
+                                if device.family == .tomomix {
+                                    try gallery.tomomixViewModel().importSave(from: url)
+                                } else {
+                                    try gallery.t7ViewModel(for: device).importSave(from: url)
+                                }
                                 toast = "Save imported. The save it replaced is in Backups."
                             } catch {
                                 toast = error.localizedDescription

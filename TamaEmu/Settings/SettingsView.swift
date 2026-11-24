@@ -338,13 +338,13 @@ struct SettingsView: View {
             if liveTranslationUsesCloud {
                 Text("On-device translation is free, fully offline, and private, but the tiny LCD font pushes its accuracy. Gemini reads the screen instead, for much better results, using the free API key you provide below.")
             } else {
-                Text("Reads the screen with Apple's on-device model — free, fully offline, and private, but the tiny LCD font pushes its accuracy. Switch to Gemini for much better results — it's the one AI service here with a genuinely free tier, no billing required (OpenAI and Anthropic both need a paid account).")
+                Text("Reads the screen with Apple's on-device model — free, fully offline, and private, but the tiny LCD font pushes its accuracy. Switch to Gemini for much better results, using a free API key from Google.")
             }
         }
 
         if liveTranslationUsesCloud {
             Section {
-                if storedKeyProvider != nil {
+                if hasStoredKey {
                     LabeledContent("API Key") {
                         Text("Key set")
                             .foregroundStyle(.secondary)
@@ -364,8 +364,8 @@ struct SettingsView: View {
     /// this is the one place that can go stale (add/change/remove all
     /// happen right here), and a Keychain read is cheap enough that there's
     /// no real cost to just always reflecting the truth.
-    private var storedKeyProvider: CloudProvider? {
-        KeychainStore.read().flatMap(CloudProvider.detect(fromKey:))
+    private var hasStoredKey: Bool {
+        !(KeychainStore.read()?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 
     private func presentAPIKeyPrompt() {
@@ -374,12 +374,9 @@ struct SettingsView: View {
     }
 
     private func saveAPIKey() {
-        // No format validation here on purpose — CloudProvider.detect is
-        // for *routing*, not gatekeeping. It already defaults to Gemini
-        // for anything it doesn't recognize, so there's nothing left for
-        // this to meaningfully reject; it previously did, and rejected a
-        // real, working key purely because the detection pattern was
-        // guessed and out of date.
+        // No format validation here on purpose: Google's key format has
+        // changed before, and an earlier check rejected a real, working
+        // key. Gemini itself says if a key is bad.
         let trimmed = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         KeychainStore.write(trimmed)
@@ -411,7 +408,7 @@ struct BackupListView: View {
                     reload()
                 }
             } footer: {
-                Text("Tomomix keeps a backup of \(device.title) automatically, about once an hour while you play, and before anything that replaces its save. The 3 most recent are kept, plus one per day for the last week.")
+                Text("Tomomix keeps a backup of \(device.family == .tomomix ? "your tomomix" : device.title) automatically, about once an hour while you play, and before anything that replaces its save. The 3 most recent are kept, plus one per day for the last week.")
             }
 
             Section {

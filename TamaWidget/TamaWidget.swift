@@ -7,7 +7,7 @@ struct TamaWidget: Widget {
             TamaWidgetView(entry: entry)
         }
         .configurationDisplayName("Tomomix")
-        .description("Shows one of your Tamagotchis. Long-press to choose which.")
+        .description("Shows one of your pets. Long-press to choose which.")
         .supportedFamilies([.systemSmall])
         // Without this, WidgetKit insets our content with its own system
         // margin, which is what left a visible border of padding around

@@ -613,7 +613,7 @@ final class PlayViewModel: SaveBackupHost {
                 case .success(let translated):
                     text = translated
                 case .failure(let error):
-                    text = error.message(for: CloudProvider.detect(fromKey: cloudAPIKey) ?? .gemini)
+                    text = error.message
                     isError = true
                 }
             } else {

@@ -2,6 +2,7 @@ import AVFoundation
 import Foundation
 import Observation
 import os
+import TamaCore
 import UIKit
 import UserNotifications
 
@@ -80,6 +81,7 @@ final class TomomixViewModel {
     private var captionUntil: Date?
     private var lastTick = Date()
     private var lastSave = Date()
+    @ObservationIgnored fileprivate var lastWidgetFrame = Date.distantPast
     private var loop: Task<Void, Never>?
     private var gameTask: Task<Void, Never>?
     /// After eating (or refusing), the food menu comes back with the same
@@ -96,21 +98,12 @@ final class TomomixViewModel {
     init() {
         if let save = TomomixStore.load() {
             brain = save.brain
-            timeOffset = save.timeOffset
-            pausedAt = save.pausedAt
+            timeOffset = 0
             muted = save.muted
-            paused = save.pausedAt != nil
-            frozenAt = save.pausedAt != nil ? Date() : nil
-            waitingForStar = save.waitingForStar ?? false
-            petName = save.petName
-            outdoors = save.outdoors ?? false
-            // Older pauses and the old speed/skip tools left its clock off
-            // the phone's time. Put it back in step without living or undoing
-            // anything (a gap from the app being closed is still caught up).
-            if pausedAt == nil, timeOffset != 0 {
-                brain.shiftClock(by: -timeOffset)
-                timeOffset = 0
-            }
+            paused = false
+            waitingForStar = false
+            outdoors = false
+            apply(save)
         } else {
             brain = TomoBrain(now: Date())
             timeOffset = 0
@@ -126,6 +119,27 @@ final class TomomixViewModel {
         if let name = ProcessInfo.processInfo.environment["TOMO_DEBUG_CHAR"],
            let c = TomoCharacter(rawValue: name) { preview.character = c }
         #endif
+    }
+
+    /// Takes on a save file's state (at launch, and after a restore or
+    /// import).
+    private func apply(_ save: TomomixStore.SaveFile) {
+        brain = save.brain
+        timeOffset = save.timeOffset
+        pausedAt = save.pausedAt
+        muted = save.muted
+        paused = save.pausedAt != nil
+        frozenAt = save.pausedAt != nil ? Date() : nil
+        waitingForStar = save.waitingForStar ?? false
+        petName = save.petName
+        outdoors = save.outdoors ?? false
+        // Older pauses and the old speed/skip tools left its clock off
+        // the phone's time. Put it back in step without living or undoing
+        // anything (a gap from the app being closed is still caught up).
+        if pausedAt == nil, timeOffset != 0 {
+            brain.shiftClock(by: -timeOffset)
+            timeOffset = 0
+        }
     }
 
     // MARK: - Names and the first star (§3)
@@ -291,7 +305,11 @@ final class TomomixViewModel {
         gameTask = nil
         if case .game = screen { screen = .main }
         beeper.stop()
+        publishWidgetFrame()
         save()
+        // Rides on this save, at most hourly (see SavePaths.makeBackup):
+        // nothing runs in the background for it.
+        SavePaths(device: DeviceCatalog.tomomix).makeBackup(reason: .automatic)
         // Off screen (another page, or the app closed): tell the phone
         // when it will call next, so iOS can notify without the app
         // having to run in the background.
@@ -334,6 +352,7 @@ final class TomomixViewModel {
         // Born while the app was closed: ask its name once it's on screen.
         if brain.phase == .alive, petName == nil, prompt == nil, moment == nil { prompt = .petName }
         if !events.isEmpty || now.timeIntervalSince(lastSave) > 30 { save() }
+        if now.timeIntervalSince(lastWidgetFrame) > Self.widgetFrameInterval { publishWidgetFrame() }
     }
 
     private func handle(_ events: [TomoBrain.Event], live: Bool) {
@@ -642,6 +661,8 @@ final class TomomixViewModel {
     }
 
     func newStar() {
+        save()
+        SavePaths(device: DeviceCatalog.tomomix).makeBackup(reason: .beforeNewStar)
         gameTask?.cancel()
         foodChoiceAfterMoment = nil
         // Back to the starry night: the next star is the player's to catch.
@@ -853,6 +874,118 @@ final class TomomixViewModel {
     private var saveFile: TomomixStore.SaveFile {
         TomomixStore.SaveFile(brain: brain, timeOffset: timeOffset, pausedAt: pausedAt, muted: muted,
                               waitingForStar: waitingForStar, petName: petName, outdoors: outdoors)
+    }
+}
+
+// MARK: - Widget, backups, export and import
+
+extension TomomixViewModel: SaveBackupHost {
+    /// How often the widget's picture is refreshed while the page is on
+    /// screen (it's also refreshed whenever the page leaves the screen).
+    static let widgetFrameInterval: TimeInterval = 120
+
+    /// Hands the home-screen widget (and the backup list's preview) the
+    /// game screen as it looks right now. Does nothing while the page
+    /// isn't on screen, since there is nothing to draw from.
+    func publishWidgetFrame() {
+        lastWidgetFrame = Date()
+        guard let frame = recordingFrame(side: 512) else { return }
+        WidgetSharedState.publish(image: frame, device: DeviceCatalog.tomomix)
+    }
+
+    func backupNow() {
+        save()
+        SavePaths(device: DeviceCatalog.tomomix).makeBackup(reason: .manual)
+    }
+
+    /// Puts a backup back. Like the other pets, it carries on from the
+    /// moment of the backup with no time owed: the hours since then are
+    /// skipped, not lived (an old backup would otherwise come back to a
+    /// pile of neglect).
+    func restoreBackup(_ backup: SaveBackup) throws {
+        let wasRunning = isRunning
+        if wasRunning { stop() } else { save() }
+        defer { if wasRunning { start() } }
+        try SavePaths(device: DeviceCatalog.tomomix).restore(backup)
+        reloadFromDisk()
+    }
+
+    /// A copy of the save as one `.tomomix` file, for the "save to Files"
+    /// sheet. Never the live file: that sheet moves what it's given.
+    func prepareExportURL() -> URL? {
+        save()
+        let export = TomomixExport(save: saveFile, playerName: Self.playerName)
+        guard let data = try? JSONEncoder().encode(export) else { return nil }
+        let fm = FileManager.default
+        let folder = fm.temporaryDirectory.appendingPathComponent("TomomixExport", isDirectory: true)
+        try? fm.removeItem(at: folder)
+        let stamp = Date().formatted(.iso8601.year().month().day().dateSeparator(.dash))
+        let pet = (petName?.isEmpty == false ? petName! : "Tomomix")
+        let name = "\(pet) \(stamp)".replacingOccurrences(of: "/", with: "-")
+        let url = folder.appendingPathComponent(name).appendingPathExtension(TomomixExport.fileExtension)
+        do {
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    /// Replaces the tomomix with an exported one. The current one is
+    /// backed up first, so an import can be undone from Backups. Like a
+    /// restore, the time since the export is skipped, not lived.
+    func importSave(from url: URL) throws {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        // Read and check the whole file before touching anything.
+        guard let export = try? JSONDecoder().decode(TomomixExport.self, from: Data(contentsOf: url)),
+              export.format == TomomixExport.formatName else {
+            throw TomomixExport.Failure("This isn't a Tomomix save file.")
+        }
+        let wasRunning = isRunning
+        if wasRunning { stop() } else { save() }
+        defer { if wasRunning { start() } }
+        SavePaths(device: DeviceCatalog.tomomix).makeBackup(reason: .beforeImport)
+        TomomixStore.write(export.save)
+        if let player = export.playerName, Self.playerName == nil { Self.playerName = player }
+        reloadFromDisk()
+    }
+
+    /// Takes on whatever is in the save file now, after a restore or an
+    /// import, and lines its clock up with now without living the gap.
+    private func reloadFromDisk() {
+        guard let file = TomomixStore.load() else { return }
+        apply(file)
+        if pausedAt == nil, !waitingForStar { brain.skipPause(to: simNow) }
+        screen = .main
+        cursor = nil
+        moment = nil
+        prompt = nil
+        caption = nil
+        caughtStar = nil
+        caughtAt = nil
+        foodChoiceAfterMoment = nil
+        lastTick = Date()
+        save()
+    }
+}
+
+/// A tomomix as one file the player can keep or move to another phone.
+struct TomomixExport: Codable {
+    static let fileExtension = "tomomix"
+    static let formatName = "tomomix-save"
+
+    var format = TomomixExport.formatName
+    var version = 1
+    var save: TomomixStore.SaveFile
+    /// The player's own name, so a move to a new phone keeps it too.
+    var playerName: String?
+
+    struct Failure: LocalizedError {
+        let message: String
+        init(_ message: String) { self.message = message }
+        var errorDescription: String? { message }
     }
 }
 

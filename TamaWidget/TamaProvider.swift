@@ -60,10 +60,11 @@ struct TamaProvider: AppIntentTimelineProvider {
     }
 
     private func currentEntry(for configuration: SelectTamaIntent, at date: Date) -> TamaEntry {
-        let isPremium = WidgetSharedState.isPremium
         guard let id = configuration.tama?.id, let device = DeviceCatalog.find(name: id) else {
-            return TamaEntry(date: date, image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil, isPremium: isPremium)
+            return TamaEntry(date: date, image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil, isPremium: WidgetSharedState.isPremium)
         }
+        // The tomomix is free in full, its widget included.
+        let isPremium = WidgetSharedState.isPremium || device.family == .tomomix
         var image: UIImage?
         if let path = WidgetSharedState.latestFramePath(for: device), let data = try? Data(contentsOf: path) {
             image = UIImage(data: data)

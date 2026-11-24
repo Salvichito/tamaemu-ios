@@ -6,7 +6,7 @@ struct TamaEntity: AppEntity {
     let id: String
     var displayName: String
 
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Tama"
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Pet"
     static var defaultQuery = TamaEntityQuery()
 
     var displayRepresentation: DisplayRepresentation {
@@ -22,8 +22,9 @@ struct TamaEntityQuery: EntityQuery {
     /// mirrors the owned-device list into the one place both processes
     /// actually share: the App Group's UserDefaults suite.
     private func ownedDevices() -> [TamaDevice] {
-        let ownedIDs = Set(WidgetSharedState.ownedDeviceIDs())
-        return DeviceCatalog.all().filter { ownedIDs.contains($0.id) }
+        // find(name:) rather than filtering all(): the built-in tomomix
+        // isn't in all(), which only lists models a file can be imported for.
+        WidgetSharedState.ownedDeviceIDs().compactMap(DeviceCatalog.find(name:))
     }
 
     func entities(for identifiers: [String]) async -> [TamaEntity] {
@@ -42,8 +43,8 @@ struct TamaEntityQuery: EntityQuery {
 /// Widget) to one specific owned Tama, since several can be owned at once
 /// now — one widget instance per Tama the player wants to watch.
 struct SelectTamaIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource = "Choose Tama"
+    static var title: LocalizedStringResource = "Choose Pet"
 
-    @Parameter(title: "Tama")
+    @Parameter(title: "Pet")
     var tama: TamaEntity?
 }
