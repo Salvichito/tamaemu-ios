@@ -88,7 +88,7 @@ struct TamaPageView: View {
             // never shifts the title/ButtonPad position while visible.
             .overlay(alignment: .top) {
                 if let translatedText = viewModel.translatedText {
-                    TranslationBubble(text: translatedText) {
+                    TranslationBubble(text: translatedText, isError: viewModel.translationIsError) {
                         viewModel.dismissTranslation()
                     }
                     .offset(y: -64)

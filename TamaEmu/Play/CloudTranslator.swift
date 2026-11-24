@@ -35,15 +35,55 @@ enum CloudProvider {
     }
 }
 
-enum CloudTranslator {
-    static func translate(_ cgImage: CGImage, apiKey: String) async -> String? {
-        guard let provider = CloudProvider.detect(fromKey: apiKey) else { return nil }
-        guard let upscaled = ScreenImagePrep.textAreaUpscaled(cgImage) else { return nil }
-        switch provider {
-        case .gemini: return await translateWithGemini(upscaled, apiKey: apiKey)
-        case .openAI: return await translateWithOpenAI(upscaled, apiKey: apiKey)
-        case .anthropic: return await translateWithAnthropic(upscaled, apiKey: apiKey)
+/// Why a cloud translation didn't produce text, worded for the player —
+/// shown in the same bubble a translation would be, so a failed tap never
+/// just looks like nothing happened.
+enum CloudTranslationError: Error {
+    case timedOut, offline, rateLimited, busy, badKey, nothingLegible, unexpectedReply
+
+    func message(for provider: CloudProvider) -> String {
+        let name = provider.displayName
+        switch self {
+        case .timedOut: return "\(name) took too long. Try again."
+        case .offline: return "No internet connection."
+        case .rateLimited: return "Too many requests to \(name). Wait a moment and try again."
+        case .busy: return "\(name) is busy right now. Try again."
+        case .badKey: return "\(name) didn't accept your API key. Check it in Settings."
+        case .nothingLegible: return "No text found on screen."
+        case .unexpectedReply: return "Couldn't get a translation from \(name). Try again."
         }
+    }
+}
+
+enum CloudTranslator {
+    /// Text on success; on failure, a short player-facing reason.
+    static func translate(_ cgImage: CGImage, apiKey: String) async -> Result<String, CloudTranslationError> {
+        guard let provider = CloudProvider.detect(fromKey: apiKey) else { return .failure(.badKey) }
+        guard let upscaled = ScreenImagePrep.textAreaUpscaled(cgImage),
+              let base64 = pngBase64(upscaled)
+        else { return .failure(.unexpectedReply) }
+        let request: URLRequest
+        let body: [String: Any]
+        switch provider {
+        case .gemini: (request, body) = geminiRequest(base64, apiKey: apiKey)
+        case .openAI: (request, body) = openAIRequest(base64, apiKey: apiKey)
+        case .anthropic: (request, body) = anthropicRequest(base64, apiKey: apiKey)
+        }
+        let json: [String: Any]
+        switch await post(request, body: body) {
+        case .success(let reply): json = reply
+        case .failure(let error): return .failure(error)
+        }
+        let text: String?
+        switch provider {
+        case .gemini: text = geminiText(json)
+        case .openAI: text = openAIText(json)
+        case .anthropic: text = anthropicText(json)
+        }
+        guard let text else { return .failure(.unexpectedReply) }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+        return trimmed.isEmpty ? .failure(.nothingLegible) : .success(trimmed)
     }
 
     private static let promptText = """
@@ -62,8 +102,7 @@ enum CloudTranslator {
 
     // MARK: Gemini
 
-    private static func translateWithGemini(_ cgImage: CGImage, apiKey: String) async -> String? {
-        guard let base64 = pngBase64(cgImage) else { return nil }
+    private static func geminiRequest(_ base64: String, apiKey: String) -> (URLRequest, [String: Any]) {
         let body: [String: Any] = [
             "contents": [[
                 "parts": [
@@ -73,26 +112,31 @@ enum CloudTranslator {
             ]],
             // Temperature 0, same reasoning as the on-device model: this
             // is a read-the-screen task with one right answer, not
-            // creative writing.
-            "generationConfig": ["temperature": 0],
+            // creative writing. The output cap just stops a runaway reply
+            // from holding the spinner — a real answer is a few words.
+            // (Thinking is left at Flash-Lite's own default, which Google
+            // documents as minimal.)
+            "generationConfig": ["temperature": 0, "maxOutputTokens": 512],
         ]
-        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent") else { return nil }
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent")!)
         request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
-        guard let result = await post(request, body: body) else { return nil }
+        return (request, body)
+    }
+
+    private static func geminiText(_ json: [String: Any]) -> String? {
         guard
-            let candidates = result["candidates"] as? [[String: Any]],
+            let candidates = json["candidates"] as? [[String: Any]],
             let content = candidates.first?["content"] as? [String: Any],
-            let parts = content["parts"] as? [[String: Any]],
-            let text = parts.first?["text"] as? String
+            let parts = content["parts"] as? [[String: Any]]
         else { return nil }
-        return cleaned(text)
+        // Skip any thought-summary parts; the answer is the plain text part.
+        let texts = parts.filter { ($0["thought"] as? Bool) != true }.compactMap { $0["text"] as? String }
+        return texts.isEmpty ? nil : texts.joined()
     }
 
     // MARK: OpenAI
 
-    private static func translateWithOpenAI(_ cgImage: CGImage, apiKey: String) async -> String? {
-        guard let base64 = pngBase64(cgImage) else { return nil }
+    private static func openAIRequest(_ base64: String, apiKey: String) -> (URLRequest, [String: Any]) {
         let body: [String: Any] = [
             "model": "gpt-5-mini",
             "temperature": 0,
@@ -104,22 +148,22 @@ enum CloudTranslator {
                 ],
             ]],
         ]
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else { return nil }
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        guard let result = await post(request, body: body) else { return nil }
+        return (request, body)
+    }
+
+    private static func openAIText(_ json: [String: Any]) -> String? {
         guard
-            let choices = result["choices"] as? [[String: Any]],
-            let message = choices.first?["message"] as? [String: Any],
-            let text = message["content"] as? String
+            let choices = json["choices"] as? [[String: Any]],
+            let message = choices.first?["message"] as? [String: Any]
         else { return nil }
-        return cleaned(text)
+        return message["content"] as? String
     }
 
     // MARK: Anthropic
 
-    private static func translateWithAnthropic(_ cgImage: CGImage, apiKey: String) async -> String? {
-        guard let base64 = pngBase64(cgImage) else { return nil }
+    private static func anthropicRequest(_ base64: String, apiKey: String) -> (URLRequest, [String: Any]) {
         let body: [String: Any] = [
             "model": "claude-haiku-5-5",
             "max_tokens": 200,
@@ -132,37 +176,96 @@ enum CloudTranslator {
                 ],
             ]],
         ]
-        guard let url = URL(string: "https://api.anthropic.com/v1/messages") else { return nil }
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        guard let result = await post(request, body: body) else { return nil }
-        guard
-            let content = result["content"] as? [[String: Any]],
-            let text = content.first?["text"] as? String
-        else { return nil }
-        return cleaned(text)
+        return (request, body)
+    }
+
+    private static func anthropicText(_ json: [String: Any]) -> String? {
+        guard let content = json["content"] as? [[String: Any]] else { return nil }
+        return content.first?["text"] as? String
     }
 
     // MARK: Shared
 
-    private static func post(_ request: URLRequest, body: [String: Any]) async -> [String: Any]? {
+    /// Hard ceiling for one attempt. The image is only tens of KB, so a
+    /// healthy request finishes in a few seconds; anything still going
+    /// at this point is stalled, not slow. Before this existed the app
+    /// used iOS's default 60 s idle timeout with no overall limit, which
+    /// is what made a stalled request look stuck forever.
+    private static let attemptTimeout: TimeInterval = 15
+
+    /// Own session rather than URLSession.shared: the per-request and
+    /// whole-transfer limits both get capped, and an ephemeral config
+    /// keeps the API key and replies out of any on-disk cache. It still
+    /// reuses its connection between taps.
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = attemptTimeout
+        config.timeoutIntervalForResource = attemptTimeout
+        config.waitsForConnectivity = false
+        return URLSession(configuration: config)
+    }()
+
+    /// One automatic retry, only for "busy" / "rate-limited" replies —
+    /// those come back fast and often clear within a second. A timeout
+    /// isn't retried, so the worst case stays around one attempt's limit
+    /// plus a quick failed one, not two full stalls back to back.
+    private static func post(
+        _ request: URLRequest, body: [String: Any]
+    ) async -> Result<[String: Any], CloudTranslationError> {
         var request = request
-        guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return nil }
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return .failure(.unexpectedReply) }
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = bodyData
-        do {
-            let (data, _) = try await URLSession.shared.data(for: request)
-            return try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        } catch {
-            return nil
+        request.timeoutInterval = attemptTimeout
+
+        var result = await attempt(request)
+        if case .failure(let error) = result, error == .busy || error == .rateLimited {
+            try? await Task.sleep(for: .seconds(1.5))
+            result = await attempt(request)
         }
+        return result
     }
 
-    private static func cleaned(_ text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+    private static func attempt(_ request: URLRequest) async -> Result<[String: Any], CloudTranslationError> {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError {
+            switch error.code {
+            case .timedOut: return .failure(.timedOut)
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
+                 .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+                return .failure(.offline)
+            default: return .failure(.unexpectedReply)
+            }
+        } catch {
+            return .failure(.unexpectedReply)
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        switch status {
+        case 200..<300:
+            return json.map { .success($0) } ?? .failure(.unexpectedReply)
+        case 401, 403:
+            return .failure(.badKey)
+        case 400:
+            // Gemini reports a bad key as a 400, not a 401.
+            let body = String(data: data, encoding: .utf8) ?? ""
+            return body.contains("API_KEY_INVALID") || body.contains("API key not valid")
+                ? .failure(.badKey) : .failure(.unexpectedReply)
+        case 429:
+            return .failure(.rateLimited)
+        case 500...599:
+            // Includes Anthropic's 529 "overloaded".
+            return .failure(.busy)
+        default:
+            return .failure(.unexpectedReply)
+        }
     }
 
     private static func pngBase64(_ cgImage: CGImage) -> String? {

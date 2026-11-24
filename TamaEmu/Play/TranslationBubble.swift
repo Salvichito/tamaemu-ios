@@ -7,14 +7,22 @@ import SwiftUI
 /// auto-dismisses it after a few seconds unread.
 struct TranslationBubble: View {
     let text: String
+    /// A failure reason rather than a translation — shown dimmer with a
+    /// small warning mark so it doesn't read as what the screen says.
+    var isError = false
     let onDismiss: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(text)
+            Label {
+                Text(text)
+            } icon: {
+                if isError { Image(systemName: "exclamationmark.triangle") }
+            }
+                .labelStyle(BubbleLabelStyle(showsIcon: isError))
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.primary)
+                .foregroundStyle(isError ? .secondary : .primary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -27,6 +35,16 @@ struct TranslationBubble: View {
         .frame(maxWidth: 240)
         .contentShape(Rectangle())
         .onTapGesture { onDismiss() }
+    }
+}
+
+private struct BubbleLabelStyle: LabelStyle {
+    let showsIcon: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 6) {
+            if showsIcon { configuration.icon }
+            configuration.title
+        }
     }
 }
 

@@ -43,6 +43,8 @@ final class PlayViewModel: SaveBackupHost {
     /// countdown instead of silently keeping the old one running.
     private(set) var translationID: UUID?
     private(set) var isTranslating = false
+    /// The bubble is showing a failure reason, not a translation.
+    private(set) var translationIsError = false
     /// Whether the live engine is currently running at the
     /// tap-and-hold fast-forward speed — purely a UI flag for the badge
     /// TamaPageView shows while held. Never persisted: losing the engine
@@ -602,8 +604,18 @@ final class PlayViewModel: SaveBackupHost {
         let cloudAPIKey = AppSettings.liveTranslationUsesCloud ? KeychainStore.read() : nil
         Task.detached { [weak self] in
             let text: String?
+            var isError = false
             if let cloudAPIKey, !cloudAPIKey.isEmpty {
-                text = await CloudTranslator.translate(image, apiKey: cloudAPIKey)
+                // A failed cloud request now says why in the bubble
+                // (timed out, busy, bad key...) instead of the spinner
+                // just stopping with nothing shown.
+                switch await CloudTranslator.translate(image, apiKey: cloudAPIKey) {
+                case .success(let translated):
+                    text = translated
+                case .failure(let error):
+                    text = error.message(for: CloudProvider.detect(fromKey: cloudAPIKey) ?? .gemini)
+                    isError = true
+                }
             } else {
                 text = await ScreenTranslator.translate(image)
             }
@@ -611,6 +623,7 @@ final class PlayViewModel: SaveBackupHost {
             await MainActor.run {
                 self.isTranslating = false
                 self.translatedText = text
+                self.translationIsError = isError
                 self.translationID = text != nil ? UUID() : nil
             }
         }
