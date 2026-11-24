@@ -36,6 +36,7 @@
 		65C3C829A2C6F004A14D8A70 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F058EEC27A45730B3595D812 /* WelcomeView.swift */; };
 		6876BF308047341A244531B7 /* V1PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382CE8A382C98053A51E7AB9 /* V1PageView.swift */; };
 		694922B0124194E5CAB93EE0 /* ScreenTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3DE16C24D18BB2F54C7241D /* ScreenTranslator.swift */; };
+		6A06542C34228494D627E218 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3B8FE7E50C065E0898DF5BA4 /* PrivacyInfo.xcprivacy */; };
 		6C357B264E2775A5E88D2A74 /* TamaLibCore in Frameworks */ = {isa = PBXBuildFile; productRef = A11D632E4B54DF8C670B5778 /* TamaLibCore */; };
 		6DEF195F7215573C55FFE139 /* T7PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A735B64EEDCE8C20FB0B1 /* T7PageView.swift */; };
 		748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */; };
@@ -67,6 +68,7 @@
 		D9115EAC767B490EB90DB299 /* ScreenRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */; };
 		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
 		DBDEB5A1D000D35A0A87316E /* T7EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51134BD9CBB7FA2AC0B5BD6C /* T7EmulatorEngine.swift */; };
+		E1D0B3CB439B1328942674E8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F61FF087E5191BB61E5AD116 /* PrivacyInfo.xcprivacy */; };
 		E313A904940FD4FD31FC386B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 229AB57C64B25F1A07269DE4 /* Assets.xcassets */; };
 		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
 		E49CB9524210D840D9C46A28 /* LinkPort.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73A464D9A5B4C551857E6F9 /* LinkPort.swift */; };
@@ -128,6 +130,7 @@
 		34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudTranslator.swift; sourceTree = "<group>"; };
 		36E1506F6C754F9FAE07B3BB /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		382CE8A382C98053A51E7AB9 /* V1PageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V1PageView.swift; sourceTree = "<group>"; };
+		3B8FE7E50C065E0898DF5BA4 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveDeviceLookup.swift; sourceTree = "<group>"; };
 		42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectTamaIntent.swift; sourceTree = "<group>"; };
 		42D45A04487E1B1C19010476 /* V1EmulatorEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V1EmulatorEngine.swift; sourceTree = "<group>"; };
@@ -177,6 +180,7 @@
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
 		DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "CGImage+GlowColor.swift"; path = "CGImage+GlowColor.swift"; sourceTree = "<group>"; };
 		F058EEC27A45730B3595D812 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		F61FF087E5191BB61E5AD116 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaGalleryView.swift; sourceTree = "<group>"; };
 		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -229,6 +233,7 @@
 				04981D1305DB4733ACBC657E /* Info.plist */,
 				2E4BFE97A8F641C6AD122775 /* TamaWidget.entitlements */,
 				229AB57C64B25F1A07269DE4 /* Assets.xcassets */,
+				F61FF087E5191BB61E5AD116 /* PrivacyInfo.xcprivacy */,
 			);
 			path = TamaWidget;
 			sourceTree = "<group>";
@@ -329,6 +334,7 @@
 				8E9FAE9C242B6BB117C6B454 /* Resources */,
 				B13BA0BC3698C849674338E2 /* TamaEmu.storekit */,
 				0978203F9895AEFB0BF43260 /* Tomomix */,
+				3B8FE7E50C065E0898DF5BA4 /* PrivacyInfo.xcprivacy */,
 			);
 			path = TamaEmu;
 			sourceTree = "<group>";
@@ -450,6 +456,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E313A904940FD4FD31FC386B /* Assets.xcassets in Resources */,
+				E1D0B3CB439B1328942674E8 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -459,6 +466,7 @@
 			files = (
 				5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */,
 				8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */,
+				6A06542C34228494D627E218 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
