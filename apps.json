@@ -11,8 +11,17 @@
       "localizedDescription": "An iOS emulator for Tamagotchi-family devices. Does not include any firmware/ROM — bring your own.",
       "iconURL": "https://raw.githubusercontent.com/Salvichito/tomomix/main/apps-icon.png",
       "tintColor": "FF6FA5",
-      "size": 25183836,
+      "size": 25329026,
       "versions": [
+        {
+          "version": "1.5",
+          "buildVersion": "9",
+          "date": "2026-11-23T00:00:00Z",
+          "localizedDescription": "The app is now called Tomomix, with a new purple icon. Adds early support for Tama-Go and Tamagotchi Friends (sound, pause and fast-forward for these two are still to come), plus export/import of their saves from the ⋯ menu. Everything is unlocked in this build.",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.5-build9/TamaEmu.ipa",
+          "size": 25329026,
+          "minOSVersion": "18.0"
+        },
         {
           "version": "1.5",
           "date": "2026-11-21T00:00:00Z",
