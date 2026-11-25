@@ -55,7 +55,9 @@ enum NotificationScheduler {
         content.sound = .default
 
         let request = UNNotificationRequest(
-            identifier: "tama-calling-\(UUID().uuidString)",
+            // One per Tama: a newer call replaces the older one in
+            // Notification Center instead of piling up beside it.
+            identifier: "tama-calling-\(deviceTitle)",
             content: content,
             trigger: nil
         )

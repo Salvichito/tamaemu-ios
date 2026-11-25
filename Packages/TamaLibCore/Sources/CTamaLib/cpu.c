@@ -786,6 +786,19 @@ static void set_memory(u12_t n, u4_t v)
 	g_hal->log(LOG_MEMORY, "Write 0x%X - Address 0x%03X - PC = 0x%04X\n", v, n, pc);
 }
 
+/* iOS port: cpu_frequency isn't part of the saved state, so a restored
+ * save always resumed at OSC1 even when the ROM had switched to OSC3 (0xF70
+ * bit 3) -- the CPU then ran ~30x slow until the ROM next wrote 0xF70. The
+ * Yasashii sits in OSC3 for long stretches (its sleep screen and the scroll
+ * into the clock, found 2026-11-25: a ~0.6 s scroll took ~20 s after every
+ * resume). Called by ios_hal_load_state() after RAM/IO is restored; 0xF70
+ * is already in the saved memory, so no new state. */
+void cpu_sync_clock_from_io(void)
+{
+	cpu_frequency = (GET_IO_MEMORY(memory, REG_CPU_OSC3_CTRL) & 0x8) ? OSC3_FREQUENCY : OSC1_FREQUENCY;
+	scaled_cycle_accumulator = 0;
+}
+
 void cpu_refresh_hw(void)
 {
 	static const struct range {

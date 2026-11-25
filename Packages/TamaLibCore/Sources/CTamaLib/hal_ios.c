@@ -618,6 +618,8 @@ bool ios_hal_load_state(const uint8_t *data, uint32_t len)
 		pos = s_cursor_get_u8(data, pos, len, &u8);
 		state->memory[i] = u8;
 	}
+	/* The CPU clock (OSC1/OSC3) lives in 0xF70 of the memory just restored. */
+	cpu_sync_clock_from_io();
 	for (uint8_t y = 0; y < IOS_HAL_LCD_HEIGHT; y++) {
 		for (uint8_t x = 0; x < IOS_HAL_LCD_WIDTH; x++) {
 			pos = s_cursor_get_u8(data, pos, len, &u8);

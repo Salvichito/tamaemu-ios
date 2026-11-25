@@ -38,6 +38,47 @@ final class InputController: @unchecked Sendable {
     }
     private let maxQueued = 2
 
+    /// "Hold until it beeps" buttons (Yasashii only, see V1EmulatorEngine):
+    /// instead of a fixed minimum, the press is held until the firmware
+    /// beeps to say it took it (acknowledge()), at least ackFloorMs and at
+    /// most ackCapMs. Measured headless 2026-11-25: awake, the Yasashii
+    /// can take anywhere from ~0.15 s to ~1 s to beep depending on where
+    /// in its own cycle the press lands, so any fixed hold short enough to
+    /// feel like a tap lost some presses.
+    private var ackButtons: UInt8 = 0
+    private var ackFloorMs: Int64 = 0
+    private var ackCapMs: Int64 = 0
+    private var ackStartMs = [Int64](repeating: 0, count: Button.allCases.count)
+    private var awaitingAck: UInt8 = 0
+    func setAckHold(buttons: Set<Button>, floorMs: Int64, capMs: Int64) {
+        lock.lock(); defer { lock.unlock() }
+        ackButtons = buttons.reduce(0) { $0 | UInt8(1 << $1.rawValue) }
+        ackFloorMs = floorMs
+        ackCapMs = capMs
+        awaitingAck = 0
+    }
+    /// The firmware just started a beep: every press still waiting for one
+    /// ends at its floor (or now, if that's already past).
+    func acknowledge() {
+        lock.lock(); defer { lock.unlock() }
+        guard awaitingAck != 0 else { return }
+        let now = Self.nowMs()
+        for i in 0..<Button.allCases.count where (awaitingAck & (1 << i)) != 0 {
+            holdUntilMs[i] = max(ackStartMs[i] + ackFloorMs, now)
+        }
+        awaitingAck = 0
+    }
+    /// Starts the firmware-side hold of button i at `now`.
+    private func beginHold(_ i: Int, now: Int64) {
+        if (ackButtons & (1 << i)) != 0 {
+            holdUntilMs[i] = now + ackCapMs
+            ackStartMs[i] = now
+            awaitingAck |= UInt8(1 << i)
+        } else {
+            holdUntilMs[i] = now + minHold(i)
+        }
+    }
+
     private let lock = NSLock()
     private var held: UInt8 = 0
     private var holdUntilMs = [Int64](repeating: 0, count: Button.allCases.count)
@@ -55,7 +96,7 @@ final class InputController: @unchecked Sendable {
             queued[i] = min(queued[i] + 1, maxQueued)
         } else {
             held |= UInt8(1 << i)
-            holdUntilMs[i] = now + minHold(i)
+            beginHold(i, now: now)
         }
     }
 
@@ -75,13 +116,22 @@ final class InputController: @unchecked Sendable {
         for i in 0..<Button.allCases.count {
             if holdUntilMs[i] > now {
                 mask |= UInt8(1 << i)
-            } else if queued[i] > 0 && (mask & (1 << i)) == 0 && now >= upAtMs[i] + gapMs {
+            } else if queued[i] > 0 && (mask & (1 << i)) == 0 && (lastMask & (1 << i)) == 0
+                        && now >= upAtMs[i] + gapMs {
+                // lastMask: the firmware must have seen this button go up
+                // (which is what sets upAtMs) before a queued tap starts.
+                // Without it, a queued tap began the instant the previous
+                // hold ended, so the firmware saw one unbroken press --
+                // found 2026-11-25 from a log: four quick taps on the
+                // Yasashii happiness button became one 5.5 s hold, which
+                // the toy ignored.
                 queued[i] -= 1
-                holdUntilMs[i] = now + minHold(i)
+                beginHold(i, now: now)
                 mask |= UInt8(1 << i)
             }
         }
         let wentUp = lastMask & ~mask
+        awaitingAck &= mask
         if wentUp != 0 {
             for i in 0..<Button.allCases.count where (wentUp & (1 << i)) != 0 {
                 upAtMs[i] = now

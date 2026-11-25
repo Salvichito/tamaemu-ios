@@ -175,7 +175,14 @@ private struct LampButton<Icon: View>: View {
     let onChange: ((Bool) -> Void)?
 
     @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
-    @State private var isPressed = false
+    /// @GestureState, not @State: it resets to false by itself when the
+    /// touch is cancelled (e.g. the buttons get disabled mid-press), where
+    /// a DragGesture's onEnded never runs. With @State a cancelled press
+    /// left isPressed stuck true, so the guard below dropped every later
+    /// tap and the toy saw the button held forever (found 2026-11-25:
+    /// happiness button dead after feeding a snack).
+    @GestureState private var isPressed = false
+    @State private var pressHandler: ((Bool) -> Void)?
 
     private static var glow: Color { Color(red: 1.0, green: 0.82, blue: 0.35) }
 
@@ -198,18 +205,23 @@ private struct LampButton<Icon: View>: View {
         }
         .gesture(
             DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    guard let onChange, !isPressed else { return }
-                    isPressed = true
-                    onChange(true)
-                }
-                .onEnded { _ in
-                    guard let onChange, isPressed else { return }
-                    isPressed = false
-                    onChange(false)
-                },
+                .updating($isPressed) { _, state, _ in state = true },
             including: onChange == nil ? .none : .all
         )
+        // Press and release both follow isPressed, so a cancelled touch
+        // still sends the release.
+        .onChange(of: isPressed) { _, pressed in
+            if pressed {
+                pressHandler = onChange
+                pressHandler?(true)
+            } else {
+                // The handler the press started with, even if onChange has
+                // since become nil (buttons disabled), so the toy always
+                // gets the release.
+                pressHandler?(false)
+                pressHandler = nil
+            }
+        }
     }
 }
 

@@ -104,8 +104,14 @@ enum BackgroundRefresh {
     /// One Tama's headless catch-up + save. Caller holds its EngineGate.
     private static func refresh(_ device: TamaDevice, budget: TimeInterval, shouldAbort: @escaping () -> Bool) {
         let paths = SavePaths(device: device)
+        // One alert per Tama per pass: a pass replays everything since the
+        // last one, and a Yasashii (whose lamps stand in for the attention
+        // icon) can start and stop calling several times in that stretch --
+        // each used to post its own alert, arriving as a burst.
+        var alreadyNotified = false
         let notifyCall = {
-            guard !isAppActive else { return }
+            guard !isAppActive, !alreadyNotified else { return }
+            alreadyNotified = true
             NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
             // A real heads-up just went out — no need for the dumb
             // "it's been a while" reminder on top of it.

@@ -226,6 +226,7 @@ u4_t cpu_get_out_port(u8_t index);
 void cpu_sync_ref_timestamp(void);
 
 void cpu_refresh_hw(void);
+void cpu_sync_clock_from_io(void); /* iOS port, see cpu.c */
 
 void cpu_reset(void);
 

@@ -135,16 +135,23 @@ final class V1EmulatorEngine {
         // them 0.3 s (quick taps queue up instead of being lost). The
         // Yasashii is slower still (measured headless 2026-11-25, status
         // button, 20 tries each: 0/20 at 60 ms, 5/20 at 100 ms, 18/20 at
-        // 150 ms, 16-20/20 from 250 ms), so it gets 0.25 s. Its status
-        // button (pin A, also the clock-setting button) still wanted a
-        // slight hold at 0.25 s on the user's phone, so that one gets 0.45 s.
+        // 150 ms, 16-20/20 from 250 ms), so it gets 0.25 s -- now only for
+        // cancel; the rest wait for the toy's own beep (below).
         switch model {
         case IOS_HAL_MODEL_TAMAOTCH:
             input.setTiming(minimumHoldMs: 200, minimumGapMs: 300)
         case IOS_HAL_MODEL_YASASHII:
-            input.setTiming(minimumHoldMs: 250, minimumGapMs: 300, holdOverrides: [.a: 450])
+            // Every button but cancel is held until the toy beeps (see
+            // InputController.setAckHold): fixed holds lost ~15-20% of
+            // presses on awake saves (measured headless 2026-11-25), the
+            // beep rule ~0-1%. Cancel never beeps, so it keeps 0.25 s.
+            input.setTiming(minimumHoldMs: 250, minimumGapMs: 300)
+            input.setAckHold(buttons: [.a, .b, .tap, .k10, .k11, .k12, .k13], floorMs: 150, capMs: 600)
         default:
             input.setTiming(minimumHoldMs: 60, minimumGapMs: 25)
+        }
+        if model != IOS_HAL_MODEL_YASASHII {
+            input.setAckHold(buttons: [], floorMs: 0, capMs: 0)
         }
         let started = romWords.withUnsafeBufferPointer { buf in
             ios_hal_start(buf.baseAddress, UInt32(buf.count), model)
@@ -205,16 +212,36 @@ final class V1EmulatorEngine {
         ios_hal_stop()
     }
 
+    /// Instructions run per pass of runLoop (a power of two dividing 64,
+    /// so the audio tick below still lands every 64 instructions).
+    private static let stepsPerPass: UInt32 = 32
+
     private func runLoop() {
         var bitsBuf = [UInt8](repeating: 0, count: 64)
         var lastPublish = Date.distantPast
+        var lastToneOn = false
         var audioTickCounter: UInt32 = 0
 
         while true {
             stopLock.lock(); let stop = shouldStop; stopLock.unlock()
             if stop { break }
 
-            ios_hal_step()
+            // A small batch per pass, not one instruction: everything below
+            // (locks, Date(), the input check) cost far more than the
+            // instruction itself. The P1 runs ~5k instructions a second, but
+            // the Yasashii switches its chip to the fast OSC3 clock for
+            // animations and runs up to ~170k (measured headless
+            // 2026-11-25) -- one-at-a-time from Swift couldn't keep up on a
+            // phone, so it slowed to a crawl whenever it got busy (the
+            // toilet-cleaning animation). 32 instructions is ~6 ms at the
+            // slow clock, well under the shortest press the firmware is shown.
+            ios_hal_step_many(Self.stepsPerPass)
+
+            // A new beep is the firmware's "got it" for a held press
+            // (InputController.setAckHold; a no-op unless a press waits).
+            let toneNow = ios_hal_tone_on()
+            if toneNow && !lastToneOn { input.acknowledge() }
+            lastToneOn = toneNow
 
             // Forwarded every step, not just on the throttled publish tick
             // below -- hw_set_button() is a cheap, idempotent CPU-pin write
@@ -241,7 +268,7 @@ final class V1EmulatorEngine {
             }
             // This loop runs once per emulated instruction, far more often
             // than the sound engine needs to hear from it.
-            audioTickCounter &+= 1
+            audioTickCounter &+= Self.stepsPerPass
             if audioTickCounter & 63 == 0 {
                 audioOutput.tick(buttonsDown: mask != 0)
             }
