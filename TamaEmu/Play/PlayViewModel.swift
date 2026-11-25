@@ -613,7 +613,7 @@ final class PlayViewModel: SaveBackupHost {
         let cloudAPIKey = AppSettings.liveTranslationUsesCloud ? KeychainStore.read() : nil
         Task.detached { [weak self] in
             let text: String?
-            var isError = false
+            let isError: Bool
             if let cloudAPIKey, !cloudAPIKey.isEmpty {
                 // A failed cloud request now says why in the bubble
                 // (timed out, busy, bad key...) instead of the spinner
@@ -621,12 +621,14 @@ final class PlayViewModel: SaveBackupHost {
                 switch await CloudTranslator.translate(image, apiKey: cloudAPIKey) {
                 case .success(let translated):
                     text = translated
+                    isError = false
                 case .failure(let error):
                     text = error.message
                     isError = true
                 }
             } else {
                 text = await ScreenTranslator.translate(image)
+                isError = false
             }
             guard let self else { return }
             await MainActor.run {
