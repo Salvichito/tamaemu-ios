@@ -101,7 +101,7 @@ final class T7EmulatorEngine {
     /// resumes with the right data already in place. Returns false if the
     /// core failed to start.
     @discardableResult
-    func start(romData: Data, eepromData: Data? = nil, stateData: Data? = nil) -> Bool {
+    func start(romData: Data, eepromData: Data? = nil, stateData: Data? = nil, setClockTo clockTime: Date? = nil) -> Bool {
         guard thread == nil else { return true }
 
         let started = romData.withUnsafeBytes { raw in
@@ -122,6 +122,12 @@ final class T7EmulatorEngine {
         if let stateData {
             _ = stateData.withUnsafeBytes { raw in
                 ios_t7_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(stateData.count))
+            }
+            // Only on top of a loaded save: a fresh boot is still in its
+            // own clock-setting screen.
+            if let clockTime {
+                let now = Calendar.current.dateComponents([.hour, .minute, .second], from: clockTime)
+                _ = ios_t7_set_clock(Int32(now.hour ?? 0), Int32(now.minute ?? 0), Int32(now.second ?? 0))
             }
         }
 

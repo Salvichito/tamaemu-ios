@@ -224,6 +224,22 @@ void ios_t7_sound_skip_to(uint32_t keep)
   t7_snd_skip_to(keep);
 }
 
+bool ios_t7_set_clock(int hour, int minute, int second)
+{
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return false;
+  /* Found by watching a running Tama-Go and Friends headless: both keep
+   * the game clock as plain binary bytes, hour 0x0306 and minute 0x0307
+   * (0-23 / 0-59), with the second at t7_rtc_sec_addr(). Rollover past
+   * midnight after a write was checked on both. Before the player has
+   * set the clock (fresh boot setup) the hour byte is not a valid hour,
+   * so leave it alone then. */
+  if (t7_ram_read(0x0306) > 23) return false;
+  t7_ram_write(0x0306, (uint8_t)hour);
+  t7_ram_write(0x0307, (uint8_t)minute);
+  t7_ram_write(t7_rtc_sec_addr(), (uint8_t)second);
+  return true;
+}
+
 bool ios_t7_attention_on(void)
 {
   uint8_t icons[IOS_T7_ICON_COUNT];

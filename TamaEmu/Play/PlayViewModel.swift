@@ -123,7 +123,10 @@ final class PlayViewModel: SaveBackupHost {
             // would measure the entire paused interval as a backlog to
             // fast-forward through, the opposite of what pausing means.
             SavePaths(device: selectedDevice).markSyncedNow()
-            startEngine()
+            // ...but the Tama's own clock should still show the real time,
+            // not the moment it was paused. Jumping it (like "Sync Clock to
+            // Now") moves only the clock — nothing ages in between.
+            startEngine(syncClockToNow: true)
         }
     }
 
@@ -475,7 +478,7 @@ final class PlayViewModel: SaveBackupHost {
     /// nothing is waiting on it.
     private nonisolated static let catchUpWallClockBudget: TimeInterval = 10.0
 
-    private func startEngine() {
+    private func startEngine(syncClockToNow: Bool = false) {
         stopEngine()
         startGeneration += 1
         let generation = startGeneration
@@ -540,6 +543,12 @@ final class PlayViewModel: SaveBackupHost {
                     newEngine.save()
                     releaseGate()
                     return
+                }
+                if syncClockToNow {
+                    // The engine's thread hasn't started yet, so writing the
+                    // clock registers directly is safe here.
+                    let now = Calendar.current.dateComponents([.hour, .minute, .second], from: Date())
+                    newEngine.setClock(hour: now.hour ?? 0, minute: now.minute ?? 0, second: now.second ?? 0)
                 }
                 let image = LCDImageBuilder.makeImage(
                     from: newEngine.renderCurrentFrame(), width: 128, height: 128

@@ -68,7 +68,8 @@ final class T7PlayViewModel: SaveBackupHost {
         if isPaused {
             stopEngine()
         } else {
-            // Nothing is owed for the time spent paused.
+            // Nothing is owed for the time spent paused, but the Tama's
+            // clock still jumps to the real time (same as a color Tama).
             startEngine(discardingGap: true)
         }
     }
@@ -325,7 +326,10 @@ final class T7PlayViewModel: SaveBackupHost {
                 }, onCallDetected: {
                     NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
                 })
-                guard newEngine.start(romData: romData, eepromData: eepromToLoad, stateData: stateToLoad) else {
+                guard newEngine.start(
+                    romData: romData, eepromData: eepromToLoad, stateData: stateToLoad,
+                    setClockTo: discardingGap ? Date() : nil
+                ) else {
                     releaseGate()
                     self.errorMessage = "Couldn't start this Tama's emulator core."
                     self.isLoading = false

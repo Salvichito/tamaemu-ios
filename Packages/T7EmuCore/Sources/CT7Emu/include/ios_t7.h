@@ -70,6 +70,10 @@ bool ios_t7_sound_busy(void);
  * bottom right, lit until answered or 15 minutes pass (a care miss).
  * Not yet seen lit in this port's own testing. */
 bool ios_t7_attention_on(void);
+/* Jumps the Tama's own clock to this time (24-hour). Only safe while the
+ * core isn't being stepped. Returns false, changing nothing, if the
+ * values are out of range or the Tama's clock hasn't been set yet. */
+bool ios_t7_set_clock(int hour, int minute, int second);
 
 /* The emulated 4 KB I2C EEPROM -- the Tama's own game save (character,
  * growth stage, stats). Same split as real hardware: this is what
