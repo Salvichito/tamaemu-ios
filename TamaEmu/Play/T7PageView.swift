@@ -37,7 +37,10 @@ struct T7PageView: View {
     private var pageContent: some View {
         VStack(spacing: 16) {
             ZStack {
-                T7ScreenView(state: viewModel.screenState)
+                T7ScreenView(
+                    state: viewModel.screenState,
+                    isFriends: viewModel.selectedDevice.id == "tamagotchi-friends"
+                )
                     .frame(maxWidth: 280)
                     .overlay(alignment: .topTrailing) {
                         if viewModel.isFastForwarding && !viewModel.isPaused {
