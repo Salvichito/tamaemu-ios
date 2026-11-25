@@ -90,6 +90,9 @@ private struct ButtonView: View {
     // on a real iPad. The SDK has no switch to pin that, so iOS 26 gets a
     // hand-drawn frosted disc instead (blur material + bright rim + soft
     // shadow): it only ever follows the app's light/dark appearance.
+    //
+    // iOS 18 gets the same frosted disc. Don't bring back the old faint
+    // fill it used to have there: the buttons were nearly invisible.
     @ViewBuilder
     private var shape: some View {
         if #available(iOS 27.0, *) {

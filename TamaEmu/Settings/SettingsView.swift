@@ -295,8 +295,10 @@ struct SettingsView: View {
             ))
             Toggle("Ambient Background", isOn: purchases.isPremium ? $ambientBackgroundEnabled : .constant(false))
                 .disabled(!purchases.isPremium)
-            NavigationLink("App Icon") {
-                AppIconPickerView()
+            if AppIconChoice.isSupported {
+                NavigationLink("App Icon") {
+                    AppIconPickerView()
+                }
             }
         } header: {
             Text("Display")

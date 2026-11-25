@@ -18,6 +18,15 @@ struct AppIconChoice: Identifiable, Hashable {
     var previewImage: String { "IconPreview-\(id)" }
     var isPremium: Bool { id != "default" }
 
+    /// Alternate icons are Icon Composer files, and Xcode only makes
+    /// old-style fallback images for the main icon — not the alternates.
+    /// So below iOS 26 the App Icon option is hidden; the main icon still
+    /// shows fine there.
+    static var isSupported: Bool {
+        if #available(iOS 26.0, *) { return true }
+        return false
+    }
+
     static let all: [AppIconChoice] = [
         .init(id: "default", label: "Classic"),
         .init(id: "yellow", label: "Yellow"),

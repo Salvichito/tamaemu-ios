@@ -108,8 +108,10 @@ struct TomomixSettingsView: View {
                     }
                     LabeledContent("Ambient Background", value: "Always on")
                     Toggle("Retro Screen", isOn: $retro)
-                    NavigationLink("App Icon") {
-                        AppIconPickerView()
+                    if AppIconChoice.isSupported {
+                        NavigationLink("App Icon") {
+                            AppIconPickerView()
+                        }
                     }
                 } header: {
                     Text("Screen")
