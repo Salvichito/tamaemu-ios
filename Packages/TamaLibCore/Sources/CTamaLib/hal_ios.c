@@ -278,11 +278,18 @@ int ios_hal_start(const uint16_t *program, uint32_t program_words, int model)
 	/* Per-model wiring (see hw.c / cpu.c). Set before tamalib_init() so the
 	 * very first LCD writes already use it. */
 	s_model = model;
-	hw_set_model(model == IOS_HAL_MODEL_ICON_PER_SEGMENT ? HW_MODEL_ICON_PER_SEGMENT
+	hw_set_model((model == IOS_HAL_MODEL_ICON_PER_SEGMENT || model == IOS_HAL_MODEL_MOTHRA
+	              || model == IOS_HAL_MODEL_TAMAOTCH || model == IOS_HAL_MODEL_GENJINTCH)
+	               ? HW_MODEL_ICON_PER_SEGMENT
 	           : model == IOS_HAL_MODEL_YASASHII ? HW_MODEL_DIRECT
 	           : model == IOS_HAL_MODEL_DIGIMON ? HW_MODEL_DIGIMON
 	           : HW_MODEL_P1);
-	cpu_kmask_fix = (model == IOS_HAL_MODEL_DIGIMON);
+	/* Not for every model: on the Yasashii, key interrupts made a resumed
+	 * save drift from the run it was saved from (Tools/v1check). */
+	cpu_kmask_fix = (model == IOS_HAL_MODEL_DIGIMON || model == IOS_HAL_MODEL_MOTHRA
+	                 || model == IOS_HAL_MODEL_GENJINTCH);
+	cpu_prog_timer_sel_fix = (model == IOS_HAL_MODEL_TAMAOTCH || model == IOS_HAL_MODEL_MOTHRA
+	                          || model == IOS_HAL_MODEL_GENJINTCH);
 
 	tamalib_register_hal(&s_hal);
 	/* 0 = success, matching tamalib_init's own convention (ORs cpu_init's

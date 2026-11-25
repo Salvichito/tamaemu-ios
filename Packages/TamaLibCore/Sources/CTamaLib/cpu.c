@@ -235,6 +235,7 @@ static u32_t ts_remainder = 0; /* iOS port: see wait_for_cycles() */
  * bz_shot: the one-shot buzzer (0xF75 bit 3; bit 2: 125 ms, else 31.25 ms),
  * which upstream ignored. Ends after its time in OSC1 ticks (32768 Hz). */
 int cpu_kmask_fix = 0;
+int cpu_prog_timer_sel_fix = 0; /* see prog_timer_period */
 static u32_t bz_shot_end = 0;
 static u8_t bz_shot = 0;
 
@@ -472,11 +473,13 @@ static u4_t get_io(u12_t n)
 			return GET_IO_MEMORY(memory, n);
 
 		case REG_P30_P33_IO_PORT:
-			/* iOS port: the Yasashii polls this. Still reads 0, exactly
-			 * what the unimplemented default returned: answering 0xF here
-			 * changed its behaviour (hatch timing, which lamps lit) in
-			 * headless tests, so keep 0 and only drop the log line. */
-			return 0;
+			/* iOS port: only the Yasashii reads this (checked against every
+			 * first-gen ROM, 2026-11-24). Bit 0 low puts it in a fast test
+			 * mode: with 0 here the egg hatched ~10 s after the clock was
+			 * set and the baby grew up in minutes. With the pins high, as
+			 * unconnected pins read on the real toy, it hatches ~5 min
+			 * after the clock is set, as its manual says. */
+			return 0xF;
 
 		case REG_CPU_OSC3_CTRL:
 			/* CPU/OSC3 clocks switch, CPU voltage switch */
@@ -677,7 +680,8 @@ static void set_io(u12_t n, u4_t v)
 
 		case REG_PROG_TIMER_CLK_SEL:
 			/* Prog timer clock selection */
-			/* Assume 256Hz, output disabled */
+			/* Assume 256Hz, output disabled (iOS port: except with
+			 * cpu_prog_timer_sel_fix, see prog_timer_period) */
 			break;
 
 		case REG_R00_R03_OUTPUT_PORT:
@@ -1966,16 +1970,29 @@ static void handle_timers(void)
 		SET_IO_MEMORY(memory, REG_CLOCK_TIMER_DATA_1, GET_IO_MEMORY(memory, REG_CLOCK_TIMER_DATA_1) ^ (0x1 << 0));
 	}
 
-	if (prog_timer_enabled && tick_counter - prog_timer_timestamp >= TIMER_256HZ_PERIOD) {
+	/* iOS port: cpu_prog_timer_sel_fix honours the prog timer's input clock
+	 * select (0xF79 d0-d2), which upstream ignores ("assume 256Hz"): 2-7 =
+	 * 256, 512, ... 8192 Hz, per MAME's e0c6s46.cpp. Read from I/O memory,
+	 * which saves already carry, so no new state. On for Tamaotch, Mothra
+	 * and Genjintch (set in ios_hal_start), the ROMs that select 512/8192 Hz.
+	 * Tamaotch at 256 Hz ran its key debounce at half speed (presses had to
+	 * last ~0.35 s; ~0.15 s with this). An earlier finding that this froze
+	 * the Genjintch was really its missing key interrupts: with
+	 * cpu_kmask_fix as well it passes Tools/v1check (2026-11-24). Every
+	 * other ROM selects 256 Hz, where this changes nothing. */
+	u4_t prog_timer_sel = GET_IO_MEMORY(memory, REG_PROG_TIMER_CLK_SEL) & 0x7;
+	u32_t prog_timer_period = (cpu_prog_timer_sel_fix && prog_timer_sel >= 2) ? (TIMER_256HZ_PERIOD >> (prog_timer_sel - 2)) : TIMER_256HZ_PERIOD;
+
+	if (prog_timer_enabled && tick_counter - prog_timer_timestamp >= prog_timer_period) {
 		do {
-			prog_timer_timestamp += TIMER_256HZ_PERIOD;
+			prog_timer_timestamp += prog_timer_period;
 			prog_timer_data--;
 
 			if (prog_timer_data == 0) {
 				prog_timer_data = prog_timer_rld;
 				generate_interrupt(INT_PROG_TIMER_SLOT, 0);
 			}
-		} while (tick_counter - prog_timer_timestamp >= TIMER_256HZ_PERIOD);
+		} while (tick_counter - prog_timer_timestamp >= prog_timer_period);
 	}
 
 	/* iOS port: end of a one-shot beep, see bz_shot. */
@@ -1988,8 +2005,40 @@ static void handle_timers(void)
 void cpu_reset(void)
 {
 	bz_shot = 0;
+	bz_shot_end = 0;
 	for (int p = 0; p < 8; p++) {
 		out_ports[p] = 0xF;
+	}
+
+	/* iOS port: upstream relies on a fresh process for the rest of the
+	 * chip's state, but the app starts the core many times in one process
+	 * (switching Tamas, catch-up hops, peeks). Without this, a start
+	 * inherited the last run's halt flag, interrupt masks/flags and timers:
+	 * measured 2026-11-24, Mothra, Umino, Genjintch and Digimon V1/V2 came
+	 * back to a blank screen that never recovered after a real-time run
+	 * was stopped and the core started again. ios_hal_load_state() restores
+	 * all of these from a save afterwards, so resumes are unaffected. */
+	tick_counter = 0;
+	clk_timer_2hz_timestamp = 0;
+	clk_timer_4hz_timestamp = 0;
+	clk_timer_8hz_timestamp = 0;
+	clk_timer_16hz_timestamp = 0;
+	clk_timer_32hz_timestamp = 0;
+	clk_timer_64hz_timestamp = 0;
+	clk_timer_128hz_timestamp = 0;
+	clk_timer_256hz_timestamp = 0;
+	prog_timer_timestamp = 0;
+	prog_timer_enabled = 0;
+	prog_timer_data = 0;
+	prog_timer_rld = 0;
+	call_depth = 0;
+	cpu_halted = 0;
+	scaled_cycle_accumulator = 0;
+	ts_remainder = 0;
+	for (int s = 0; s < INT_SLOT_NUM; s++) {
+		interrupts[s].factor_flag_reg = 0;
+		interrupts[s].mask_reg = 0;
+		interrupts[s].triggered = 0;
 	}
 
 	u13_t i;

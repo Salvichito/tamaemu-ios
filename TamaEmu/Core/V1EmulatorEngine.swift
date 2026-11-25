@@ -129,8 +129,15 @@ final class V1EmulatorEngine {
         guard thread == nil else { return true }
 
         romWords = Self.parseROM(romData)
+        let model = V1EmulatorEngine.model(for: romWords)
+        // See InputController.setTiming: Tamaotch drops taps under ~0.15 s
+        // and taps closer than ~0.3 s apart, so hold each 0.2 s and space
+        // them 0.3 s (quick taps queue up instead of being lost).
+        let isTamaotch = model == IOS_HAL_MODEL_TAMAOTCH
+        input.setTiming(minimumHoldMs: isTamaotch ? 200 : 60,
+                        minimumGapMs: isTamaotch ? 300 : 25)
         let started = romWords.withUnsafeBufferPointer { buf in
-            ios_hal_start(buf.baseAddress, UInt32(buf.count), V1EmulatorEngine.model(for: romWords))
+            ios_hal_start(buf.baseAddress, UInt32(buf.count), model)
         }
         guard started == 0 else { return false }
 
@@ -438,7 +445,10 @@ extension V1EmulatorEngine {
     static func model(for romWords: [UInt16]) -> Int32 {
         let bytes = romWords.lazy.flatMap { [UInt8($0 >> 8), UInt8($0 & 0xFF)] }
         switch DeviceCatalog.v1DeviceID(forROM: bytes) {
-        case "umino", "genjintch", "tamaotch": return IOS_HAL_MODEL_ICON_PER_SEGMENT
+        case "umino": return IOS_HAL_MODEL_ICON_PER_SEGMENT
+        case "genjintch": return IOS_HAL_MODEL_GENJINTCH
+        case "tamaotch": return IOS_HAL_MODEL_TAMAOTCH
+        case "mothra": return IOS_HAL_MODEL_MOTHRA
         case "yasashii": return IOS_HAL_MODEL_YASASHII
         case "digimon-v1", "digimon-v2", "digimon-v3": return IOS_HAL_MODEL_DIGIMON
         default: return IOS_HAL_MODEL_P1
@@ -459,10 +469,14 @@ extension V1EmulatorEngine {
 }
 
 /// Turns the Yasashii's blinking care-button lamps into one steady
-/// "calling" signal, the way the attention icon works on other models: a
-/// lamp blinks about once a second, so "calling" means some lamp was lit
-/// within the last 1.5 emulated seconds. Times are the core's own clock
-/// (ios_hal_elapsed_us), compared with wrapping subtraction.
+/// "calling" signal, the way the attention icon works on other models:
+/// "calling" means some lamp was lit within the last 5 emulated seconds.
+/// Measured headless 2026-11-24 over an emulated hour: the meal/happiness
+/// lamps blink about twice a second with gaps up to ~1.5 s, and the lights
+/// lamp blinks only every ~2 s. The old 1.5 s window counted each lights
+/// blink as a new call (~70 alerts an hour); 5 s gives ~4, one per real
+/// call. Times are the core's own clock (ios_hal_elapsed_us), compared
+/// with wrapping subtraction.
 struct LampCallTracker {
     private var lastLitUs: UInt32?
 
@@ -472,6 +486,6 @@ struct LampCallTracker {
             return true
         }
         guard let lastLitUs else { return false }
-        return nowUs &- lastLitUs < 1_500_000
+        return nowUs &- lastLitUs < 5_000_000
     }
 }

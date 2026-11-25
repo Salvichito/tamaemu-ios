@@ -17,21 +17,35 @@ final class InputController: @unchecked Sendable {
         case tap = 3, k10 = 4, k11 = 5, k12 = 6, k13 = 7
     }
 
-    private let minHoldMs: Int64 = 60
-    private let gapMs: Int64 = 25
+    /// Shortest press the firmware is shown however quick the tap, and the
+    /// shortest release it sees between two taps of the same button. 60/25 ms
+    /// cover every ROM except the Tamaotch, which (measured headless
+    /// 2026-11-24, with its program timer at the right speed) drops presses
+    /// under ~0.15 s and presses that follow the last one within ~0.3 s;
+    /// V1EmulatorEngine raises both for that model before it starts.
+    private var minHoldMs: Int64 = 60
+    private var gapMs: Int64 = 25
+    func setTiming(minimumHoldMs: Int64, minimumGapMs: Int64) {
+        lock.lock(); defer { lock.unlock() }
+        minHoldMs = minimumHoldMs
+        gapMs = minimumGapMs
+    }
     private let maxQueued = 2
 
     private let lock = NSLock()
     private var held: UInt8 = 0
     private var holdUntilMs = [Int64](repeating: 0, count: Button.allCases.count)
     private var queued = [Int](repeating: 0, count: Button.allCases.count)
+    /// When the firmware last saw each button go up, for gapMs.
+    private var upAtMs = [Int64](repeating: 0, count: Button.allCases.count)
+    private var lastMask: UInt8 = 0
 
     /// Call once when a button is physically pressed down.
     func press(_ button: Button) {
         lock.lock(); defer { lock.unlock() }
         let now = Self.nowMs()
         let i = button.rawValue
-        if holdUntilMs[i] > now {
+        if holdUntilMs[i] > now || now < upAtMs[i] + gapMs {
             queued[i] = min(queued[i] + 1, maxQueued)
         } else {
             held |= UInt8(1 << i)
@@ -55,12 +69,19 @@ final class InputController: @unchecked Sendable {
         for i in 0..<Button.allCases.count {
             if holdUntilMs[i] > now {
                 mask |= UInt8(1 << i)
-            } else if queued[i] > 0 && now >= holdUntilMs[i] + gapMs {
+            } else if queued[i] > 0 && (mask & (1 << i)) == 0 && now >= upAtMs[i] + gapMs {
                 queued[i] -= 1
                 holdUntilMs[i] = now + minHoldMs
                 mask |= UInt8(1 << i)
             }
         }
+        let wentUp = lastMask & ~mask
+        if wentUp != 0 {
+            for i in 0..<Button.allCases.count where (wentUp & (1 << i)) != 0 {
+                upAtMs[i] = now
+            }
+        }
+        lastMask = mask
         return mask
     }
 

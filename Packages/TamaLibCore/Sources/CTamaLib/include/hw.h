@@ -58,8 +58,8 @@ void hw_enable_buzzer(bool_t en);
 /* iOS port: see hw.c. */
 void hw_buzzer_shot(bool_t on);
 
-#define HW_MODEL_P1                 0 /* P1, P2, Angel, Morino, Mothra: upstream wiring */
-#define HW_MODEL_ICON_PER_SEGMENT   1 /* Umino, Genjintch, Tamaotch */
+#define HW_MODEL_P1                 0 /* P1, P2, Angel, Morino: upstream wiring */
+#define HW_MODEL_ICON_PER_SEGMENT   1 /* Umino, Genjintch, Tamaotch, Mothra */
 #define HW_MODEL_DIRECT             2 /* Yasashii */
 #define HW_MODEL_DIGIMON            3 /* Digimon V1/V2/V3 */
 void hw_set_model(u8_t model);

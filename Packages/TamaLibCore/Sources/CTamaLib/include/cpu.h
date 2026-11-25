@@ -32,6 +32,7 @@
 
 /* iOS port: see cpu.c. */
 extern int cpu_kmask_fix;
+extern int cpu_prog_timer_sel_fix;
 
 #include "hal.h"
 

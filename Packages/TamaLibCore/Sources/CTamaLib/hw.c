@@ -69,7 +69,7 @@ void hw_release(void)
  *
  * - Digimon: segments 1..8, 12..27 and 29..36 are the 32 columns, and the
  *   icons have their own segments.
- * - Direct (Yasashii): segment n is column n.
+ * - Direct (Yasashii): segments 0-15 are columns 0-15, 16-31 reversed.
  * - Icon-per-segment (Umino, Genjintch, Tamaotch): each menu icon is lit by
  *   one segment -- top 8, 17, 18, 19 (com 0-7) = icons 0-3, bottom 39, 38,
  *   37, 28 (com 8-15) = icons 4-7 -- not by the P1's combinations. */
@@ -90,8 +90,13 @@ void hw_set_model(u8_t model)
 void hw_set_lcd_pin(u8_t seg, u8_t com, u8_t val)
 {
 	if (hw_model == HW_MODEL_DIRECT) {
+		/* Segments 0-15 are columns 0-15; 16-31 run backwards (31 is
+		 * column 16). Found 2026-11-24 from raw segment dumps: with plain
+		 * seg = column, the egg came out in two pieces 16 columns apart and
+		 * the clock's right half was mirrored. The HAL then turns the whole
+		 * picture 180 degrees for this model. */
 		if (seg < LCD_WIDTH) {
-			g_hal->set_lcd_matrix(seg, com, val);
+			g_hal->set_lcd_matrix(seg < 16 ? seg : 47 - seg, com, val);
 		}
 		return;
 	}

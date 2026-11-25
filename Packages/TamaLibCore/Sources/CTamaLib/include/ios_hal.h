@@ -18,10 +18,25 @@ int ios_hal_start(const uint16_t *program, uint32_t program_words, int model);
 /* Which toy the ROM is, for the parts of the hardware the ROM alone doesn't
  * say: LCD wiring, LCD orientation, and how keys and beeps reach the chip.
  * The per-model behaviour comes from Paramix Studio's V1Emu (see CREDITS.md). */
-#define IOS_HAL_MODEL_P1                0 /* P1, P2, Angel, Morino, Mothra */
-#define IOS_HAL_MODEL_ICON_PER_SEGMENT  1 /* Umino, Genjintch, Tamaotch */
+#define IOS_HAL_MODEL_P1                0 /* P1, P2, Angel, Morino */
+#define IOS_HAL_MODEL_ICON_PER_SEGMENT  1 /* Umino */
 #define IOS_HAL_MODEL_YASASHII          2
 #define IOS_HAL_MODEL_DIGIMON           3
+/* Mothra: icon-per-segment LCD wiring, and like the Digimon it needs key
+ * interrupts (cpu_kmask_fix). Measured headless 2026-11-24: without the
+ * interrupts a press had to last ~0.5 s to register and the egg never hatched
+ * in the runner; with the P1 wiring whole icon rows lit together. */
+#define IOS_HAL_MODEL_MOTHRA            4
+/* Tamaotch: icon-per-segment wiring, and its program timer runs at the speed
+ * the ROM selects (cpu_prog_timer_sel_fix in cpu.c) instead of a fixed
+ * 256 Hz, which made it need ~0.35 s presses. */
+#define IOS_HAL_MODEL_TAMAOTCH          5
+/* Genjintch: icon-per-segment wiring, key interrupts (cpu_kmask_fix) and
+ * the program timer at the speed the ROM selects. Measured 2026-11-24 with
+ * Tools/v1check: without key interrupts it only saw a key held across a
+ * twice-a-second check, so most clock-confirm and menu presses were lost;
+ * with both it hatches (~4.9 min) and every 0.08 s press registers. */
+#define IOS_HAL_MODEL_GENJINTCH         6
 
 /* One emulated instruction. Paced to real time internally by TamaLib
  * itself (via sleep_until), same as a real device's clock. */
