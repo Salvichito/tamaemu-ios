@@ -179,7 +179,7 @@ struct TomoMoment {
         case .scold: return 2.3
         case .confused: return 2.0
         case .medicine: return TomoFrog.duration
-        case .poop: return 1
+        case .poop: return PoopPile.flightDuration
         case .poke: return 0.6
         case .evolve, .depart: return 3
         case .birthIntro: return TomoRules.birthIntroSeconds
@@ -505,6 +505,12 @@ struct TomoStage: View {
                         .position(x: w / 2 - size * 0.5, y: h - size * 0.23)
                 }
 
+                // A new poop shoots out from behind it (drawn under it
+                // until it's clear, then with the rest of the pile).
+                if !outdoors, let m = moment, case .poop = m.kind {
+                    poopLayer(width: w, height: h, behindOnly: true)
+                }
+
                 TomoSprite(character: look.character, pose: look.pose, frame: look.frame, mirrored: look.mirrored)
                     .frame(width: size, height: size)
                     .colorMultiply(look.silhouette ? .black : .white)
@@ -775,20 +781,24 @@ struct TomoStage: View {
 
     // MARK: Props and effects
 
-    private func poopLayer(width w: CGFloat, height h: CGFloat) -> some View {
+    private func poopLayer(width w: CGFloat, height h: CGFloat, behindOnly: Bool = false) -> some View {
         var count = forceMark == "poop-small" ? 3 : forceMark == "poop-big" ? 6 : brain.poop
         var grabX: CGFloat?
-        var drop: Double = 0
+        var flight: Double?
         if let m = moment {
             switch m.kind {
             case .clean(let n):
                 count = n
                 grabX = Self.swooshX(progress: m.progress(at: now), width: w, height: h)
-            case .poop: drop = 1 - m.progress(at: now)
+            case .poop: flight = m.elapsed(at: now)
             default: break
             }
         }
-        return PoopPile(count: count, newestDrop: drop, now: now, side: h * 0.52,
+        // Its bottom, where the tomomix stands center stage (size = h * 0.86).
+        let size = h * 0.86
+        return PoopPile(count: count, flight: flight,
+                        launch: CGPoint(x: w / 2 + size * 0.05, y: h - size * 0.38),
+                        behindOnly: behindOnly, now: now, side: h * 0.52,
                         width: w, height: h, grabX: grabX)
     }
 
@@ -1302,14 +1312,25 @@ struct TomoSky: View {
 }
 
 /// §10: up to 8 poops, small ones turning big after the 4th, on four
-/// spots on the floor, mirrored left and right (see `spots`). `newestDrop`
-/// (0-1) lifts the newest one while it falls in. Each poop's smell waves
+/// spots on the floor, mirrored left and right (see `spots`). While
+/// `flight` runs, the newest one is shot out from behind the tomomix,
+/// hits the right edge of the screen, and bounces down onto its spot. Each poop's smell waves
 /// (`tomo-poop-small-wave-1..3`, cut out by the import script) flip
 /// left-right about once a second, each on its own beat. While the swoosh
 /// passes (`grabX`), each poop sticks to it and rides it off the screen.
 struct PoopPile: View {
     let count: Int
-    var newestDrop: Double = 0
+    /// Seconds into the newest one's launch (nil when it's just sitting there).
+    var flight: Double? = nil
+    /// Where it shoots out from: behind the tomomix, in this view's points.
+    var launch: CGPoint = .zero
+    /// Draw only the flying one, while it's still behind the tomomix.
+    var behindOnly = false
+
+    /// How long the launch takes, and when it smacks the wall (after which
+    /// it's drawn in front of the tomomix).
+    static let flightDuration: TimeInterval = 1.4
+    static let wallHit: TimeInterval = 0.3
     var now = Date()
     /// The size of one drawing's square (the poop sits in its lower half).
     var side: CGFloat = 52
@@ -1327,29 +1348,117 @@ struct PoopPile: View {
         CGPoint(x: 0.5 - 0.404, y: 0.731),
     ]
 
+    /// Big or small for each spot, right to left, with `n` poops.
+    /// Big ones replace small ones in the same order they came: right first.
+    static func pieces(_ n: Int) -> [Bool] {
+        let big = max(0, n - 4)
+        let small = min(n, 4) - big
+        return (0..<big).map { _ in true } + (0..<max(0, small)).map { _ in false }
+    }
+
     var body: some View {
-        let big = max(0, count - 4)
-        let small = min(count, 4) - big
-        // Big ones replace small ones in the same order they came: right first.
-        let pieces = (0..<big).map { _ in true } + (0..<max(0, small)).map { _ in false }
-        let newestIndex = big > 0 ? big - 1 : pieces.count - 1
         // The stage sits inside the game screen (TomoScene's indoor layout):
         // 80% of its width, starting 11.3% in; 64% of its height, 13.2% down.
         let screen = width / 0.8
-        ZStack {
-            ForEach(pieces.indices, id: \.self) { i in
-                let spot = Self.spots[i % Self.spots.count]
-                let newest = i == newestIndex
-                // The body's middle is lower than the drawing's middle.
-                let bodyDrop = side * (pieces[i] ? 0.18 : 0.23)
-                let x = (spot.x - 0.1134) * screen
-                let y = (spot.y - 0.1316) * screen - bodyDrop
-                piece(big: pieces[i], index: i)
-                    .position(x: max(x, grabX ?? -.infinity),
-                              y: y - (newest ? CGFloat(newestDrop) * 40 : 0))
+        func spotCenter(_ i: Int, big: Bool) -> CGPoint {
+            // i is -1 with no poops (newestIndex below), e.g. right after
+            // switching Tamas -- wrap it instead of crashing.
+            let n = Self.spots.count
+            let spot = Self.spots[((i % n) + n) % n]
+            // The body's middle is lower than the drawing's middle.
+            let bodyDrop = side * (big ? 0.18 : 0.23)
+            return CGPoint(x: (spot.x - 0.1134) * screen, y: (spot.y - 0.1316) * screen - bodyDrop)
+        }
+        let e = flight ?? Self.flightDuration
+        let flying = e < Self.flightDuration
+        let early = e < Self.wallHit
+        // From the 5th on, a small one lands on top of a small one and
+        // they turn into a big one once it has settled.
+        let merging = flying && count > 4
+        let merged = merging && e >= Self.settled
+        let shown = merging && !merged ? count - 1 : count
+        let pieces = Self.pieces(shown)
+        let newestIndex = max(0, count - 4) > 0 ? count - 5 : pieces.count - 1
+        // What the flying one is, and where it lands.
+        let flyerBig = !merging && (pieces.indices.contains(newestIndex) ? pieces[newestIndex] : false)
+        let landing: CGPoint = {
+            let c = spotCenter(newestIndex, big: flyerBig)
+            return merging ? CGPoint(x: c.x, y: c.y - side * 0.17) : c
+        }()
+        return ZStack {
+            if !behindOnly {
+                ForEach(pieces.indices, id: \.self) { i in
+                    let c = spotCenter(i, big: pieces[i])
+                    if i == newestIndex, flying, !merging {
+                        EmptyView()                    // it's the one flying in
+                    } else if i == newestIndex, merged {
+                        // Boing: the two become one big one.
+                        let u = (e - Self.settled) / (Self.flightDuration - Self.settled)
+                        piece(big: true, index: i)
+                            .scaleEffect(1 + 0.3 * CGFloat(1 - u), anchor: .bottom)
+                            .position(c)
+                    } else {
+                        piece(big: pieces[i], index: i)
+                            .position(x: max(c.x, grabX ?? -.infinity), y: c.y)
+                    }
+                }
+            }
+            if flying, !merged, behindOnly == early {
+                // The right edge of the game screen, less half a body.
+                let wall = (0.985 - 0.1134) * screen - side * 0.3
+                let f = Self.flightPose(at: e, from: launch, wall: wall, to: landing, height: height)
+                piece(big: flyerBig, index: newestIndex)
+                    .scaleEffect(x: f.sx, y: f.sy, anchor: f.anchor)
+                    .rotationEffect(.degrees(f.spin))
+                    .scaleEffect(f.grow)
+                    .position(f.at)
             }
         }
         .frame(width: width, height: height)
+    }
+
+    /// When the flying one has stopped bouncing.
+    static let settled: TimeInterval = 1.3
+
+    /// The launched poop at `e` seconds: where it is, its squash, its spin,
+    /// and how grown it is. Not physics, just a cartoon: shot out fast,
+    /// SPLAT against the right edge, falls back down onto its spot, and
+    /// bounces twice, smaller each time.
+    static func flightPose(at e: Double, from a: CGPoint, wall: CGFloat, to b: CGPoint, height h: CGFloat)
+        -> (at: CGPoint, sx: CGFloat, sy: CGFloat, anchor: UnitPoint, spin: Double, grow: CGFloat) {
+        let hit = CGPoint(x: wall, y: a.y - h * 0.18)
+        func lerp(_ p: CGFloat, _ q: CGFloat, _ u: Double) -> CGFloat { p + (q - p) * CGFloat(u) }
+        let splat = 0.38, land = 0.82, bounce1 = 0.9, bounce2 = 1.12, bounce3 = 1.17, still = settled
+        if e < wallHit {
+            // Shot out: straight and fast, a little arc, spinning, growing
+            // out from behind as it comes.
+            let u = e / wallHit
+            let y = lerp(a.y, hit.y, u) - h * 0.12 * CGFloat(4 * u * (1 - u))
+            return (CGPoint(x: lerp(a.x, wall, u), y: y), 1, 1, .center, u * 540, 0.45 + 0.55 * CGFloat(min(1, u * 2.5)))
+        }
+        if e < splat {
+            // Flattened against the edge.
+            return (hit, 0.55, 1.3, .trailing, 0, 1)
+        }
+        if e < land {
+            // Falls off the wall: a small pop back out, then down onto its
+            // spot, spinning the other way.
+            let u = (e - splat) / (land - splat)
+            let pop = h * 0.12
+            let y = hit.y - pop * CGFloat(u) + (b.y - hit.y + pop) * CGFloat(u * u)
+            return (CGPoint(x: lerp(wall, b.x, u), y: y), 1, 1, .center, -u * 360, 1)
+        }
+        if e < bounce1 { return (b, 1.35, 0.65, .bottom, 0, 1) }          // squish on the floor
+        if e < bounce2 {
+            let u = (e - bounce1) / (bounce2 - bounce1)
+            return (CGPoint(x: b.x, y: b.y - h * 0.14 * CGFloat(4 * u * (1 - u))), 0.9, 1.1, .bottom, 0, 1)
+        }
+        if e < bounce3 { return (b, 1.15, 0.85, .bottom, 0, 1) }
+        if e < still {
+            let u = (e - bounce3) / (still - bounce3)
+            return (CGPoint(x: b.x, y: b.y - h * 0.045 * CGFloat(4 * u * (1 - u))), 1, 1, .bottom, 0, 1)
+        }
+        return (b, 1, 1, .center, 0, 1)
     }
 
     @ViewBuilder
