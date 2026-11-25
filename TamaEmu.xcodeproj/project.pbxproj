@@ -18,16 +18,21 @@
 		1FB4361F27FC0E81D609693D /* NearbyLinkSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A958E0CD980C3FF23A48260 /* NearbyLinkSession.swift */; };
 		219462947CE54CAE77590FBB /* LCDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2071482F1952F86F44813F /* LCDView.swift */; };
 		2559E121C7834A669CA62761 /* TamaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D458AD74EED4234849FBD4C /* TamaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
+		2C728D8AE876178196E74A20 /* TamaEmu-yellow.icon in Resources */ = {isa = PBXBuildFile; fileRef = C5598B7FD9C023D32CEBEABF /* TamaEmu-yellow.icon */; };
 		2E0563C3DFDE462BABCF712F /* TamaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */; };
+		3007F50F9BD283AE92166AEE /* TamaEmu-fuchsia.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0F024F9562457A2D0D316EF6 /* TamaEmu-fuchsia.icon */; };
 		344D1C96652FA73744DB0B24 /* SelectTamaIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */; };
 		34FFC4BF7D11F08E57C2F917 /* TranslationBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C882B35EC13DBF00890164 /* TranslationBubble.swift */; };
 		376943024E12FD504C0B1EA9 /* T7EmuCore in Frameworks */ = {isa = PBXBuildFile; productRef = 25705C1AFE21BBBE608456B1 /* T7EmuCore */; };
+		39573BC6B67E6F2995EBF058 /* TamaEmu-clearblue.icon in Resources */ = {isa = PBXBuildFile; fileRef = FBF0829034B81AFFB641BD6F /* TamaEmu-clearblue.icon */; };
 		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
+		47EB8E7819F48AB9C030EFA5 /* AppIconPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 460F3B99588EEF9FCA8CFB31 /* AppIconPickerView.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
 		4CF56E64D9B116A97407FC59 /* CGImage+GlowColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */; };
 		5566778899001122AABBCCEE /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1122334455667788990AABBC /* DeviceDetector.swift */; };
 		5852CCBE471F4FC1B9974C1D /* CallDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */; };
 		58954D6CFADCBA28E1D22FB4 /* TomomixViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F51CBE682BD89D42AFE444A /* TomomixViewModel.swift */; };
+		5901CA1C2BD15F55F2A97D41 /* TamaEmu-white.icon in Resources */ = {isa = PBXBuildFile; fileRef = C217387A859B666798D1B1C2 /* TamaEmu-white.icon */; };
 		5AFDD78582EA89F72D65FEAB /* TamaGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */; };
 		5E7498BC978B4320AE9A4549 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6071AE0290284B2485601BEE /* NotificationScheduler.swift */; };
 		5EEBBE5E2F2440F0B6445AA8 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
@@ -39,6 +44,7 @@
 		6A06542C34228494D627E218 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3B8FE7E50C065E0898DF5BA4 /* PrivacyInfo.xcprivacy */; };
 		6C357B264E2775A5E88D2A74 /* TamaLibCore in Frameworks */ = {isa = PBXBuildFile; productRef = A11D632E4B54DF8C670B5778 /* TamaLibCore */; };
 		6DEF195F7215573C55FFE139 /* T7PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A735B64EEDCE8C20FB0B1 /* T7PageView.swift */; };
+		700DDB38F50160F7753D0FB2 /* TamaEmu-blueyellow.icon in Resources */ = {isa = PBXBuildFile; fileRef = E4188174545C83BE2D508C72 /* TamaEmu-blueyellow.icon */; };
 		748528DF305E126CCD63878C /* BlurredLCDBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D05FFCDB210ED3D163095DA /* BlurredLCDBackground.swift */; };
 		76A282E73C1A4031BC19A87F /* EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B7C07FCF0F4912B54971C1 /* EmulatorEngine.swift */; };
 		7788990011223344AABBCC11 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3344556677889900AABBCCEE /* SettingsView.swift */; };
@@ -54,6 +60,7 @@
 		8FA58851B1A7D70721182E97 /* T7PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E2ABE30C3A16622D447D9B /* T7PlayViewModel.swift */; };
 		9A728C37BBD35895FD2E3205 /* TamaPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */; };
 		9C2ABB0AE0ED1B8AA21A44CF /* P1ScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0166CB9A3B0725D2C7861438 /* P1ScreenView.swift */; };
+		A2D07405A2BA7E908298E29F /* TamaEmu-pastelorange.icon in Resources */ = {isa = PBXBuildFile; fileRef = F396781857FA48021B9F38A2 /* TamaEmu-pastelorange.icon */; };
 		A3D4EAF7B72EA340385B50F1 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B463E74FCC99EE8258DD71F /* PaywallView.swift */; };
 		AE6186A0722B2D81648CEF71 /* CloudTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */; };
 		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
@@ -68,6 +75,7 @@
 		D9115EAC767B490EB90DB299 /* ScreenRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EFCEAD899A422F9DDAF66B /* ScreenRecorder.swift */; };
 		DA44D00325BFA38292314D7E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = DC388A891AB0A5E539584A3B /* TamaCore */; };
 		DBDEB5A1D000D35A0A87316E /* T7EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51134BD9CBB7FA2AC0B5BD6C /* T7EmulatorEngine.swift */; };
+		DDA7D043FAAD314E0E05842A /* TamaEmu-pastelpurple.icon in Resources */ = {isa = PBXBuildFile; fileRef = BAAD6E2F6F86D7774DB3176E /* TamaEmu-pastelpurple.icon */; };
 		E1D0B3CB439B1328942674E8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F61FF087E5191BB61E5AD116 /* PrivacyInfo.xcprivacy */; };
 		E313A904940FD4FD31FC386B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 229AB57C64B25F1A07269DE4 /* Assets.xcassets */; };
 		E316E7AE0C0C4378A34BCDF8 /* SavePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE647F4A560420EAE69A61E /* SavePaths.swift */; };
@@ -115,6 +123,7 @@
 		08FA2CA12A7E453DB3633ED9 /* CallDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetector.swift; sourceTree = "<group>"; };
 		0A958E0CD980C3FF23A48260 /* NearbyLinkSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NearbyLinkSession.swift; sourceTree = "<group>"; };
 		0DA411496FA6DB2410E96335 /* TamaEmuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaEmuApp.swift; sourceTree = "<group>"; };
+		0F024F9562457A2D0D316EF6 /* TamaEmu-fuchsia.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-fuchsia.icon"; sourceTree = "<group>"; };
 		1122334455667788990AABBC /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		14B814DDD09245609E359714 /* TamaEmu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TamaEmu.entitlements; sourceTree = "<group>"; };
 		1BBD0D1B0503923459126E75 /* PurchaseManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
@@ -134,6 +143,7 @@
 		40947BF2F88D49FF8BBEB7E5 /* ActiveDeviceLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveDeviceLookup.swift; sourceTree = "<group>"; };
 		42C69E5D204FC126CB4FCC3A /* SelectTamaIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectTamaIntent.swift; sourceTree = "<group>"; };
 		42D45A04487E1B1C19010476 /* V1EmulatorEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V1EmulatorEngine.swift; sourceTree = "<group>"; };
+		460F3B99588EEF9FCA8CFB31 /* AppIconPickerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppIconPickerView.swift; sourceTree = "<group>"; };
 		48000D40ECD8B146CAD8EF8F /* TamaEmu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TamaEmu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C0E0DD6673484D7CEF5EB7A /* TamaNeglectWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaNeglectWidget.swift; sourceTree = "<group>"; };
 		4F51CBE682BD89D42AFE444A /* TomomixViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TomomixViewModel.swift; sourceTree = "<group>"; };
@@ -169,8 +179,11 @@
 		B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B73A464D9A5B4C551857E6F9 /* LinkPort.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LinkPort.swift; sourceTree = "<group>"; };
 		B981F7475F4CBC8F947FA893 /* ScreenImagePrep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenImagePrep.swift; sourceTree = "<group>"; };
+		BAAD6E2F6F86D7774DB3176E /* TamaEmu-pastelpurple.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-pastelpurple.icon"; sourceTree = "<group>"; };
 		BBD6C736DFDD48A490A1BAE7 /* TamaPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaPageView.swift; sourceTree = "<group>"; };
+		C217387A859B666798D1B1C2 /* TamaEmu-white.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-white.icon"; sourceTree = "<group>"; };
 		C3A1F9E2B4D8467C9A1E5F3D /* ReminderNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotificationScheduler.swift; sourceTree = "<group>"; };
+		C5598B7FD9C023D32CEBEABF /* TamaEmu-yellow.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-yellow.icon"; sourceTree = "<group>"; };
 		C72058A070E307D1BA4EFEB3 /* TomomixAnimation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TomomixAnimation.swift; sourceTree = "<group>"; };
 		CE2071482F1952F86F44813F /* LCDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LCDView.swift; sourceTree = "<group>"; };
 		D07A735B64EEDCE8C20FB0B1 /* T7PageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = T7PageView.swift; sourceTree = "<group>"; };
@@ -179,9 +192,12 @@
 		D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReorderTamasView.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
 		DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "CGImage+GlowColor.swift"; path = "CGImage+GlowColor.swift"; sourceTree = "<group>"; };
+		E4188174545C83BE2D508C72 /* TamaEmu-blueyellow.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-blueyellow.icon"; sourceTree = "<group>"; };
 		F058EEC27A45730B3595D812 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		F396781857FA48021B9F38A2 /* TamaEmu-pastelorange.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-pastelorange.icon"; sourceTree = "<group>"; };
 		F61FF087E5191BB61E5AD116 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaGalleryView.swift; sourceTree = "<group>"; };
+		FBF0829034B81AFFB641BD6F /* TamaEmu-clearblue.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-clearblue.icon"; sourceTree = "<group>"; };
 		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -243,6 +259,7 @@
 			children = (
 				3344556677889900AABBCCEE /* SettingsView.swift */,
 				9CC7FDF7922F47E85A83DFA2 /* DownloadsView.swift */,
+				460F3B99588EEF9FCA8CFB31 /* AppIconPickerView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -252,6 +269,13 @@
 			children = (
 				B18BC5317FCCF9E6847BDB8E /* Assets.xcassets */,
 				A6F23E2FAB4441C29D62B880 /* TamaEmu.icon */,
+				E4188174545C83BE2D508C72 /* TamaEmu-blueyellow.icon */,
+				FBF0829034B81AFFB641BD6F /* TamaEmu-clearblue.icon */,
+				0F024F9562457A2D0D316EF6 /* TamaEmu-fuchsia.icon */,
+				F396781857FA48021B9F38A2 /* TamaEmu-pastelorange.icon */,
+				BAAD6E2F6F86D7774DB3176E /* TamaEmu-pastelpurple.icon */,
+				C217387A859B666798D1B1C2 /* TamaEmu-white.icon */,
+				C5598B7FD9C023D32CEBEABF /* TamaEmu-yellow.icon */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -467,6 +491,13 @@
 				5F1D1C76C85B42F7732D0982 /* Assets.xcassets in Resources */,
 				8AD5729005354611B37F2053 /* TamaEmu.icon in Resources */,
 				6A06542C34228494D627E218 /* PrivacyInfo.xcprivacy in Resources */,
+				700DDB38F50160F7753D0FB2 /* TamaEmu-blueyellow.icon in Resources */,
+				39573BC6B67E6F2995EBF058 /* TamaEmu-clearblue.icon in Resources */,
+				3007F50F9BD283AE92166AEE /* TamaEmu-fuchsia.icon in Resources */,
+				A2D07405A2BA7E908298E29F /* TamaEmu-pastelorange.icon in Resources */,
+				DDA7D043FAAD314E0E05842A /* TamaEmu-pastelpurple.icon in Resources */,
+				5901CA1C2BD15F55F2A97D41 /* TamaEmu-white.icon in Resources */,
+				2C728D8AE876178196E74A20 /* TamaEmu-yellow.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -548,6 +579,7 @@
 				89333E30B711F69BD07A7EA3 /* TomomixAnimation.swift in Sources */,
 				FB5B0A06E5D69F074513239A /* TomomixSettingsView.swift in Sources */,
 				65C3C829A2C6F004A14D8A70 /* WelcomeView.swift in Sources */,
+				47EB8E7819F48AB9C030EFA5 /* AppIconPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -581,8 +613,10 @@
 		36F3512EEA8E21D9A4A7D9E7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "TamaEmu-blueyellow TamaEmu-clearblue TamaEmu-fuchsia TamaEmu-pastelorange TamaEmu-pastelpurple TamaEmu-white TamaEmu-yellow";
 				ASSETCATALOG_COMPILER_APPICON_NAME = TamaEmu;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -617,8 +651,10 @@
 		6B2D3D1FA88C0C29A789FEE0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "TamaEmu-blueyellow TamaEmu-clearblue TamaEmu-fuchsia TamaEmu-pastelorange TamaEmu-pastelpurple TamaEmu-white TamaEmu-yellow";
 				ASSETCATALOG_COMPILER_APPICON_NAME = TamaEmu;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = TamaEmu/TamaEmu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -687,7 +723,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -747,7 +783,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

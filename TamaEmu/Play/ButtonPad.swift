@@ -90,15 +90,13 @@ private struct ButtonView: View {
     // on a real iPad. The SDK has no switch to pin that, so iOS 26 gets a
     // hand-drawn frosted disc instead (blur material + bright rim + soft
     // shadow): it only ever follows the app's light/dark appearance.
-    //
-    // Below iOS 26: the plain translucent disc.
     @ViewBuilder
     private var shape: some View {
         if #available(iOS 27.0, *) {
             Circle()
                 .fill(.clear)
                 .glassEffect(isEnabled ? .regular : .clear, in: Circle())
-        } else if #available(iOS 26.0, *) {
+        } else {
             Circle()
                 .fill(.ultraThinMaterial)
                 .overlay {
@@ -113,10 +111,6 @@ private struct ButtonView: View {
                 }
                 .shadow(color: .black.opacity(0.14), radius: 6, y: 2)
                 .opacity(isEnabled ? 1 : 0.45)
-        } else {
-            Circle()
-                .fill(Color(.secondarySystemBackground).opacity(0.25))
-                .opacity(isEnabled ? 1 : 0.4)
         }
     }
 }

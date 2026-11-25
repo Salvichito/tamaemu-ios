@@ -585,9 +585,7 @@ struct TamaGalleryView: View {
     /// iOS pairs into one capsule on its own — same mechanism as the top
     /// bar's Settings/⋯ pair. The fixed `ToolbarSpacer` (iOS 26's own API
     /// for this) is what keeps the translate button in its own separate
-    /// capsule instead of fusing with that pair; below iOS 26 none of this
-    /// capsule-pairing exists in the first place, so there's nothing to
-    /// fall back to.
+    /// capsule instead of fusing with that pair.
     @ToolbarContentBuilder
     private func bottomToolbarContent(viewModel: PlayViewModel) -> some ToolbarContent {
         ToolbarItem(placement: .bottomBar) {

@@ -108,10 +108,13 @@ struct TomomixSettingsView: View {
                     }
                     LabeledContent("Ambient Background", value: "Always on")
                     Toggle("Retro Screen", isOn: $retro)
+                    NavigationLink("App Icon") {
+                        AppIconPickerView()
+                    }
                 } header: {
                     Text("Screen")
                 } footer: {
-                    Text("Tomomix's sky fills your whole screen, included free with Tomomix. Retro Screen adds big pixels and scan lines, like an old screen. Appearance applies to the whole app.")
+                    Text("Tomomix's sky fills your whole screen, included free with Tomomix. Retro Screen adds big pixels and scan lines, like an old screen. Appearance and App Icon apply to the whole app.")
                 }
                 Section {
                     Toggle("Notifications", isOn: Binding(
