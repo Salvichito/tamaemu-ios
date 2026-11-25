@@ -1,3 +1,4 @@
+import UIKit
 import UserNotifications
 
 /// iOS suppresses a local notification's banner/sound by default while
@@ -36,7 +37,18 @@ enum NotificationScheduler {
         }
     }
 
+    /// Only the Tama on screen ever runs live, so while the app is open
+    /// a call is one the player is already looking at -- an alert for it
+    /// is just noise (e.g. Yasashii's lit buttons trip the call detector
+    /// every time one is pressed). Only alert once the app is closed.
     static func fireCallingNotification(deviceTitle: String) {
+        DispatchQueue.main.async {
+            guard UIApplication.shared.applicationState == .background else { return }
+            post(deviceTitle: deviceTitle)
+        }
+    }
+
+    private static func post(deviceTitle: String) {
         let content = UNMutableNotificationContent()
         content.title = "Your Tama is calling"
         content.body = "\(deviceTitle) needs your attention."

@@ -19,16 +19,22 @@ final class InputController: @unchecked Sendable {
 
     /// Shortest press the firmware is shown however quick the tap, and the
     /// shortest release it sees between two taps of the same button. 60/25 ms
-    /// cover every ROM except the Tamaotch, which (measured headless
+    /// cover every ROM except the Tamaotch and Yasashii; the Tamaotch (measured headless
     /// 2026-11-24, with its program timer at the right speed) drops presses
     /// under ~0.15 s and presses that follow the last one within ~0.3 s;
     /// V1EmulatorEngine raises both for that model before it starts.
     private var minHoldMs: Int64 = 60
     private var gapMs: Int64 = 25
-    func setTiming(minimumHoldMs: Int64, minimumGapMs: Int64) {
+    /// Per-button minimum hold that overrides minHoldMs (see setTiming).
+    private var holdOverrideMs: [Button: Int64] = [:]
+    func setTiming(minimumHoldMs: Int64, minimumGapMs: Int64, holdOverrides: [Button: Int64] = [:]) {
         lock.lock(); defer { lock.unlock() }
         minHoldMs = minimumHoldMs
         gapMs = minimumGapMs
+        holdOverrideMs = holdOverrides
+    }
+    private func minHold(_ i: Int) -> Int64 {
+        Button(rawValue: i).flatMap { holdOverrideMs[$0] } ?? minHoldMs
     }
     private let maxQueued = 2
 
@@ -49,7 +55,7 @@ final class InputController: @unchecked Sendable {
             queued[i] = min(queued[i] + 1, maxQueued)
         } else {
             held |= UInt8(1 << i)
-            holdUntilMs[i] = now + minHoldMs
+            holdUntilMs[i] = now + minHold(i)
         }
     }
 
@@ -71,7 +77,7 @@ final class InputController: @unchecked Sendable {
                 mask |= UInt8(1 << i)
             } else if queued[i] > 0 && (mask & (1 << i)) == 0 && now >= upAtMs[i] + gapMs {
                 queued[i] -= 1
-                holdUntilMs[i] = now + minHoldMs
+                holdUntilMs[i] = now + minHold(i)
                 mask |= UInt8(1 << i)
             }
         }

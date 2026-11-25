@@ -132,10 +132,20 @@ final class V1EmulatorEngine {
         let model = V1EmulatorEngine.model(for: romWords)
         // See InputController.setTiming: Tamaotch drops taps under ~0.15 s
         // and taps closer than ~0.3 s apart, so hold each 0.2 s and space
-        // them 0.3 s (quick taps queue up instead of being lost).
-        let isTamaotch = model == IOS_HAL_MODEL_TAMAOTCH
-        input.setTiming(minimumHoldMs: isTamaotch ? 200 : 60,
-                        minimumGapMs: isTamaotch ? 300 : 25)
+        // them 0.3 s (quick taps queue up instead of being lost). The
+        // Yasashii is slower still (measured headless 2026-11-25, status
+        // button, 20 tries each: 0/20 at 60 ms, 5/20 at 100 ms, 18/20 at
+        // 150 ms, 16-20/20 from 250 ms), so it gets 0.25 s. Its status
+        // button (pin A, also the clock-setting button) still wanted a
+        // slight hold at 0.25 s on the user's phone, so that one gets 0.45 s.
+        switch model {
+        case IOS_HAL_MODEL_TAMAOTCH:
+            input.setTiming(minimumHoldMs: 200, minimumGapMs: 300)
+        case IOS_HAL_MODEL_YASASHII:
+            input.setTiming(minimumHoldMs: 250, minimumGapMs: 300, holdOverrides: [.a: 450])
+        default:
+            input.setTiming(minimumHoldMs: 60, minimumGapMs: 25)
+        }
         let started = romWords.withUnsafeBufferPointer { buf in
             ios_hal_start(buf.baseAddress, UInt32(buf.count), model)
         }
@@ -489,3 +499,4 @@ struct LampCallTracker {
         return nowUs &- lastLitUs < 5_000_000
     }
 }
+

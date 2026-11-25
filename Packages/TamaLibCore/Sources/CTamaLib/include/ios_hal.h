@@ -88,7 +88,10 @@ void ios_hal_set_button(int btn, bool pressed);
  * headless runner: meal, happiness and lights each blink when the toy
  * needs that care and stop once it's given; affection, status and toilet
  * are placed from the order the six run in at hatching (clockwise around
- * the real toy), not individually confirmed. */
+ * the real toy: top row left to right, then bottom row right to left).
+ * Status/toilet were first placed the wrong way round; the user saw the
+ * toilet lamp light on the status screen (2026-11-25) and they were
+ * swapped. Affection is still not individually confirmed. */
 #define IOS_HAL_LAMP_MEAL       (1 << 0)
 #define IOS_HAL_LAMP_HAPPINESS  (1 << 1)
 #define IOS_HAL_LAMP_AFFECTION  (1 << 2)

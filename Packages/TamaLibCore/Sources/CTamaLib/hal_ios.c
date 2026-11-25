@@ -184,6 +184,16 @@ static void s_log(log_level_t level, char *buff, ...)
 	if (!s_is_log_enabled(level)) {
 		return;
 	}
+	/* The Yasashii's start-up code clears 32 nibbles (0xE60-0xE7F) that
+	 * aren't RAM on this chip -- harmless, the real chip ignores them too,
+	 * but it filled Xcode's console with dozens of scary-looking lines on
+	 * every launch. Print the first few errors of a run, then stay quiet. */
+	if (level == LOG_ERROR && s_error_count > 4) {
+		if (s_error_count == 5) {
+			fputs("(further core memory warnings hidden)\n", stderr);
+		}
+		return;
+	}
 	va_list args;
 	va_start(args, buff);
 	vfprintf(stderr, buff, args);
@@ -385,9 +395,9 @@ uint8_t ios_hal_get_lamps(void)
 		4, /* P0: meal */
 		5, /* P1: happiness */
 		6, /* P2: affection */
-		0, /* R0: toilet */
+		2, /* R2: toilet */
 		1, /* R1: lights */
-		2, /* R2: status */
+		0, /* R0: status */
 	};
 	uint8_t lamps = 0;
 	for (int i = 0; i < 6; i++) {
