@@ -44,3 +44,95 @@ extension View {
         modifier(ScreenGlow(color: color))
     }
 }
+
+/// A liquid-glass frame around a screen, the same glass as the A/B/C
+/// buttons, with the screen itself looking set into it: a soft inner
+/// shadow along its top edge and, for the printed-glass monochrome
+/// screens, a faint glare.
+///
+/// The glass lives in its own tiny view (`GlassBezelBackdrop`) whose only
+/// input is a number, so a page that re-renders on every LCD frame never
+/// rebuilds the glass — rebuilding Liquid Glass that often made the A/B/C
+/// buttons flicker. It never takes touches, for the same reason the
+/// buttons' glass doesn't (see ButtonPad).
+private struct GlassScreenFrame: ViewModifier {
+    let cornerRadius: CGFloat
+    let glare: Bool
+
+    private static let bezel: CGFloat = 10
+
+    func body(content: Content) -> some View {
+        let screen = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        content
+            .overlay {
+                ZStack {
+                    // Sunk in: shadow falls from the bezel's top lip.
+                    screen
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.black.opacity(0.32), .black.opacity(0.06)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 5
+                        )
+                        .blur(radius: 3)
+                    if glare {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.22), location: 0),
+                                .init(color: .white.opacity(0.05), location: 0.45),
+                                .init(color: .clear, location: 0.46)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                    // A crisp seam where glass meets screen.
+                    screen.strokeBorder(.black.opacity(0.18), lineWidth: 0.75)
+                }
+                .clipShape(screen)
+                .allowsHitTesting(false)
+            }
+            .padding(Self.bezel)
+            .background {
+                GlassBezelBackdrop(cornerRadius: cornerRadius + Self.bezel)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
+private struct GlassBezelBackdrop: View {
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(iOS 27.0, *) {
+            shape
+                .fill(.clear)
+                .glassEffect(.regular, in: shape)
+        } else {
+            // Same frosted stand-in the buttons use below iOS 27.
+            shape
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.6), .white.opacity(0.1)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+                }
+                .shadow(color: .black.opacity(0.14), radius: 8, y: 3)
+        }
+    }
+}
+
+extension View {
+    /// See GlassScreenFrame. `cornerRadius` is the screen's own corner.
+    func glassScreenFrame(cornerRadius: CGFloat, glare: Bool = false) -> some View {
+        modifier(GlassScreenFrame(cornerRadius: cornerRadius, glare: glare))
+    }
+}

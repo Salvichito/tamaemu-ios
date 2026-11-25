@@ -26,7 +26,7 @@ struct P1ScreenView: View {
     var rounded: Bool = true
 
     private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
-    private static let cornerRadius: CGFloat = 16
+    static let cornerRadius: CGFloat = 16
     private static let iconSize: CGFloat = 36
     /// The Yasashii's care buttons: a disc around the same-size icon.
     private static let lampSize: CGFloat = 58

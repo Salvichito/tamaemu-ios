@@ -13,7 +13,7 @@ struct T7ScreenView: View {
     let state: T7ScreenState
     var isFriends = false
 
-    private static let cornerRadius: CGFloat = 16
+    static let cornerRadius: CGFloat = 16
     private static let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
 
     /// Tama-Go, per Bandai's quick-start guide and a hands-on review

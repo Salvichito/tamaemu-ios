@@ -45,6 +45,7 @@ struct V1PageView: View {
                     }
                 )
                 .frame(maxWidth: 280)
+                .glassScreenFrame(cornerRadius: P1ScreenView.cornerRadius, glare: true)
                 .overlay(alignment: .topTrailing) {
                     if viewModel.isFastForwarding && !viewModel.isPaused {
                         FastForwardIndicator()
@@ -87,7 +88,7 @@ struct V1PageView: View {
             if ambientBackgroundEnabled {
                 Text(viewModel.selectedDevice.title)
                     .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.black.opacity(0.25))
+                    .foregroundStyle(.primary.opacity(0.3))
             } else {
                 Text(viewModel.selectedDevice.title)
                     .font(.footnote)

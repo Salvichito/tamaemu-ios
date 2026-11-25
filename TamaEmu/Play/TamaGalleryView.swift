@@ -10,6 +10,7 @@ struct TamaGalleryView: View {
 
     @AppStorage(AppSettings.Keys.appearanceMode) private var appearanceModeRaw = AppSettings.AppearanceMode.system.rawValue
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
+    @AppStorage(AppSettings.Keys.theme) private var themeRaw = AppTheme.default.rawValue
 
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
@@ -32,6 +33,7 @@ struct TamaGalleryView: View {
     @State private var showingNearbyLink = false
     @State private var showingNewStarConfirm = false
     @State private var showingTomomixSettings = false
+    @State private var showingThemePicker = false
 
     /// Ambient Background is a premium feature — forced off for free users
     /// regardless of their own stored preference, which is left untouched
@@ -40,12 +42,18 @@ struct TamaGalleryView: View {
         ambientBackgroundEnabled && purchases.isPremium
     }
 
-    /// Whether the page on screen gets a full-bleed background: always for
-    /// Tomomix (its sky is included free, for everyone), otherwise the
-    /// Premium Ambient Background setting.
+    /// Whether the page on screen shows its own live backdrop: Tomomix's
+    /// sky (free, for everyone), or a color Tama's blurred screen with the
+    /// Premium Ambient Background on. Every other page gets the theme.
     private var ambientActive: Bool {
-        selectedTomomix != nil || effectiveAmbientBackgroundEnabled
+        selectedTomomix != nil || (effectiveAmbientBackgroundEnabled && selectedViewModel != nil)
     }
+
+    private var theme: AppTheme { AppTheme(rawValue: themeRaw) ?? .default }
+
+    /// Whether anything is drawn behind the pages at all — `plain` keeps
+    /// the old system background and its normal bars.
+    private var customBackdrop: Bool { ambientActive || theme != .plain }
 
     /// First Tama is always free; anything past that needs Premium.
     /// Pulled out of the `.alert` call itself — inlined there, this
@@ -310,6 +318,11 @@ struct TamaGalleryView: View {
                     Label("Screen Style", systemImage: "paintpalette")
                 }
                 Button {
+                    showingThemePicker = true
+                } label: {
+                    Label("Theme", systemImage: "swatchpalette")
+                }
+                Button {
                     showingBackups = true
                 } label: {
                     Label("Backups", systemImage: "clock.arrow.circlepath")
@@ -467,6 +480,11 @@ struct TamaGalleryView: View {
                     gallery.showingReorder = true
                 } label: {
                     Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
+                }
+                Button {
+                    showingThemePicker = true
+                } label: {
+                    Label("Theme", systemImage: "swatchpalette")
                 }
                 Button {
                     showingBackups = true
@@ -707,6 +725,18 @@ struct TamaGalleryView: View {
                 } message: {
                     Text("Up to 5 digits (max 99999). This replaces the current total.")
                 }
+                .sheet(isPresented: $showingThemePicker) {
+                    NavigationStack {
+                        ThemePickerView()
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("Done") { showingThemePicker = false }
+                                }
+                            }
+                    }
+                    // Half height, so the new backdrop shows behind it.
+                    .presentationDetents([.medium, .large])
+                }
                 .sheet(isPresented: $showingP1ScreenStyle) {
                     if let device = selectedDevice {
                         P1ScreenStyleView(deviceID: device.id)
@@ -833,9 +863,11 @@ struct TamaGalleryView: View {
             }
             .tabViewStyle(.page)
             .indexViewStyle(.page(backgroundDisplayMode: .never))
-            .scrollContentBackground(ambientActive ? .hidden : .visible)
+            .scrollContentBackground(customBackdrop ? .hidden : .visible)
             .background {
-                if ambientActive {
+                if !ambientActive {
+                    ThemeBackground(theme: theme)
+                } else {
                     // Its own view on purpose: reading `lcdImage` right
                     // here made this whole gallery body — toolbar and the
                     // open ⋯ menu included — rebuild on every LCD frame
@@ -861,7 +893,7 @@ struct TamaGalleryView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(ambientActive ? .hidden : .automatic, for: .navigationBar)
+            .toolbarBackground(customBackdrop ? .hidden : .automatic, for: .navigationBar)
             // Attached once here, to the gallery's single NavigationStack,
             // rather than per-page in TamaPageView — see that view's doc
             // comment for why a per-page toolbar could show up twice.

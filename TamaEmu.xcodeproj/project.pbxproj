@@ -82,6 +82,7 @@
 		E49CB9524210D840D9C46A28 /* LinkPort.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73A464D9A5B4C551857E6F9 /* LinkPort.swift */; };
 		E5D2CFE353E438AD0044C19B /* TomomixBrain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A448D14ED86EC103F74C83 /* TomomixBrain.swift */; };
 		E5D89CA43DE4138FBCFD2A2E /* TamaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7594ABE9067A97A1A2D888F3 /* TamaCore */; };
+		E9EEDDCAA256AC1254F8DE8D /* ThemeBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46ACD35A7C487C9DF9BA174 /* ThemeBackground.swift */; };
 		EF5191F516084C0781B33906 /* InputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736990A9EB7F43B291B3E53F /* InputController.swift */; };
 		EFC5C2D0EEC7269360784458 /* TamaNeglectWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0E0DD6673484D7CEF5EB7A /* TamaNeglectWidget.swift */; };
 		F3BF9890B6B4109C098E7B84 /* ScreenGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04D920AB897EAF6AA846A4D4 /* ScreenGlow.swift */; };
@@ -189,6 +190,7 @@
 		D07A735B64EEDCE8C20FB0B1 /* T7PageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = T7PageView.swift; sourceTree = "<group>"; };
 		D1F5737C6A2A4AF8870F54E3 /* TamaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidget.swift; sourceTree = "<group>"; };
 		D3DE16C24D18BB2F54C7241D /* ScreenTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTranslator.swift; sourceTree = "<group>"; };
+		D46ACD35A7C487C9DF9BA174 /* ThemeBackground.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThemeBackground.swift; sourceTree = "<group>"; };
 		D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReorderTamasView.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
 		DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "CGImage+GlowColor.swift"; path = "CGImage+GlowColor.swift"; sourceTree = "<group>"; };
@@ -389,6 +391,7 @@
 				8B463E74FCC99EE8258DD71F /* PaywallView.swift */,
 				786034F34616E49A26C874C5 /* NearbyLinkView.swift */,
 				F058EEC27A45730B3595D812 /* WelcomeView.swift */,
+				D46ACD35A7C487C9DF9BA174 /* ThemeBackground.swift */,
 			);
 			path = Play;
 			sourceTree = "<group>";
@@ -580,6 +583,7 @@
 				FB5B0A06E5D69F074513239A /* TomomixSettingsView.swift in Sources */,
 				65C3C829A2C6F004A14D8A70 /* WelcomeView.swift in Sources */,
 				47EB8E7819F48AB9C030EFA5 /* AppIconPickerView.swift in Sources */,
+				E9EEDDCAA256AC1254F8DE8D /* ThemeBackground.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

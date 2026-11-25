@@ -42,6 +42,7 @@ struct T7PageView: View {
                     isFriends: viewModel.selectedDevice.id == "tamagotchi-friends"
                 )
                     .frame(maxWidth: 280)
+                    .glassScreenFrame(cornerRadius: T7ScreenView.cornerRadius, glare: true)
                     .overlay(alignment: .topTrailing) {
                         if viewModel.isFastForwarding && !viewModel.isPaused {
                             FastForwardIndicator()
@@ -74,7 +75,7 @@ struct T7PageView: View {
             if ambientBackgroundEnabled {
                 Text(viewModel.selectedDevice.title)
                     .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.black.opacity(0.25))
+                    .foregroundStyle(.primary.opacity(0.3))
             } else {
                 Text(viewModel.selectedDevice.title)
                     .font(.footnote)

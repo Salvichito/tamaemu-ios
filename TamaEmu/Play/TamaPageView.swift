@@ -42,10 +42,22 @@ struct TamaPageView: View {
             }
     }
 
+    /// With Ambient Background on, the screen glows into the blurred
+    /// backdrop; otherwise it sits in a glass bezel over the theme.
+    @ViewBuilder
+    private var screen: some View {
+        if ambientBackgroundEnabled {
+            LiveLCD(viewModel: viewModel, glow: true)
+        } else {
+            LiveLCD(viewModel: viewModel, glow: false)
+                .glassScreenFrame(cornerRadius: LiveLCD.width * LCDView.cornerRadiusRatio)
+        }
+    }
+
     private var pageContent: some View {
         VStack(spacing: 16) {
             ZStack {
-                LiveLCD(viewModel: viewModel)
+                screen
                     .overlay(alignment: .topTrailing) {
                         if viewModel.isFastForwarding && !viewModel.isPaused {
                             FastForwardIndicator()
@@ -183,11 +195,19 @@ struct TamaPageView: View {
 /// Liquid Glass visibly flickered from being rebuilt that often.
 private struct LiveLCD: View {
     let viewModel: PlayViewModel
+    let glow: Bool
+
+    static let width: CGFloat = 280
 
     var body: some View {
-        LCDView(image: viewModel.lcdImage)
-            .frame(maxWidth: 280)
-            .screenGlow(color: viewModel.lcdGlowColor)
+        if glow {
+            LCDView(image: viewModel.lcdImage)
+                .frame(maxWidth: Self.width)
+                .screenGlow(color: viewModel.lcdGlowColor)
+        } else {
+            LCDView(image: viewModel.lcdImage)
+                .frame(maxWidth: Self.width)
+        }
     }
 }
 
