@@ -1361,16 +1361,14 @@ struct PoopPile: View {
         // 80% of its width, starting 11.3% in; 64% of its height, 13.2% down.
         let screen = width / 0.8
         func spotCenter(_ i: Int, big: Bool) -> CGPoint {
-            // i is -1 with no poops (newestIndex below), e.g. right after
-            // switching Tamas -- wrap it instead of crashing.
-            let n = Self.spots.count
-            let spot = Self.spots[((i % n) + n) % n]
+            let spot = Self.spots[i % Self.spots.count]
             // The body's middle is lower than the drawing's middle.
             let bodyDrop = side * (big ? 0.18 : 0.23)
             return CGPoint(x: (spot.x - 0.1134) * screen, y: (spot.y - 0.1316) * screen - bodyDrop)
         }
         let e = flight ?? Self.flightDuration
-        let flying = e < Self.flightDuration
+        // Nothing to launch with no poops (e.g. right after switching Tamas).
+        let flying = e < Self.flightDuration && count > 0
         let early = e < Self.wallHit
         // From the 5th on, a small one lands on top of a small one and
         // they turn into a big one once it has settled.
@@ -1378,7 +1376,8 @@ struct PoopPile: View {
         let merged = merging && e >= Self.settled
         let shown = merging && !merged ? count - 1 : count
         let pieces = Self.pieces(shown)
-        let newestIndex = max(0, count - 4) > 0 ? count - 5 : pieces.count - 1
+        // Never below 0: with no poops there's no newest one.
+        let newestIndex = max(0, count > 4 ? count - 5 : pieces.count - 1)
         // What the flying one is, and where it lands.
         let flyerBig = !merging && (pieces.indices.contains(newestIndex) ? pieces[newestIndex] : false)
         let landing: CGPoint = {
