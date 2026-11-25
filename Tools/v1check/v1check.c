@@ -44,7 +44,7 @@ static const toy_t TOYS[] = {
 	{ "morino",    "Mori de Hakken (Morino)", IOS_HAL_MODEL_P1, "B A C X B w1000 B", 120, 300, "manual: about 3 min", 1, 0, 1 },
 	{ "umino",     "Umi de Hakken (Umino)",  IOS_HAL_MODEL_ICON_PER_SEGMENT, "B A C w3000 B", 0, 0, "no manual at hand", 1, 0, 1 },
 	{ "genjintch", "Genjintch",              IOS_HAL_MODEL_GENJINTCH, "B A C w2000 B", 0, 0, "no manual at hand", 1, 0, 1 },
-	{ "tamaotch",  "Tamaotch",               IOS_HAL_MODEL_TAMAOTCH, "h500 B w1500 A w1500 C w3000 A", 240, 420, "manual: about 5 min after choosing the egg", 1, 0, 1 },
+	{ "tamaotch",  "Tamaotch",               IOS_HAL_MODEL_TAMAOTCH, "h500 B w1500 A w1500 C w3000 A", 150, 250, "ROM counts down 4 minute ticks from the egg choice (2.9-3.9 min); manual says about 5", 1, 0, 1 },
 	{ "mothra",    "Mothra",                 IOS_HAL_MODEL_MOTHRA, "B A C X", 240, 420, "manual: about 5 min", 1, 0, 1 },
 	{ "yasashii",  "Yasashii",               IOS_HAL_MODEL_YASASHII, "B B A X", 240, 390, "manual: about 5 min", 0, 1, 2 },
 	{ "digimon-v1", "Digimon V1",            IOS_HAL_MODEL_DIGIMON, "", 0, 0, "different toy, no egg check", 0, 0, 1 },
