@@ -296,7 +296,7 @@ struct SettingsView: View {
             Toggle("Ambient Background", isOn: purchases.isPremium ? $ambientBackgroundEnabled : .constant(false))
                 .disabled(!purchases.isPremium)
             NavigationLink("Theme") {
-                ThemePickerView()
+                ThemePickerView(device: device)
             }
             if AppIconChoice.isSupported {
                 NavigationLink("App Icon") {
@@ -306,7 +306,7 @@ struct SettingsView: View {
         } header: {
             Text("Display")
         } footer: {
-            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it — a Premium feature. Theme is the backdrop color used otherwise, and always on black-and-white models. These apply app-wide, not just to this Tama.")
+            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it — a Premium feature. These apply app-wide, not just to this Tama — except Theme, the backdrop color used when Ambient Background is off, which each Tama keeps for itself.")
         }
     }
 

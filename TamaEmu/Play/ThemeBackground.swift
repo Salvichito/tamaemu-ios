@@ -1,4 +1,5 @@
 import SwiftUI
+import TamaCore
 import UIKit
 
 /// The play screen's backdrop color whenever there's no Ambient
@@ -76,10 +77,6 @@ enum AppTheme: String, CaseIterable, Identifiable {
 
     func colors(for scheme: ColorScheme) -> (top: Color, bottom: Color)? {
         stops(for: scheme).map { (Color(hex: $0.top), Color(hex: $0.bottom)) }
-    }
-
-    static var current: AppTheme {
-        UserDefaults.standard.string(forKey: AppSettings.Keys.theme).flatMap(AppTheme.init) ?? .default
     }
 }
 
@@ -167,8 +164,13 @@ private enum ThemeGrain {
 }
 
 /// Grid of theme swatches; the backdrop behind the sheet changes as you tap.
+/// Each device keeps its own theme.
 struct ThemePickerView: View {
-    @AppStorage(AppSettings.Keys.theme) private var themeRaw = AppTheme.default.rawValue
+    @AppStorage private var themeRaw: String
+
+    init(device: TamaDevice) {
+        _themeRaw = AppStorage(wrappedValue: AppTheme.default.rawValue, AppSettings.Keys.theme(for: device))
+    }
 
     private let columns = [GridItem(.adaptive(minimum: 96), spacing: 14)]
 
@@ -219,5 +221,20 @@ private extension Color {
             green: Double((hex >> 8) & 0xFF) / 255,
             blue: Double(hex & 0xFF) / 255
         )
+    }
+}
+
+/// One device's own theme, read from its per-device key. The gallery
+/// re-creates this (`.id`) whenever the page on screen changes, since an
+/// @AppStorage key can't change after init.
+struct DeviceThemeBackground: View {
+    @AppStorage private var themeRaw: String
+
+    init(device: TamaDevice) {
+        _themeRaw = AppStorage(wrappedValue: AppTheme.default.rawValue, AppSettings.Keys.theme(for: device))
+    }
+
+    var body: some View {
+        ThemeBackground(theme: AppTheme(rawValue: themeRaw) ?? .default)
     }
 }

@@ -23,9 +23,6 @@ enum AppSettings {
         static let ignoreSilentSwitch = "settings.ignoreSilentSwitch"
         static let pauseOtherAudio = "settings.pauseOtherAudio"
         static let ambientBackgroundEnabled = "settings.ambientBackgroundEnabled"
-        /// AppTheme raw value — the play screen's backdrop when there's
-        /// no Ambient Background (see ThemeBackground).
-        static let theme = "settings.theme"
         static let reminderNotificationsEnabled = "settings.reminderNotificationsEnabled"
         static let reminderIntervalHours = "settings.reminderIntervalHours"
         /// Whether live translation uses a cloud AI (KeychainStore) instead
@@ -43,6 +40,11 @@ enum AppSettings {
         }
         static func stayAwake(for device: TamaDevice) -> String {
             "settings.stayAwake.\(device.id)"
+        }
+        /// AppTheme raw value — that device's play-screen backdrop when
+        /// there's no Ambient Background (see ThemeBackground).
+        static func theme(for device: TamaDevice) -> String {
+            "settings.theme.\(device.id)"
         }
     }
 

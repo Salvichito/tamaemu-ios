@@ -10,7 +10,6 @@ struct TamaGalleryView: View {
 
     @AppStorage(AppSettings.Keys.appearanceMode) private var appearanceModeRaw = AppSettings.AppearanceMode.system.rawValue
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
-    @AppStorage(AppSettings.Keys.theme) private var themeRaw = AppTheme.default.rawValue
 
     @State private var showingSettings = false
     @State private var showingDeleteConfirm = false
@@ -48,12 +47,6 @@ struct TamaGalleryView: View {
     private var ambientActive: Bool {
         selectedTomomix != nil || (effectiveAmbientBackgroundEnabled && selectedViewModel != nil)
     }
-
-    private var theme: AppTheme { AppTheme(rawValue: themeRaw) ?? .default }
-
-    /// Whether anything is drawn behind the pages at all — `plain` keeps
-    /// the old system background and its normal bars.
-    private var customBackdrop: Bool { ambientActive || theme != .plain }
 
     /// First Tama is always free; anything past that needs Premium.
     /// Pulled out of the `.alert` call itself — inlined there, this
@@ -727,7 +720,11 @@ struct TamaGalleryView: View {
                 }
                 .sheet(isPresented: $showingThemePicker) {
                     NavigationStack {
-                        ThemePickerView()
+                        Group {
+                            if let device = selectedDevice {
+                                ThemePickerView(device: device)
+                            }
+                        }
                             .toolbar {
                                 ToolbarItem(placement: .confirmationAction) {
                                     Button("Done") { showingThemePicker = false }
@@ -863,10 +860,15 @@ struct TamaGalleryView: View {
             }
             .tabViewStyle(.page)
             .indexViewStyle(.page(backgroundDisplayMode: .never))
-            .scrollContentBackground(customBackdrop ? .hidden : .visible)
+            .scrollContentBackground(.hidden)
             .background {
                 if !ambientActive {
-                    ThemeBackground(theme: theme)
+                    // Each device has its own theme ("Plain" draws the
+                    // system background, so this always fills the screen).
+                    if let device = selectedDevice {
+                        DeviceThemeBackground(device: device)
+                            .id(device.id)
+                    }
                 } else {
                     // Its own view on purpose: reading `lcdImage` right
                     // here made this whole gallery body — toolbar and the
@@ -893,7 +895,7 @@ struct TamaGalleryView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(customBackdrop ? .hidden : .automatic, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             // Attached once here, to the gallery's single NavigationStack,
             // rather than per-page in TamaPageView — see that view's doc
             // comment for why a per-page toolbar could show up twice.
