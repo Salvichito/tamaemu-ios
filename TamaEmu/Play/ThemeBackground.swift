@@ -28,6 +28,16 @@ enum AppTheme: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Plain and Tomomix Purple are free; the other colors are Premium.
+    var isPremium: Bool { self != .plain && self != .tomomix }
+
+    /// What actually shows: a free user's Premium pick falls back to the
+    /// default, but stays stored so it comes back the moment they unlock
+    /// Premium (same as Ambient Background).
+    func effective(isPremium premium: Bool) -> AppTheme {
+        isPremium && !premium ? .default : self
+    }
+
     var label: String {
         switch self {
         case .plain: "Plain"
@@ -167,6 +177,13 @@ private enum ThemeGrain {
 /// Each device keeps its own theme.
 struct ThemePickerView: View {
     @AppStorage private var themeRaw: String
+    @Environment(PurchaseManager.self) private var purchases
+    @State private var showingPaywall = false
+
+    /// The highlighted tile: what's actually showing, not a locked pick.
+    private var selected: AppTheme {
+        (AppTheme(rawValue: themeRaw) ?? .default).effective(isPremium: purchases.isPremium)
+    }
 
     init(device: TamaDevice) {
         _themeRaw = AppStorage(wrappedValue: AppTheme.default.rawValue, AppSettings.Keys.theme(for: device))
@@ -178,8 +195,13 @@ struct ThemePickerView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(AppTheme.allCases) { theme in
+                    let locked = theme.isPremium && !purchases.isPremium
                     Button {
-                        themeRaw = theme.rawValue
+                        if locked {
+                            showingPaywall = true
+                        } else {
+                            themeRaw = theme.rawValue
+                        }
                     } label: {
                         VStack(spacing: 6) {
                             ThemeBackground(theme: theme)
@@ -188,9 +210,19 @@ struct ThemePickerView: View {
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                                         .strokeBorder(
-                                            themeRaw == theme.rawValue ? Color.accentColor : Color.primary.opacity(0.12),
-                                            lineWidth: themeRaw == theme.rawValue ? 3 : 1
+                                            selected == theme ? Color.accentColor : Color.primary.opacity(0.12),
+                                            lineWidth: selected == theme ? 3 : 1
                                         )
+                                }
+                                .overlay(alignment: .topTrailing) {
+                                    if locked {
+                                        Image(systemName: "lock.fill")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(.white)
+                                            .padding(5)
+                                            .background(.black.opacity(0.55), in: Circle())
+                                            .padding(6)
+                                    }
                                 }
                             Text(theme.label)
                                 .font(.caption)
@@ -203,13 +235,26 @@ struct ThemePickerView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityAddTraits(themeRaw == theme.rawValue ? .isSelected : [])
+                    .accessibilityAddTraits(selected == theme ? .isSelected : [])
+                    .accessibilityHint(locked ? "Premium" : "")
                 }
             }
             .padding()
+
+            if !purchases.isPremium {
+                Text("Plain and Tomomix Purple are always free. The other colors come with Premium.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .padding(.bottom)
+            }
         }
         .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView()
+        }
     }
 }
 
@@ -229,12 +274,13 @@ private extension Color {
 /// @AppStorage key can't change after init.
 struct DeviceThemeBackground: View {
     @AppStorage private var themeRaw: String
+    @Environment(PurchaseManager.self) private var purchases
 
     init(device: TamaDevice) {
         _themeRaw = AppStorage(wrappedValue: AppTheme.default.rawValue, AppSettings.Keys.theme(for: device))
     }
 
     var body: some View {
-        ThemeBackground(theme: AppTheme(rawValue: themeRaw) ?? .default)
+        ThemeBackground(theme: (AppTheme(rawValue: themeRaw) ?? .default).effective(isPremium: purchases.isPremium))
     }
 }
