@@ -394,14 +394,16 @@ struct V1IconProfile {
         ("treatment", "P1IconMedicine"), ("call", "P1IconAttention")
     ])
 
-    /// Genjintch: measured A cycle 0-6 + attention, same as the P1. The
-    /// only icon difference found in sources: praise replaces the P1's
-    /// discipline icon. Assumed in the P1's slot -- not confirmed.
+    /// Genjintch: measured A cycle 0-6 + attention. Icon order from
+    /// tamagotchipet.com's Genjintch guide (health meter, food, game,
+    /// toilet, praise, medicine, lights, attention) -- the same pattern
+    /// as Angel and Umino, laid out on the measured 0-3 top / 4-7 bottom
+    /// wiring.
     static let genjintch = grid([
-        ("food", "P1IconFood"), ("light", "P1IconLight"),
-        ("game", "P1IconGame"), ("medicine", "P1IconMedicine"),
-        ("bathroom", "P1IconBathroom"), ("status", "P1IconStatus"),
-        ("praise", "P1IconPraise"), ("attention", "P1IconAttention")
+        ("status", "P1IconStatus"), ("food", "P1IconFood"),
+        ("game", "P1IconGame"), ("toilet", "P1IconBathroom"),
+        ("praise", "P1IconPraise"), ("medicine", "P1IconMedicine"),
+        ("lights", "P1IconLight"), ("attention", "P1IconAttention")
     ])
 
     /// Yasashii: no screen icons at all. Per its manual, six lit care
