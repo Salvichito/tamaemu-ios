@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tomomix: Virtual Pets</title>
-<meta name="description" content="New friends. Classic memories. Catch a shooting star and raise an original tomomix for free, or bring a supported classic virtual pet to your iPhone or iPad. No ads. No subscriptions.">
+<meta name="description" content="How Tomomix works: catch a shooting star, raise your tomomix through four life stages and 19 characters, play Follow Me, and keep it happy. Free on iPhone and iPad.">
 <link rel="icon" href="img/icon.png">
 <link rel="apple-touch-icon" href="img/icon.png">
 <link rel="stylesheet" href="style.css">
@@ -15,94 +15,252 @@
   <div class="wrap">
     <div class="bar">
       <a class="brand" href="./"><img src="img/icon.png" alt="">Tomomix</a>
-      <nav class="nav"><a href="support/">Support</a><a href="privacy/">Privacy</a></nav>
+      <nav class="nav"><a href="#start">How to play</a><a href="support/">Support</a><a href="privacy/">Privacy</a></nav>
     </div>
     <div class="hero-inner">
       <div>
-        <img class="hero-icon" src="img/icon.png" alt="Tomomix app icon">
         <h1>New friends. Classic memories.</h1>
-        <p class="lead">A little friend, made with a lot of care. Catch a shooting star and meet your tomomix. Raise it for free, or bring a supported classic virtual pet to your iPhone or iPad.</p>
+        <p class="lead">Catch a shooting star, raise your tomomix, and see who it grows up to be. Here's how it works.</p>
         <span class="badge">Coming soon to the App Store</span>
-        <p class="note">One optional purchase. No subscriptions. No ads.</p>
+        <p class="note">The Tomomix game is completely free. No ads. No subscriptions.</p>
       </div>
-      <div class="phone"><img src="img/room.jpg" alt="A tomomix in its cozy room"></div>
+      <div class="phone"><img src="img/room.jpg" alt="A tomomix in its room"></div>
     </div>
   </div>
 </header>
 
+<nav class="toc wrap" aria-label="On this page">
+  <a href="#start">Birth</a><a href="#time">Time &amp; age</a><a href="#stages">Life stages</a><a href="#care">Care</a><a href="#game">Follow Me</a><a href="#growth">Who it becomes</a><a href="#end">The ending</a><a href="#settings">Your pace</a>
+</nav>
+
 <main>
-  <section>
-    <div class="wrap">
-      <h2>Catch a star. Meet your tomomix.</h2>
-      <p class="sub">Your story begins with a shooting star. Catch one, watch it become a baby, and give your new friend a name. The original Tomomix game is completely free.</p>
-      <div class="shots">
-        <figure><img src="img/store-1-meet.webp" alt="Meet your tomomix: a friend to care for"></figure>
-        <figure><img src="img/store-2-choose.webp" alt="New or nostalgic: you choose between a tomomix and a classic pet"></figure>
-        <figure><img src="img/store-3-star.webp" alt="Catch a star: raise a companion"></figure>
-        <figure><img src="img/store-4-care.webp" alt="A little care: feed, play, and grow"></figure>
+
+  <!-- 1. Birth -->
+  <section id="start">
+    <div class="wrap split">
+      <div>
+        <p class="kicker">Step 1</p>
+        <h2>It starts with a star</h2>
+        <ol class="steps">
+          <li><b>Catch a shooting star.</b> Shooting stars cross the night sky every few seconds. Tap the screen, or press any button, while one is flying.</li>
+          <li><b>Watch it land.</b> The star falls onto the meadow and pulses for about 30 seconds, faster and faster.</li>
+          <li><b>Meet your baby.</b> The star bursts and your baby appears in its room. Give it a name.</li>
+        </ol>
+        <p class="tip"><b>Tip:</b> babies are born hungry and unhappy, so feed it and give it a snack straight away.</p>
+      </div>
+      <div class="art-stack">
+        <div class="night">
+          <img class="shoot" src="img/tomo/shooting-star.svg" alt="A shooting star">
+          <img class="fallen" src="img/tomo/star-fallen.svg" alt="The fallen star">
+        </div>
+        <div class="placeholder" data-file="img/shot-birth.webp">Screenshot placeholder: the star pulsing on the meadow</div>
       </div>
     </div>
   </section>
 
-  <section style="padding-top:0">
+  <!-- 2. Time -->
+  <section id="time" class="band">
     <div class="wrap">
+      <p class="kicker">How time works</p>
+      <h2>One day is three years</h2>
       <div class="grid">
-        <div class="card"><div class="emoji">🌠</div><h3>Raise a star</h3><p>Feed it, play together, clean up after it, and tuck it in at night. The way you care for it shapes who it becomes, with 19 characters to discover.</p></div>
-        <div class="card"><div class="emoji">🏡</div><h3>A cozy little world</h3><p>A room with a sky that changes with the time of day, a meadow outside, and Follow Me, a memory game to play together.</p></div>
-        <div class="card"><div class="emoji">🌙</div><h3>Care that fits your day</h3><p>Your tomomix keeps living while the app is closed, and notifications let you know when it needs you. When life gets busy, pause its world.</p></div>
-        <div class="card"><div class="emoji">🎚️</div><h3>Your pace</h3><p>Choose Easy, Classic or Hard. If you'd prefer your companion's life never to end, turn on No Deaths.</p></div>
-        <div class="card"><div class="emoji">📸</div><h3>Keep the moments</h3><p>Photos, video recording and the full-screen sky are all part of the free game.</p></div>
-        <div class="card"><div class="emoji">✏️</div><h3>Made by hand</h3><p>Every character, background and little detail was drawn by hand in Figma. None of the artwork was generated by AI.</p></div>
+        <div class="card stat"><div class="big">+3</div><h3>years every morning</h3><p>Your tomomix gets 3 years older each time it wakes up. There's no age limit.</p></div>
+        <div class="card stat"><div class="big">☀️</div><h3>It grows while awake</h3><p>Growing up only counts the time it's awake. Each character has its own bedtime and wake-up time, and sleeps through the night.</p></div>
+        <div class="card stat"><div class="big">🌙</div><h3>Life goes on when you leave</h3><p>Time keeps passing while the app is closed, and notifications tell you when it needs you. Need a break? Pause freezes its life.</p></div>
       </div>
     </div>
   </section>
 
-  <section style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <!-- 3. Stages -->
+  <section id="stages">
     <div class="wrap">
-      <h2>Old friends, new home</h2>
-      <p class="sub">Import a compatible software file to run a supported classic virtual pet, with its familiar routines, sounds and menus. Classic toy software is not included. Only import files you have the right to use.</p>
-      <div class="grid">
-        <div class="card"><div class="emoji">⏱️</div><h3>Always alive</h3><p>Adjustable time catch-up, pause and attention notifications, so your pet's life keeps moving with yours.</p></div>
-        <div class="card"><div class="emoji">🤝</div><h3>Visit a friend</h3><p>Supported color models can connect with a nearby player's phone and use compatible downloadable items.</p></div>
-        <div class="card"><div class="emoji">💬</div><h3>Less guessing, more playing</h3><p>Live Translation (beta) shows English for Japanese toy screens, offline or with Gemini using your own API key.</p></div>
-        <div class="card"><div class="emoji">🎨</div><h3>A screen full of color</h3><p>Ambient Background fills your screen with colors from your classic pet's display.</p></div>
-        <div class="card"><div class="emoji">📱</div><h3>A glimpse of your pet</h3><p>Home Screen and Lock Screen widgets keep your pet close.</p></div>
-        <div class="card"><div class="emoji">💾</div><h3>Automatic backups</h3><p>Every pet is backed up automatically, and you can import and export saves anytime.</p></div>
+      <p class="kicker">19 characters</p>
+      <h2>Four life stages</h2>
+      <p class="sub">Every tomomix starts as the same baby. What happens next depends on how you care for it. The times below are awake time, so with sleep they stretch out a little.</p>
+      <div class="stages">
+        <div class="stage">
+          <div class="who baby"><img src="img/tomo/baby-idle-1.svg" alt="The baby"></div>
+          <h3>Baby <span class="count">1</span></h3>
+          <p>About <b>1 hour</b>. It takes a short nap, and wakes up 3 years old.</p>
+        </div>
+        <div class="stage">
+          <div class="who two"><img src="img/tomo/child-good-idle-1.svg" alt="A child"><img src="img/tomo/child-bad-idle-1.svg" alt="The other child"></div>
+          <h3>Child <span class="count">2</span></h3>
+          <p>About <b>2 days</b>. Its very first hour decides which child you get.</p>
+        </div>
+        <div class="stage">
+          <div class="who three"><img src="img/tomo/teen-excellent-idle-1.svg" alt="A teen"><img src="img/tomo/teen-good-idle-1.svg" alt="Another teen"><img src="img/tomo/teen-bad-idle-1.svg" alt="A third teen"></div>
+          <h3>Teen <span class="count">3</span></h3>
+          <p>About <b>2 to 3 days</b>. Each teen points toward a different group of adults.</p>
+        </div>
+        <div class="stage">
+          <div class="who mystery">
+            <img src="img/tomo/adult-1a.svg" alt=""><img src="img/tomo/adult-2b.svg" alt=""><img src="img/tomo/adult-3c.svg" alt=""><img src="img/tomo/adult-1d.svg" alt="">
+          </div>
+          <h3>Adult <span class="count">12</span></h3>
+          <p>The rest of its life. Some adults live for days, some for weeks. Who will yours be?</p>
+        </div>
       </div>
-      <p class="sub" style="margin:22px 0 0;font-size:15px">Feature availability varies by classic model.</p>
+      <details class="peek">
+        <summary>Peek at all 12 adult silhouettes</summary>
+        <div class="adults">
+          <img src="img/tomo/adult-1a.svg" alt=""><img src="img/tomo/adult-1b.svg" alt=""><img src="img/tomo/adult-1c.svg" alt=""><img src="img/tomo/adult-1d.svg" alt="">
+          <img src="img/tomo/adult-2a.svg" alt=""><img src="img/tomo/adult-2b.svg" alt=""><img src="img/tomo/adult-2c.svg" alt=""><img src="img/tomo/adult-2d.svg" alt="">
+          <img src="img/tomo/adult-3a.svg" alt=""><img src="img/tomo/adult-3b.svg" alt=""><img src="img/tomo/adult-3c.svg" alt=""><img src="img/tomo/adult-3d.svg" alt="">
+        </div>
+      </details>
     </div>
   </section>
 
-  <section>
+  <!-- 4. Care -->
+  <section id="care" class="band">
     <div class="wrap">
-      <h2>Free to start, with optional Premium</h2>
-      <p class="sub">The free app includes one tomomix with every feature of the original game, plus one classic pet. Premium is a one-time purchase that adds a few extras while helping support this personal project.</p>
-      <div class="card" style="overflow-x:auto">
-        <table class="plans">
-          <tr><th>Free</th><th>Premium (one-time)</th></tr>
-          <tr><td>One tomomix, with every feature of the original game</td><td>Everything in Free</td></tr>
-          <tr><td>One classic pet</td><td>More than one classic pet at a time</td></tr>
-          <tr><td>Catch-up, pause, notifications, backups</td><td>Live Translation (beta) and Ambient Background</td></tr>
-          <tr><td>Connect Nearby and downloadable items</td><td>Fast-forward, photos and videos for classic pets</td></tr>
-          <tr><td></td><td>Home Screen and Lock Screen widgets</td></tr>
-          <tr><td></td><td>In-game points tools for supported models</td></tr>
+      <p class="kicker">Daily care</p>
+      <h2>Eight icons, one happy friend</h2>
+      <p class="sub">Press <b>A</b> to move between icons, <b>B</b> to choose and <b>C</b> to go back. Or just tap an icon. Both work the same way, so use whichever you like.</p>
+      <div class="icons">
+        <div class="icon"><img src="img/tomo/icon-food.svg" alt=""><h3>Food</h3><p>A <b>meal</b> fills one step of hunger. A <b>snack</b> fills one step of happiness, but adds more weight.</p></div>
+        <div class="icon"><img src="img/tomo/icon-light.svg" alt=""><h3>Light</h3><p>Turn it off once your tomomix has fallen asleep. It comes back on by itself in the morning.</p></div>
+        <div class="icon"><img src="img/tomo/icon-game.svg" alt=""><h3>Game</h3><p>Play <a href="#game">Follow Me</a> to raise happiness and burn off a little weight.</p></div>
+        <div class="icon"><img src="img/tomo/icon-medicine.svg" alt=""><h3>Medicine</h3><p>Cures sickness. Some characters need two or three doses.</p></div>
+        <div class="icon"><img src="img/tomo/icon-clean.svg" alt=""><h3>Clean</h3><p>Sweeps away all the poop at once.</p></div>
+        <div class="icon"><img src="img/tomo/icon-status.svg" alt=""><h3>Status</h3><p>Shows its name, age, weight, and its hunger, happiness and discipline meters.</p></div>
+        <div class="icon"><img src="img/tomo/icon-discipline.svg" alt=""><h3>Discipline</h3><p>Use it when your tomomix misbehaves. Only use it then, though!</p></div>
+        <div class="icon"><img src="img/tomo/icon-attention.svg" alt=""><h3>Attention</h3><p>Lights up by itself when your tomomix is calling you. You can't select it.</p></div>
+      </div>
+
+      <div class="rules">
+        <div class="card">
+          <div class="rule-art"><img src="img/tomo/meter-hunger.svg" alt=""><img src="img/tomo/meter-happy.svg" alt=""></div>
+          <h3>Hunger and happiness</h3>
+          <p>Each meter has 4 steps and slowly empties on its own. When a meter is almost empty, a <b>thought bubble</b> shows what it'll want soon.</p>
+        </div>
+        <div class="card">
+          <div class="rule-art"><img src="img/tomo/needy-1.svg" alt=""></div>
+          <h3>Answer its calls</h3>
+          <p>When a meter runs out, your tomomix calls you. Answer within <b>14 minutes</b>. If it falls asleep with the light on, turn it off within about an hour.</p>
+        </div>
+        <div class="card">
+          <div class="rule-art"><img src="img/tomo/poop-small.svg" alt=""><img src="img/tomo/poop-big.svg" alt=""></div>
+          <h3>Poop</h3>
+          <p>A little pile appears every few hours, up to 8. The more poop is lying around, the sooner your tomomix gets sick.</p>
+        </div>
+        <div class="card">
+          <div class="rule-art"><img src="img/tomo/sick-1.svg" alt=""></div>
+          <h3>Sickness</h3>
+          <p>A scribble beside its head means it's sick. Give it medicine soon. Getting sick too often is dangerous.</p>
+        </div>
+        <div class="card">
+          <div class="rule-art"><img src="img/tomo/meter-discipline.svg" alt=""></div>
+          <h3>Misbehaving</h3>
+          <p>Sometimes it calls when it doesn't need anything, or refuses food or games. That's misbehavior: discipline it. Ten scolds fill the meter, and then it behaves.</p>
+        </div>
+        <div class="card">
+          <div class="rule-art"><img src="img/tomo/zzz-1.svg" alt=""><img src="img/tomo/zzz-2.svg" alt=""><img src="img/tomo/zzz-3.svg" alt=""></div>
+          <h3>Indoors and out</h3>
+          <p>Press <b>B</b> with no icon chosen, or tap anywhere else on the screen, to go out to the meadow and back. It always sleeps indoors.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Mini-game -->
+  <section id="game">
+    <div class="wrap split">
+      <div>
+        <p class="kicker">Mini-game</p>
+        <h2>Follow Me</h2>
+        <p class="sub">A memory game. Your tomomix looks left or right, and you repeat what it did.</p>
+        <ol class="steps">
+          <li>Each round <b>repeats the last sequence and adds one more</b> direction, up to 5 rounds.</li>
+          <li>Answer with <b>A = left</b> and <b>B = right</b>, or tap the left or right side of the screen. <b>C</b> quits.</li>
+          <li>A wrong direction ends the game. So does waiting more than <b>5 seconds</b>.</li>
+        </ol>
+        <table class="plans results">
+          <tr><th>Rounds completed</th><th>Happiness</th></tr>
+          <tr><td>All 5</td><td><span class="hearts">♥♥♥</span> +3 steps</td></tr>
+          <tr><td>3 or 4</td><td><span class="hearts">♥♥</span> +2 steps</td></tr>
+          <tr><td>1 or 2</td><td><span class="hearts">♥</span> +1 step</td></tr>
+          <tr><td>None</td><td>Nothing this time</td></tr>
         </table>
+        <p class="tip">Every finished game also takes off a little weight.</p>
       </div>
-      <p class="sub" style="margin:18px 0 0">The original Tomomix game stays completely free, whether you buy Premium or simply enjoy spending time with your pet.</p>
+      <div class="art-stack">
+        <div class="follow">
+          <img class="arrow left lit" src="img/tomo/arrow.svg" alt="Left arrow, lit">
+          <img class="pet" src="img/tomo/child-good-look.svg" alt="A tomomix looking left">
+          <img class="arrow right" src="img/tomo/arrow.svg" alt="Right arrow">
+          <div class="seq"><span>←</span><span>→</span><span>→</span><span class="new">?</span></div>
+        </div>
+        <div class="placeholder" data-file="img/shot-game.webp">Screenshot placeholder: Follow Me in the room</div>
+      </div>
     </div>
   </section>
 
-  <section style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <!-- 6. Growth -->
+  <section id="growth" class="band">
     <div class="wrap">
+      <p class="kicker">Who it becomes</p>
+      <h2>Your care shapes it</h2>
+      <p class="sub">Growing up is never random. Two things decide who your tomomix becomes, and both stay with it for life.</p>
       <div class="split">
-        <div>
-          <h2>A personal project, built on shared work</h2>
-          <p class="sub" style="margin-bottom:0">This app began as an iOS adaptation of Maragotchi's web-based TamaEmu emulator. It has since grown to include additional emulator cores, features for iPhone and iPad, and my original virtual pet game, Tomomix, which now gives the app its name. I develop and maintain it independently, with gratitude to Maragotchi and the other emulator developers whose work makes its classic pet experiences possible.</p>
+        <div class="card">
+          <h3>💛 Answering its calls</h3>
+          <p>Each call you miss, and each night you leave the light on, counts as a care mistake. Fewer mistakes lead to the best teen, and that teen leads to the best group of adults. A rough start isn't final: a child from a bumpy first hour can still become the best teen.</p>
         </div>
-        <div>
-          <h2>Still growing</h2>
-          <p class="sub" style="margin-bottom:0">Next, I plan to bring the app to Apple Watch. Future plans also include support for more classic virtual pet models and connecting compatible pets over the internet. These are planned for future updates and aren't available yet.</p>
+        <div class="card">
+          <h3>🧠 Disciplining it</h3>
+          <p>Each time you let misbehavior slide for too long, it remembers. Within its group, this decides which of the four adults it becomes, and how well behaved it is when it gets there.</p>
         </div>
+      </div>
+      <p class="sub small">Things that <b>don't</b> change who it becomes: its weight, how often you play, and how quickly you tidy up. Those matter for its health and happiness instead.</p>
+    </div>
+  </section>
+
+  <!-- 7. Ending -->
+  <section id="end">
+    <div class="wrap split">
+      <div>
+        <p class="kicker">The ending</p>
+        <h2>A star in the sky</h2>
+        <p>Every adult grows old in time. Old tomomixis get hungry and sad more and more quickly, so they need extra care.</p>
+        <p>A life can also end early: if a meter stays empty for about half a day, if sickness goes untreated for hours, or if it gets sick too many times as the same character.</p>
+        <p>When a tomomix departs, it becomes a fixed star in the night sky, with its name and age. Tap twice to send a new shooting star and start again.</p>
+      </div>
+      <div class="art-stack">
+        <div class="placeholder tall" data-file="img/shot-ending.webp">Screenshot placeholder: the ending star</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Settings -->
+  <section id="settings" class="band">
+    <div class="wrap">
+      <p class="kicker">Your pace</p>
+      <h2>Make it fit your day</h2>
+      <div class="grid">
+        <div class="card"><h3>Difficulty</h3><p><b>Easy</b> gives you 1.5× more time for everything. <b>Classic</b> is the standard game. <b>Hard</b> gives you less time.</p></div>
+        <div class="card"><h3>No Deaths</h3><p>Turn it on and your tomomix's life never ends. Neglect makes it sick instead.</p></div>
+        <div class="card"><h3>Pause</h3><p>Freezes its life: no aging, hunger or poop. When you come back, everything picks up where it stopped.</p></div>
+        <div class="card"><h3>Sound</h3><p>Press <b>A + C</b> together to mute it. Calls still show on screen.</p></div>
+        <div class="card"><h3>Notifications</h3><p>Get a message when it's hungry, unhappy, sick or ready for bed, even when the app is closed.</p></div>
+        <div class="card"><h3>Retro Screen</h3><p>Big pixels and scan lines, for an old-school look.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Classic pets, short -->
+  <section id="classic">
+    <div class="wrap split">
+      <div>
+        <h2>Classic pets, too</h2>
+        <p>Tomomix can also run supported classic virtual pets from a compatible software file. Classic toy software is not included. Only import files you have the right to use.</p>
+        <p class="small muted">Feature availability varies by classic model. See <a href="support/">Support</a> for the list.</p>
+      </div>
+      <div>
+        <h2>Free, with optional Premium</h2>
+        <p><b>Free:</b> one tomomix with every feature of the game, plus one classic pet.</p>
+        <p><b>Premium (one-time):</b> more classic pets, Live Translation (beta), Ambient Background, fast-forward, photos and videos for classic pets, widgets, and points tools for supported models.</p>
       </div>
     </div>
   </section>
@@ -110,8 +268,8 @@
 
 <footer>
   <div class="wrap">
-    <span>© 2026 Tomomix. Not affiliated with, endorsed by, or sponsored by Bandai or any other virtual pet toy manufacturer.</span>
-    <span class="credit">Built on the <a href="https://github.com/maragotchi/tamaemu">tamaemu</a> emulator core by maragotchi and <a href="https://github.com/jcrona/tamalib">TamaLib</a> by Jean-Christophe Rona, with fixes from V1Emu by mameise. <a href="https://github.com/Salvichito/tomomix">Source code (GPLv3)</a>.</span>
+    <span>© 2026 Tomomix. A personal project. All art drawn by hand in Figma, none generated by AI. Not affiliated with, endorsed by, or sponsored by Bandai or any other virtual pet toy manufacturer.</span>
+    <span class="credit">Started as an iOS adaptation of Maragotchi's web-based <a href="https://github.com/maragotchi/tamaemu">tamaemu</a> emulator, with <a href="https://github.com/jcrona/tamalib">TamaLib</a> by Jean-Christophe Rona and fixes from V1Emu by mameise. Thank you. <a href="https://github.com/Salvichito/tomomix">Source code (GPLv3)</a>.</span>
     <span><a href="support/">Support</a> · <a href="privacy/">Privacy Policy</a> · <a href="mailto:tomomix.support@icloud.com">tomomix.support@icloud.com</a> · <a href="https://ko-fi.com/salvichito">Buy me a coffee ☕</a></span>
   </div>
 </footer>

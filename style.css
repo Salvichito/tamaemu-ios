@@ -131,3 +131,85 @@ footer a { color: inherit; }
   section { padding: 40px 0; }
 }
 footer .credit { flex-basis: 100%; order: 3; font-size: 13px; }
+
+/* ---- How-to-play landing ---- */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 22px; padding-bottom: 4px; }
+.toc a { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 14px; font-weight: 600; text-decoration: none; color: var(--text); }
+.toc a:hover { border-color: var(--brand); }
+section[id] { scroll-margin-top: 12px; }
+.band { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.band .card { background: var(--bg); box-shadow: none; }
+.kicker { text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; font-weight: 700; color: var(--brand); margin: 0 0 6px; }
+.split { align-items: start; }
+#start .split, #game .split, #end .split { align-items: center; }
+.steps { padding-left: 1.3em; margin: 0 0 18px; }
+.steps li { margin-bottom: 10px; }
+.tip { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--sun); border-radius: 12px; padding: 12px 16px; font-size: 16px; margin: 0; }
+.band .tip { background: var(--bg); }
+.small { font-size: 15px; }
+.muted { color: var(--muted); }
+.sub.small { margin: 22px 0 0; }
+
+.art-stack { display: grid; gap: 14px; }
+.night { position: relative; height: 220px; border-radius: 24px; overflow: hidden;
+  background: radial-gradient(ellipse at 70% 120%, #4b3f95 0%, #241f4a 55%, #15122d 100%); box-shadow: var(--shadow); }
+.night::before { content: ""; position: absolute; inset: 0;
+  background-image: radial-gradient(2px 2px at 12% 20%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 30% 60%, #fff 50%, transparent 51%),
+  radial-gradient(2px 2px at 80% 15%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 55% 35%, #fff 50%, transparent 51%),
+  radial-gradient(1.5px 1.5px at 90% 70%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 20% 85%, #fff 50%, transparent 51%); opacity: .8; }
+.night .shoot { position: absolute; width: 62%; left: 6%; top: 10%; }
+.night .fallen { position: absolute; width: 54px; right: 14%; bottom: 14%; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.18); filter: drop-shadow(0 0 14px #ffea60); } }
+@media (prefers-reduced-motion: reduce) { .night .fallen { animation: none; } }
+
+.placeholder { border: 2px dashed var(--brand); border-radius: 20px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 18px; color: var(--muted); font-size: 15px; font-weight: 600; background: repeating-linear-gradient(45deg, transparent 0 12px, rgba(126,111,202,.06) 12px 24px); }
+.placeholder::after { content: attr(data-file); font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 400; margin-top: 6px; opacity: .8; }
+.placeholder.tall { min-height: 360px; }
+
+.grid .stat .big { font-size: 34px; font-weight: 800; color: var(--brand); line-height: 1; margin-bottom: 8px; }
+
+.stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; box-shadow: var(--shadow); position: relative; }
+.stage:not(:last-child)::after { content: "›"; position: absolute; right: -14px; top: 70px; font-size: 26px; font-weight: 800; color: var(--brand); z-index: 1; }
+.stage h3 { margin: 10px 0 4px; font-size: 19px; display: flex; align-items: center; gap: 8px; }
+.stage p { margin: 0; color: var(--muted); font-size: 15px; }
+.count { background: var(--brand); color: #fff; font-size: 13px; border-radius: 999px; padding: 1px 9px; }
+.who { display: flex; justify-content: center; align-items: flex-end; height: 120px; background: var(--bg); border-radius: 14px; overflow: hidden; }
+.who img { height: 150px; width: auto; margin: 0 -22px -18px; }
+.who.two img { margin: 0 -30px -18px; }
+.who.three img { height: 130px; margin: 0 -34px -16px; }
+.who.mystery img { height: 96px; margin: 0 -16px -12px; }
+.who.baby img { height: 230px; margin-bottom: -30px; }
+.peek { margin-top: 18px; }
+.adults { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 10px; }
+.adults img { width: 100%; height: auto; }
+
+.icons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 30px; }
+.icon { display: grid; grid-template-columns: 48px 1fr; column-gap: 12px; align-items: start; }
+.icon img { width: 48px; height: 48px; grid-row: span 2; background: var(--brand); border-radius: 14px; padding: 8px; }
+.icon h3 { margin: 0; font-size: 17px; }
+.icon p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+.rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.rule-art { display: inline-flex; gap: 6px; height: 60px; margin-bottom: 12px; align-items: center; background: #f7f5fe; border-radius: 14px; padding: 8px 12px; }
+.rule-art img { height: 44px; width: auto; }
+
+.follow { position: relative; height: 260px; border-radius: 24px; background: linear-gradient(#fff5df, #ffe7c2); box-shadow: var(--shadow); overflow: hidden; }
+.follow .pet { position: absolute; left: 50%; bottom: -8px; height: 300px; transform: translateX(-50%); }
+.follow .arrow { position: absolute; top: 42%; width: 54px; opacity: .35; }
+.follow .arrow.left { left: 6%; }
+.follow .arrow.right { right: 6%; transform: scaleX(-1); }
+.follow .arrow.lit { opacity: 1; }
+.follow .seq { position: absolute; top: 14px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+.follow .seq span { background: #fff; color: #241f4a; border-radius: 10px; width: 34px; height: 34px; display: grid; place-items: center; font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+.follow .seq .new { background: var(--sun); }
+table.results { margin: 0 0 16px; }
+.hearts { color: #e25a8c; letter-spacing: 2px; margin-right: 4px; }
+
+@media (max-width: 760px) {
+  .stages { grid-template-columns: 1fr; }
+  .stage::after { display: none; }
+  .icons { grid-template-columns: 1fr; }
+  .rules { grid-template-columns: 1fr; }
+  .adults { grid-template-columns: repeat(4, 1fr); }
+}
