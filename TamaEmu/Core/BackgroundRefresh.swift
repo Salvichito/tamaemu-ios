@@ -112,7 +112,7 @@ enum BackgroundRefresh {
         let notifyCall = {
             guard !isAppActive, !alreadyNotified else { return }
             alreadyNotified = true
-            NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+            NotificationScheduler.fireCallingNotification(device: device)
             // A real heads-up just went out — no need for the dumb
             // "it's been a while" reminder on top of it.
             ReminderNotificationScheduler.cancel()

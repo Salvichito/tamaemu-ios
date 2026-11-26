@@ -518,7 +518,7 @@ final class PlayViewModel: SaveBackupHost {
                     notifyOnCatchUpCalls: false,
                     shouldAbort: { cancel.isCancelled },
                     onCallDetected: {
-                        NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+                        NotificationScheduler.fireCallingNotification(device: device)
                     }
                 )
             }

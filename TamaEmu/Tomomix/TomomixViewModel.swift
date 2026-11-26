@@ -1114,6 +1114,7 @@ enum TomomixNotifications {
             turn[call.1] = n + 1
             content.body = message(for: call.1, turn: n, pet: pet, player: player)
             content.sound = .default
+            content.userInfo = [NotificationScheduler.deviceIDKey: DeviceCatalog.tomomix.id]
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
             center.add(UNNotificationRequest(identifier: "\(prefix)\(index)", content: content, trigger: trigger))
         }

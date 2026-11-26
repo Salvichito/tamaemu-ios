@@ -302,7 +302,7 @@ final class V1PlayViewModel: SaveBackupHost {
                     self?.screenState = state
                     self?.hasShownFrame = true
                 }, onCallDetected: {
-                    NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+                    NotificationScheduler.fireCallingNotification(device: device)
                 })
                 guard newEngine.start(romData: romData, savedState: stateToLoad) else {
                     releaseGate()

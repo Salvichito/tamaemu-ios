@@ -1,5 +1,22 @@
+import TamaCore
 import UIKit
 import UserNotifications
+
+/// Which Tama a tapped notification was about, waiting for the gallery
+/// to pick it up and scroll there. Set by the delegate below; on a cold
+/// launch the tap arrives before the gallery exists, so it waits here.
+@MainActor
+@Observable
+final class NotificationRouter {
+    static let shared = NotificationRouter()
+    var pendingDeviceID: TamaDevice.ID?
+
+    /// Hands back the waiting device (once) and clears it.
+    func take() -> TamaDevice.ID? {
+        defer { pendingDeviceID = nil }
+        return pendingDeviceID
+    }
+}
 
 /// iOS suppresses a local notification's banner/sound by default while
 /// the app that scheduled it is in the foreground — exactly when the
@@ -15,6 +32,19 @@ private final class ForegroundPresenter: NSObject, UNUserNotificationCenterDeleg
     ) {
         completionHandler([.banner, .sound, .badge])
     }
+
+    /// The player tapped a notification: open on the Tama it was about.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let deviceID = response.notification.request.content.userInfo[NotificationScheduler.deviceIDKey] as? String
+        DispatchQueue.main.async {
+            if let deviceID { NotificationRouter.shared.pendingDeviceID = deviceID }
+            completionHandler()
+        }
+    }
 }
 
 /// Fires a local notification when the Tamagotchi needs attention.
@@ -23,6 +53,9 @@ private final class ForegroundPresenter: NSObject, UNUserNotificationCenterDeleg
 /// cold launch before they've done anything.
 enum NotificationScheduler {
     private static let foregroundPresenter = ForegroundPresenter()
+    /// userInfo key naming the Tama a notification is about, so tapping
+    /// it can open the app on that Tama's page.
+    static let deviceIDKey = "deviceID"
 
     /// Must run before any notification could possibly be fired while
     /// the app is in the foreground — call once, as early as possible.
@@ -41,18 +74,19 @@ enum NotificationScheduler {
     /// a call is one the player is already looking at -- an alert for it
     /// is just noise (e.g. Yasashii's lit buttons trip the call detector
     /// every time one is pressed). Only alert once the app is closed.
-    static func fireCallingNotification(deviceTitle: String) {
+    static func fireCallingNotification(device: TamaDevice) {
         DispatchQueue.main.async {
             guard UIApplication.shared.applicationState == .background else { return }
-            post(deviceTitle: deviceTitle)
+            post(deviceID: device.id, deviceTitle: device.title)
         }
     }
 
-    private static func post(deviceTitle: String) {
+    private static func post(deviceID: TamaDevice.ID, deviceTitle: String) {
         let content = UNMutableNotificationContent()
         content.title = "Your Tama is calling"
         content.body = "\(deviceTitle) needs your attention."
         content.sound = .default
+        content.userInfo = [deviceIDKey: deviceID]
 
         let request = UNNotificationRequest(
             // One per Tama: a newer call replaces the older one in

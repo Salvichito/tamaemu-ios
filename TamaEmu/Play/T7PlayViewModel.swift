@@ -324,7 +324,7 @@ final class T7PlayViewModel: SaveBackupHost {
                     self?.screenState = state
                     self?.hasShownFrame = true
                 }, onCallDetected: {
-                    NotificationScheduler.fireCallingNotification(deviceTitle: device.title)
+                    NotificationScheduler.fireCallingNotification(device: device)
                 })
                 guard newEngine.start(
                     romData: romData, eepromData: eepromToLoad, stateData: stateToLoad,

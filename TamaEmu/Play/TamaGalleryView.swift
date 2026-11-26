@@ -115,7 +115,18 @@ struct TamaGalleryView: View {
                 gallery.pageDidAppear(newDevice)
             }
         }
+        // Tapping a Tama's notification opens the app on that Tama.
+        // Picked up here on a cold launch (the tap arrived before this
+        // view existed), when coming forward (below), or right away if
+        // the app was already open.
+        .onAppear { showNotifiedDevice() }
+        .onChange(of: NotificationRouter.shared.pendingDeviceID) { _, _ in
+            if scenePhase == .active { showNotifiedDevice() }
+        }
         .onChange(of: scenePhase) { _, newPhase in
+            // Before reading the current page, so the Tama that comes to
+            // life is the one the tapped notification was about.
+            if newPhase == .active { showNotifiedDevice() }
             // Only the currently visible page is ever live, so background/
             // foreground only needs to touch that one page's engine.
             guard let currentID = gallery.selectedPage, let current = gallery.device(withID: currentID) else { return }
@@ -836,6 +847,11 @@ struct TamaGalleryView: View {
                     }
                 }
         }
+    }
+
+    private func showNotifiedDevice() {
+        guard let id = NotificationRouter.shared.take(), gallery.device(withID: id) != nil else { return }
+        gallery.selectedPage = id
     }
 
     /// Split out of `galleryStack` — folding this back into one modifier
