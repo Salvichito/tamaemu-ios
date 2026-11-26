@@ -65,7 +65,14 @@ extern uint16_t g_irq_vectors[16];
 extern uint8_t g_irq_pending_any;
 /* 1.6.9 (test12) battery, as TamaGo-Pebble v0.3.0: T7_IDLE jumps over the passes of the main loop's wait at $CE66
  * (bit-identical), T7_STOP halts the CPU when the firmware writes 7 to $3001 (until an IRQ or a key) */
-#define T7_IDLE_PC 0xCE66u
+/* iOS port: the same wait loop sits at $CE11 on Tamagotchi Friends (its
+ * random-number bytes at $C0-$C4 instead of $C4-$C8, and its last one
+ * adds 0x0D instead of 0x13), so t7_idle_check
+ * looks for either and records where it found it. See CREDITS.md. */
+extern uint16_t g_t7_idle_pc;   /* the loop's first JSR */
+extern uint8_t g_t7_idle_zp;    /* first of its five zero-page bytes */
+extern uint8_t g_t7_idle_k[5];  /* what each of the five routines adds */
+#define T7_IDLE_PC g_t7_idle_pc
 extern uint8_t g_t7_idle_ok, g_t7_halted;
 #ifdef T7_JSR_HLE
 extern uint8_t g_t7_hle, g_t7_dark;

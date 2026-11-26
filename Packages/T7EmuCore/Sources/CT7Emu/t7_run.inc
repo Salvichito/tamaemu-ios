@@ -128,12 +128,13 @@ uint32_t T7_HOT t7_cpu_run(uint32_t budget)
         if (son) { if (snd <= 0) lim = 0; else if ((uint32_t)snd < lim) lim = (uint32_t)snd; }
         uint32_t pass = t7_idle_pass_cyc(), n = lim / pass;
         if (n) {
-          static const uint8_t k[5] = { 0x07, 0x03, 0x0D, 0x17, 0x13 };
+          const uint8_t *k = g_t7_idle_k;   /* iOS port: per-ROM (zp base, adds, return address) */
           uint32_t prev = 0;
-          for (int i = 0; i < 5; i++) { uint32_t v = (g_wram[0xC4 + i] + (n - 1u) * k[i]) & 0xFF; prev = v; g_wram[0xC4 + i] = (uint8_t)(v + k[i]); }
-          uint32_t o = prev + 0x13u;
-          fv = (~(prev ^ 0x13u) & (prev ^ o)) & 0x80u; fc = o > 0xFFu;
-          g_wram[0x100 | sp] = 0xCE; g_wram[0x100 | ((sp - 1) & 0xFF)] = 0x74;
+          for (int i = 0; i < 5; i++) { uint32_t v = (g_wram[g_t7_idle_zp + i] + (n - 1u) * k[i]) & 0xFF; prev = v; g_wram[g_t7_idle_zp + i] = (uint8_t)(v + k[i]); }
+          uint32_t o = prev + k[4];
+          fv = (~(prev ^ k[4]) & (prev ^ o)) & 0x80u; fc = o > 0xFFu;
+          /* the last JSR's return address, left on the stack below sp */
+          g_wram[0x100 | sp] = (uint8_t)((T7_IDLE_PC + 14u) >> 8); g_wram[0x100 | ((sp - 1) & 0xFF)] = (uint8_t)(T7_IDLE_PC + 14u);
           a = 0; NZ(0);
           uint32_t s = n * pass;
           cyc += s; g_t7_idle_cyc += s;

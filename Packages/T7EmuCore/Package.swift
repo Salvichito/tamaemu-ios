@@ -19,9 +19,10 @@ let package = Package(
                 //   core assumes 20 calls/s and fired 180 video IRQs/s here.
                 // - T7_FASTRUN: the register-caching interpreter (t7_run.inc),
                 //   same results instruction by instruction; ~1.6x faster.
-                // - T7_IDLE: skips the Tama-Go main loop's idle wait in one go
-                //   (bit-identical; off by itself for Friends); ~7x faster
-                //   catch-up on Tama-Go.
+                // - T7_IDLE: skips the main loop's idle wait in one go
+                //   (bit-identical); ~7x faster catch-up. Upstream's check
+                //   only knew the Tama-Go's copy of the loop; this port's
+                //   (see CREDITS.md) finds Friends' too, ~8x faster there.
                 // Checked headless against the plain interpreter: same screen
                 // every emulated minute over 2 h of random play, both ROMs.
                 .define("T7_VIDEO_CYCLES"),

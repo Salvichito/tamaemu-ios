@@ -843,8 +843,35 @@ static uint32_t bc_key(uint8_t *k)
 #endif
 #endif
 uint32_t g_t7_idle_cyc, g_t7_keyact;   /* keyact: cycles left without STOP after a key changed (T7_STOP_KEYACT) */
-static const uint8_t IDLE_SIG[19] = { 0x20,0xED,0xD2, 0x20,0xF5,0xD2, 0x20,0xFD,0xD2, 0x20,0x05,0xD3, 0x20,0x0D,0xD3, 0xA5,0x2D, 0xF0,0xED };
-static const uint8_t IDLE_ADD[5] = { 0x07, 0x03, 0x0D, 0x17, 0x13 };
+uint16_t g_t7_idle_pc = 0xCE66u;
+uint8_t g_t7_idle_zp = 0xC4;
+uint8_t g_t7_idle_k[5] = { 0x07, 0x03, 0x0D, 0x17, 0x13 };   /* Tama-Go's; Friends ends in 0x0D */
+#ifdef T7_IDLE
+/* iOS port: upstream matched one fixed 19-byte signature (Tama-Go's loop
+ * at $CE66, routines at $D2ED, bytes $C4-$C8). This checks the same shape
+ * wherever the loop is: five JSRs to consecutive 8-byte routines
+ * "LDA zp / CLC / ADC #k / STA zp / RTS" on consecutive zero-page bytes
+ * (any k; recorded for the skip), then LDA $2D / BEQ back to the first JSR. */
+static int t7_idle_match(uint16_t pc)
+{
+  const uint8_t *l = &g_static_rom[pc - 0xC000u];
+  uint16_t r0 = (uint16_t)(l[1] | l[2] << 8);
+  if (r0 < 0xC000u || r0 > 0xFFD0u) return 0;
+  uint8_t zp = g_static_rom[r0 - 0xC000u + 1], k[5];
+  for (int i = 0; i < 5; i++) {
+    uint16_t ri = (uint16_t)(r0 + i * 8);
+    if (l[i * 3] != 0x20 || l[i * 3 + 1] != (ri & 0xFF) || l[i * 3 + 2] != (ri >> 8)) return 0;
+    const uint8_t *r = &g_static_rom[ri - 0xC000u];
+    if (r[0] != 0xA5 || r[1] != zp + i || r[2] != 0x18 || r[3] != 0x69 || r[5] != 0x85 || r[6] != zp + i || r[7] != 0x60) return 0;
+    k[i] = r[4];
+  }
+  if (l[15] != 0xA5 || l[16] != 0x2D || l[17] != 0xF0 || l[18] != 0xED) return 0;   /* BEQ -19: back to pc */
+  g_t7_idle_pc = pc;
+  g_t7_idle_zp = zp;
+  for (int i = 0; i < 5; i++) g_t7_idle_k[i] = k[i];
+  return 1;
+}
+#endif
 #ifdef T7_FREESTANDING
 __attribute__((minsize))
 #endif
@@ -853,11 +880,7 @@ void t7_idle_check(void)
   g_t7_idle_ok = 0; g_t7_halted = 0;
 #ifdef T7_IDLE
   if (!g_static_rom) return;
-  for (int i = 0; i < 19; i++) if (g_static_rom[T7_IDLE_PC - 0xC000u + i] != IDLE_SIG[i]) return;
-  for (int i = 0; i < 5; i++) {
-    const uint8_t *r = &g_static_rom[0xD2ED - 0xC000 + i * 8];
-    if (r[0] != 0xA5 || r[1] != 0xC4 + i || r[2] != 0x18 || r[3] != 0x69 || r[4] != IDLE_ADD[i] || r[5] != 0x85 || r[6] != 0xC4 + i || r[7] != 0x60) return;
-  }
+  if (!t7_idle_match(0xCE66u) && !t7_idle_match(0xCE11u)) return;   /* Tama-Go, Friends */
   g_t7_idle_ok = 1;
 #endif
 #ifdef T7_JSR_HLE

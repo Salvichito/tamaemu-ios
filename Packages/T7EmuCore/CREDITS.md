@@ -43,10 +43,20 @@ is listed here and marked with an `// iOS port:` comment at the change site:
   in its trailer, version "iOS2") and `t7_snd_skip_to()` (audio-thread side: drops
   stale buffered samples when the audio engine wakes). Appended at the end of the file.
 
+- `t7_cpu.c`, `t7_run.inc`, `include/t7_internal.h`: `T7_IDLE`'s wait-loop skip also
+  recognises Tamagotchi Friends. Upstream checked one fixed signature (Tama-Go's loop
+  at `$CE66`, random bytes `$C4-$C8`, adds 07/03/0D/17/13); Friends has the same loop at
+  `$CE11` on `$C0-$C4` with a last add of 0D, so it never qualified. `t7_idle_check`
+  now matches the loop's shape at either address and records the loop address,
+  zero-page base and adds, which the skip uses instead of the constants. Checked
+  headless against the plain interpreter: same screen, WRAM and CPU registers every
+  emulated minute over 24 h with random presses, both ROMs. Friends catch-up went from
+  about 240x to about 1,800-2,000x real time on a Mac.
+
 Build switches (Package.swift, not code changes): `T7_VIDEO_CYCLES`, `T7_FASTRUN`,
 `T7_IDLE`, the timing/speed subset of upstream's own Paradise build flags.
 
-Every other file under `Sources/CT7Emu/` other than `ios_t7_compat.c` and the new
+Every other file under `Sources/CT7Emu/` (and every other line of the files above) other than `ios_t7_compat.c` and the new
 header `include/ios_t7.h` is byte-for-byte what was vendored, including
 `include/pebble_compat.h`, which turned out to already be a pure declarations-only
 header (no Pebble-specific code in it) describing exactly the small logging/resource/
