@@ -210,3 +210,4 @@ table.results { margin: 0 0 16px; }
   .rules { grid-template-columns: 1fr; }
   .adults { grid-template-columns: repeat(4, 1fr); }
 }
+.stages + .tip { margin-top: 18px; }
