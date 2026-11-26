@@ -29,6 +29,8 @@ final class T7PlayViewModel: SaveBackupHost {
     /// V1PlayViewModel's own.
     private var hasShownFrame = false
 
+    /// When the widget's picture was last refreshed (see publishWidgetFrame).
+    @ObservationIgnored private var lastWidgetFrame = Date.distantPast
     private var engine: T7EmulatorEngine?
     /// The last video frame drawn, reused while the screen hasn't changed.
     private var recordingFrameCache: (state: T7ScreenState, image: CGImage)?
@@ -110,6 +112,8 @@ final class T7PlayViewModel: SaveBackupHost {
             await MainActor.run {
                 guard self.isPaused, self.engine == nil else { return }
                 self.screenState = screen
+                // A paused Tama's widget shows this frozen screen too.
+                self.publishWidgetFrame()
             }
         }
     }
@@ -128,6 +132,7 @@ final class T7PlayViewModel: SaveBackupHost {
         isFastForwarding = false
         guard let engine else { return }
         engine.stop()
+        publishWidgetFrame()
         let paths = SavePaths(device: selectedDevice)
         try? paths.ensureDirectoriesExist()
         if let state = engine.saveState(),
@@ -257,6 +262,26 @@ final class T7PlayViewModel: SaveBackupHost {
 
     var isFriends: Bool { selectedDevice.id == "tamagotchi-friends" }
 
+    // MARK: - Widget
+
+    /// Hands the home-screen widget this Tama's screen as it looks right
+    /// now: the same picture as a screenshot, at a smaller size. Called
+    /// when the page stops, and every couple of minutes while it plays
+    /// (same pace as Tomomix's).
+    func publishWidgetFrame() {
+        lastWidgetFrame = Date()
+        guard hasShownFrame, let image = widgetImage() else { return }
+        WidgetSharedState.publish(image: image, device: selectedDevice)
+    }
+
+    private func widgetImage() -> CGImage? {
+        renderT7Snapshot(state: screenState, isFriends: isFriends, scale: 2)
+    }
+
+    private func publishWidgetFrameIfDue() {
+        if Date().timeIntervalSince(lastWidgetFrame) > TomomixViewModel.widgetFrameInterval { publishWidgetFrame() }
+    }
+
     // MARK: - Screenshot / video
 
     /// The screen as a picture, at the size it's drawn in the gallery.
@@ -354,6 +379,7 @@ final class T7PlayViewModel: SaveBackupHost {
                 let newEngine = T7EmulatorEngine(onFrame: { [weak self] state in
                     self?.screenState = state
                     self?.hasShownFrame = true
+                    self?.publishWidgetFrameIfDue()
                 }, onCallDetected: {
                     NotificationScheduler.fireCallingNotification(device: device)
                 })

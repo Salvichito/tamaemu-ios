@@ -54,16 +54,46 @@ enum BackgroundRefresh {
         // whenever the app was next opened and saved as if no time had
         // passed in between.
         let expired = CancelFlag()
-        await withTaskCancellationHandler {
+        let screens = await withTaskCancellationHandler {
             runPass(shouldAbort: { expired.isCancelled || isAppActive })
         } onCancel: {
             expired.cancel()
         }
+        // First-gen and Tama-Go/Friends widget pictures are drawn with the
+        // same SwiftUI views as their screenshots, which need the main
+        // thread -- so the pass only collects their screens, and they're
+        // drawn here once it's done.
+        guard !screens.isEmpty, !expired.isCancelled else { return }
+        await MainActor.run {
+            for screen in screens { screen.publish() }
+        }
     }
 
-    private static func runPass(shouldAbort: @escaping () -> Bool) {
+    /// A Tama's screen after its catch-up, waiting to be drawn for the
+    /// widget on the main thread.
+    private enum WidgetScreen {
+        case firstGen(TamaDevice, P1ScreenState)
+        case t7(TamaDevice, T7ScreenState)
+
+        @MainActor func publish() {
+            let image: CGImage?
+            let device: TamaDevice
+            switch self {
+            case .firstGen(let d, let state):
+                device = d
+                image = renderP1Snapshot(state: state, deviceID: d.id, scale: 2)
+            case .t7(let d, let state):
+                device = d
+                image = renderT7Snapshot(state: state, isFriends: d.id == "tamagotchi-friends", scale: 2)
+            }
+            if let image { WidgetSharedState.publish(image: image, device: device) }
+        }
+    }
+
+    private static func runPass(shouldAbort: @escaping () -> Bool) -> [WidgetScreen] {
+        var screens: [WidgetScreen] = []
         let owned = ActiveDeviceLookup.allImported().filter { !DevicePauseState.isPaused($0) }
-        guard !owned.isEmpty else { return }
+        guard !owned.isEmpty else { return screens }
         let ordered = BackgroundRefreshCursor.ordered(owned)
 
         // No UI is blocked here, unlike the foreground launch path, so this
@@ -84,25 +114,30 @@ enum BackgroundRefresh {
             // silent since the player is already looking at the screen,
             // unlike this headless pass, which exists specifically to
             // warn them *before* they do.
-            guard !shouldAbort() else { return }
+            guard !shouldAbort() else { return screens }
             let spent = Double(DispatchTime.now().uptimeNanoseconds - passStart) / 1_000_000_000
             let budget = (totalBudget - spent) / Double(ordered.count - index)
-            guard budget > 0.25 else { return }
+            guard budget > 0.25 else { return screens }
 
             // Skip (rather than wait for) a Tama something else is using
             // right now — that can only be the foreground, which will
             // catch it up itself. See EngineGate.
             let gate = EngineGate.gate(for: device)
             guard gate.acquire(timeout: 0.5) else { continue }
-            refresh(device, budget: budget, shouldAbort: shouldAbort)
+            if let screen = refresh(device, budget: budget, shouldAbort: shouldAbort) {
+                screens.append(screen)
+            }
             gate.release()
 
             BackgroundRefreshCursor.recordStoppedAfter(device)
         }
+        return screens
     }
 
     /// One Tama's headless catch-up + save. Caller holds its EngineGate.
-    private static func refresh(_ device: TamaDevice, budget: TimeInterval, shouldAbort: @escaping () -> Bool) {
+    /// Returns the screen to draw for the widget, for the families whose
+    /// picture can't be made here (see WidgetScreen).
+    private static func refresh(_ device: TamaDevice, budget: TimeInterval, shouldAbort: @escaping () -> Bool) -> WidgetScreen? {
         let paths = SavePaths(device: device)
         // One alert per Tama per pass: a pass replays everything since the
         // last one, and a Yasashii (whose lamps stand in for the attention
@@ -126,7 +161,7 @@ enum BackgroundRefresh {
                 catchUpWallClockBudget: budget,
                 shouldAbort: shouldAbort,
                 onCallDetected: notifyCall
-            ) else { return }
+            ) else { return nil }
             // init() already ran its catch-up pass. Publish + save, then
             // let `engine` deallocate — it was never start()ed, so there's
             // no thread to stop and no concurrent writer for save() to
@@ -140,26 +175,23 @@ enum BackgroundRefresh {
             engine.save()
 
         case .v1:
-            // No widget image published here yet (unlike .ctama above)
-            // -- rendering one needs the same icon/background artwork
-            // P1ScreenView draws with, which lives in SwiftUI, not
-            // something this headless pass can call into. Catch-up and
-            // the call notification both work without it, so that's
-            // just a gap, not a blocker.
+            // The widget picture needs P1ScreenView's artwork (SwiftUI),
+            // so only the screen is read here; run() draws it.
             guard let romData = try? Data(contentsOf: paths.importedROMPath),
                   let savedState = try? Data(contentsOf: paths.v1StatePath),
-                  let caughtUpTo = paths.lastSavedAt else { return }
+                  let caughtUpTo = paths.lastSavedAt else { return nil }
             let owed = Date().timeIntervalSince(caughtUpTo)
-            guard owed > 1 else { return }
+            guard owed > 1 else { return nil }
+            let romWords = V1EmulatorEngine.parseROM(romData)
             let result = V1EmulatorEngine.catchUp(
-                romWords: V1EmulatorEngine.parseROM(romData),
+                romWords: romWords,
                 from: savedState,
                 backlogSeconds: owed,
                 wallClockBudget: budget,
                 shouldAbort: shouldAbort,
                 onCallDetected: notifyCall
             )
-            guard result.advancedSeconds > 0 else { return }
+            guard result.advancedSeconds > 0 else { return nil }
             try? paths.ensureDirectoriesExist()
             // Forward by exactly what was emulated — never "now". Stamping
             // "now" here is what made a P1's clock fall behind for good
@@ -167,16 +199,18 @@ enum BackgroundRefresh {
             if (try? result.state.write(to: paths.v1StatePath, options: .atomic)) != nil {
                 paths.lastSavedAt = caughtUpTo.addingTimeInterval(result.advancedSeconds)
             }
+            // Still inside the gate: peeking loads the state into the core.
+            return V1EmulatorEngine.peekScreen(romWords: romWords, state: result.state).map { .firstGen(device, $0) }
 
         case .t7:
-            // No widget image yet, same reasoning as .v1 above. Calls
-            // come from the attention icon (see ios_t7_attention_on).
+            // Widget picture: same as .v1 above. Calls come from the
+            // attention icon (see ios_t7_attention_on).
             guard let romData = try? Data(contentsOf: paths.importedROMPath),
                   let savedState = try? Data(contentsOf: paths.t7StatePath),
-                  let caughtUpTo = paths.lastSavedAt else { return }
+                  let caughtUpTo = paths.lastSavedAt else { return nil }
             let savedEeprom = try? Data(contentsOf: paths.t7EepromPath)
             let owed = Date().timeIntervalSince(caughtUpTo)
-            guard owed > 1 else { return }
+            guard owed > 1 else { return nil }
             let result = T7EmulatorEngine.catchUp(
                 romData: romData,
                 eepromData: savedEeprom,
@@ -186,7 +220,7 @@ enum BackgroundRefresh {
                 shouldAbort: shouldAbort,
                 onCallDetected: notifyCall
             )
-            guard result.advancedSeconds > 0 else { return }
+            guard result.advancedSeconds > 0 else { return nil }
             try? paths.ensureDirectoriesExist()
             if (try? result.state.write(to: paths.t7StatePath, options: .atomic)) != nil {
                 paths.lastSavedAt = caughtUpTo.addingTimeInterval(result.advancedSeconds)
@@ -194,6 +228,8 @@ enum BackgroundRefresh {
             if let eeprom = result.eeprom {
                 try? eeprom.write(to: paths.t7EepromPath, options: .atomic)
             }
+            return T7EmulatorEngine.peekScreen(romData: romData, eepromData: result.eeprom ?? savedEeprom, state: result.state)
+                .map { .t7(device, $0) }
 
         case .tomomix:
             // No emulator: the rules engine plays the missed minutes in
@@ -202,6 +238,7 @@ enum BackgroundRefresh {
             // (TomomixNotifications), so none is fired from here.
             _ = TomomixStore.catchUp()
         }
+        return nil
     }
 }
 

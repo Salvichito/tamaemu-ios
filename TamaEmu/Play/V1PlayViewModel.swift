@@ -42,6 +42,8 @@ final class V1PlayViewModel: SaveBackupHost {
     /// reused until the screen actually differs.
     private var recordingFrameCache: (state: P1ScreenState, image: CGImage)?
 
+    /// When the widget's picture was last refreshed (see publishWidgetFrame).
+    @ObservationIgnored private var lastWidgetFrame = Date.distantPast
     private var engine: V1EmulatorEngine?
     /// Bumped by stopEngine() and every startEngine() call -- a catch-up
     /// pass that finishes after being superseded (page swiped away,
@@ -131,6 +133,8 @@ final class V1PlayViewModel: SaveBackupHost {
                 // screen now.
                 guard self.isPaused, self.engine == nil else { return }
                 self.screenState = screen
+                // A paused Tama's widget shows this frozen screen too.
+                self.publishWidgetFrame()
             }
         }
     }
@@ -151,6 +155,7 @@ final class V1PlayViewModel: SaveBackupHost {
         isFastForwarding = false
         guard let engine else { return }
         engine.stop()
+        publishWidgetFrame()
         if let data = engine.saveState() {
             let paths = SavePaths(device: selectedDevice)
             try? paths.ensureDirectoriesExist()
@@ -223,6 +228,26 @@ final class V1PlayViewModel: SaveBackupHost {
     func openMenuIcon(light: Int) {
         guard let count = V1IconProfile.tappableMenuLights(for: selectedDevice.id) else { return }
         engine?.openMenuIcon(light: light, count: count)
+    }
+
+    // MARK: - Widget
+
+    /// Hands the home-screen widget this Tama's screen as it looks right
+    /// now: the same picture as a screenshot, at a smaller size. Called
+    /// when the page stops, and every couple of minutes while it plays
+    /// (same pace as Tomomix's).
+    func publishWidgetFrame() {
+        lastWidgetFrame = Date()
+        guard hasShownFrame, let image = widgetImage() else { return }
+        WidgetSharedState.publish(image: image, device: selectedDevice)
+    }
+
+    private func widgetImage() -> CGImage? {
+        renderP1Snapshot(state: screenState, deviceID: selectedDevice.id, scale: 2)
+    }
+
+    private func publishWidgetFrameIfDue() {
+        if Date().timeIntervalSince(lastWidgetFrame) > TomomixViewModel.widgetFrameInterval { publishWidgetFrame() }
     }
 
     // MARK: - Screenshot / video
@@ -323,6 +348,7 @@ final class V1PlayViewModel: SaveBackupHost {
                 let newEngine = V1EmulatorEngine(onFrame: { [weak self] state in
                     self?.screenState = state
                     self?.hasShownFrame = true
+                    self?.publishWidgetFrameIfDue()
                 }, onCallDetected: {
                     NotificationScheduler.fireCallingNotification(device: device)
                 })
