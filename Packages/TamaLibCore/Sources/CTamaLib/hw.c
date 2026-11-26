@@ -44,16 +44,22 @@ bool_t hw_init(void)
 	cpu_set_input_pin(PIN_K02, PIN_STATE_HIGH);
 	cpu_set_input_pin(PIN_K03, PIN_STATE_HIGH);
 
-	/* iOS port: the Yasashii has four more buttons on K10-K13, also active
-	 * low. Left unset they read as held down and the toy never gets past
-	 * its start screen. Only for that model: other ROMs may read K1 for
-	 * something else, and upstream always left it low. */
-	if (hw_model == HW_MODEL_DIRECT) {
-		cpu_set_input_pin(PIN_K10, PIN_STATE_HIGH);
-		cpu_set_input_pin(PIN_K11, PIN_STATE_HIGH);
-		cpu_set_input_pin(PIN_K12, PIN_STATE_HIGH);
-		cpu_set_input_pin(PIN_K13, PIN_STATE_HIGH);
-	}
+	/* iOS port: K10-K13 rest high (not pressed) on every model, like
+	 * K00-K03. Upstream left them low, which reads as "held down":
+	 * - the Yasashii has four buttons there and never got past its start
+	 *   screen;
+	 * - Mothra and Genjintch read K13 as their factory test pad. With it
+	 *   "held", each C press toggled the ROM's own test mode (RAM 0x008
+	 *   bit 0), where every main-loop pass counts as a minute, so the
+	 *   clock and care timers jumped ahead to the next event (found
+	 *   2026-11-26; key scan at 0x0700 stores K13 into RAM 0x014 bit 3,
+	 *   toggle at 0x1DF9 / 0x1DCB).
+	 * No other ROM reads K1 in play (measured 2026-11-26). Pin states are
+	 * not saved, so this also fixes existing saves on their next start. */
+	cpu_set_input_pin(PIN_K10, PIN_STATE_HIGH);
+	cpu_set_input_pin(PIN_K11, PIN_STATE_HIGH);
+	cpu_set_input_pin(PIN_K12, PIN_STATE_HIGH);
+	cpu_set_input_pin(PIN_K13, PIN_STATE_HIGH);
 
 	return 0;
 }
