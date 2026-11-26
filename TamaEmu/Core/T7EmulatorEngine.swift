@@ -6,7 +6,7 @@ import Foundation
 /// A Tama-Go / Tamagotchi Friends (T7Emu) screen snapshot: 48x31 pixels at
 /// 4 grayscale levels, plus 10 fixed status icons. Row-major, matching
 /// `ios_t7_get_frame`'s layout (see ios_t7.h for the confirmed icon order).
-struct T7ScreenState {
+struct T7ScreenState: Equatable {
     var pixels: [UInt8] // 0...3 per pixel
     var icons: [UInt8] // 0...3 per icon
 
@@ -89,6 +89,17 @@ final class T7EmulatorEngine {
     /// or squeezes playback by a few percent to hold this level.
     private static let audioTargetSamples: UInt32 = 1920
     private var audioCapturing = false
+
+    /// For ScreenRecorder -- same pass-throughs the other engines have.
+    var audioFormat: AVAudioFormat { audioOutput.outputFormat }
+
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock) {
+        audioOutput.installRecordingTap(format: format, bufferSize: bufferSize, block: block)
+    }
+
+    func removeRecordingTap() {
+        audioOutput.removeRecordingTap()
+    }
 
     /// Tap-an-icon shortcut (icon_nav.c, same one the first-gen engine
     /// uses): the stepping thread presses the buttons for the user until

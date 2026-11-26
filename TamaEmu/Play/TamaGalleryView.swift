@@ -454,6 +454,35 @@ struct TamaGalleryView: View {
         }
     }
 
+    /// Camera and video for a Tama-Go/Friends page: Premium, like every
+    /// other model's.
+    @ToolbarContentBuilder
+    private func t7BottomToolbarContent(viewModel: T7PlayViewModel) -> some ToolbarContent {
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                if purchases.isPremium {
+                    saveScreenshot(viewModel.screenshot())
+                } else {
+                    showingPaywall = true
+                }
+            } label: {
+                Image(systemName: "camera")
+            }
+        }
+        ToolbarItem(placement: .bottomBar) {
+            Button {
+                if purchases.isPremium {
+                    toggleRecording(for: viewModel)
+                } else {
+                    showingPaywall = true
+                }
+            } label: {
+                Image(systemName: isRecording ? "stop.circle.fill" : "video")
+                    .foregroundStyle(isRecording ? .red : .primary)
+            }
+        }
+    }
+
     private func minimalToolbarContent() -> some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
@@ -935,8 +964,11 @@ struct TamaGalleryView: View {
                     v1ToolbarContent(viewModel: viewModel)
                 } else if let model = selectedTomomix {
                     tomomixToolbarContent(model: model)
-                } else if selectedDevice != nil {
+                } else if let device = selectedDevice {
                     minimalToolbarContent()
+                    if device.family == .t7 {
+                        t7BottomToolbarContent(viewModel: gallery.t7ViewModel(for: device))
+                    }
                 }
             }
     }

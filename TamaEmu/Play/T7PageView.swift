@@ -39,7 +39,7 @@ struct T7PageView: View {
             ZStack {
                 T7ScreenView(
                     state: viewModel.screenState,
-                    isFriends: viewModel.selectedDevice.id == "tamagotchi-friends",
+                    isFriends: viewModel.isFriends,
                     onIconTap: buttonsDisabled ? nil : { viewModel.openMenuIcon(light: $0) }
                 )
                     .frame(maxWidth: 280)

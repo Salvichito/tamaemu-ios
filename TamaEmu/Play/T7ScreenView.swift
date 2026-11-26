@@ -16,6 +16,9 @@ struct T7ScreenView: View {
     /// with the icon's index when a tappable one is tapped. nil draws
     /// them inert.
     var onIconTap: ((Int) -> Void)?
+    /// False for screenshots and video, which can't carry transparent
+    /// corners -- see renderT7Snapshot.
+    var rounded = true
 
     static let cornerRadius: CGFloat = 16
     private static let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
@@ -109,7 +112,7 @@ struct T7ScreenView: View {
             }
         }
         .frame(width: side, height: side)
-        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: rounded ? Self.cornerRadius : 0, style: .continuous))
     }
 
     private var pixelGrid: some View {

@@ -1,3 +1,5 @@
+import AVFoundation
+import CoreGraphics
 import Foundation
 import Observation
 import TamaCore
@@ -28,6 +30,8 @@ final class T7PlayViewModel: SaveBackupHost {
     private var hasShownFrame = false
 
     private var engine: T7EmulatorEngine?
+    /// The last video frame drawn, reused while the screen hasn't changed.
+    private var recordingFrameCache: (state: T7ScreenState, image: CGImage)?
     private var startGeneration = 0
     /// See PlayViewModel's own loadCancel / holdsGate.
     private var loadCancel: CancelFlag?
@@ -238,6 +242,15 @@ final class T7PlayViewModel: SaveBackupHost {
         DevicePauseState.setPaused(false, for: selectedDevice)
     }
 
+    var isFriends: Bool { selectedDevice.id == "tamagotchi-friends" }
+
+    // MARK: - Screenshot / video
+
+    /// The screen as a picture, at the size it's drawn in the gallery.
+    func screenshot() -> CGImage? {
+        renderT7Snapshot(state: screenState, isFriends: isFriends)
+    }
+
     /// Tap-an-icon shortcut; see T7EmulatorEngine.openMenuIcon.
     func openMenuIcon(light: Int) {
         engine?.openMenuIcon(light: light)
@@ -416,5 +429,24 @@ enum T7SaveFile {
         let stateLength = try length()
         let state = stateLength > 0 ? Data(try take(stateLength)) : nil
         return Contents(deviceID: deviceID, eeprom: eeprom, state: state)
+    }
+}
+
+extension T7PlayViewModel: ScreenRecordable {
+    var audioFormat: AVAudioFormat? { engine?.audioFormat }
+
+    func installRecordingTap(format: AVAudioFormat, bufferSize: AVAudioFrameCount, block: @escaping AVAudioNodeTapBlock) {
+        engine?.installRecordingTap(format: format, bufferSize: bufferSize, block: block)
+    }
+
+    func removeRecordingTap() {
+        engine?.removeRecordingTap()
+    }
+
+    func recordingFrame(side: CGFloat) -> CGImage? {
+        if let cached = recordingFrameCache, cached.state == screenState { return cached.image }
+        guard let image = screenshot() else { return nil }
+        recordingFrameCache = (screenState, image)
+        return image
     }
 }

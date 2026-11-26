@@ -24,6 +24,15 @@ func renderP1Snapshot(state: P1ScreenState, deviceID: String, scale: CGFloat = 3
     return renderer.cgImage
 }
 
+/// The Tama-Go/Friends screen as a square picture, the same way as
+/// renderP1Snapshot above.
+@MainActor
+func renderT7Snapshot(state: T7ScreenState, isFriends: Bool, scale: CGFloat = 3) -> CGImage? {
+    let renderer = ImageRenderer(content: T7ScreenView(state: state, isFriends: isFriends, rounded: false).frame(width: 280, height: 280))
+    renderer.scale = scale
+    return renderer.cgImage
+}
+
 /// What ScreenRecorder needs from whichever Tama is on screen: a picture
 /// of its display whenever asked, and a way to listen in on its sound.
 @MainActor
