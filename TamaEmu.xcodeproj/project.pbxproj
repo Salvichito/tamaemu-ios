@@ -64,6 +64,7 @@
 		A2D07405A2BA7E908298E29F /* TamaEmu-pastelorange.icon in Resources */ = {isa = PBXBuildFile; fileRef = F396781857FA48021B9F38A2 /* TamaEmu-pastelorange.icon */; };
 		A3D4EAF7B72EA340385B50F1 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B463E74FCC99EE8258DD71F /* PaywallView.swift */; };
 		AE6186A0722B2D81648CEF71 /* CloudTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34D4D638AFBB5007B1C1FA18 /* CloudTranslator.swift */; };
+		B34B2BFA530BD47927C3DBCC /* OnlineLinkSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3C508BA776F1D9C0AE5148 /* OnlineLinkSession.swift */; };
 		B8B072A35E064CDB8C48D449 /* TamaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE81F774BA64BA899C7ADF6 /* TamaWidgetView.swift */; };
 		BA5FDB4EA0ED1C08A401C2FA /* V1EmulatorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D45A04487E1B1C19010476 /* V1EmulatorEngine.swift */; };
 		C608F5DC627A201383AA3219 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9228514E9DDD678D810B062 /* PlayViewModel.swift */; };
@@ -203,6 +204,7 @@
 		F78256880EA69DD157D2EBEE /* TamaGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaGalleryView.swift; sourceTree = "<group>"; };
 		FBF0829034B81AFFB641BD6F /* TamaEmu-clearblue.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-clearblue.icon"; sourceTree = "<group>"; };
 		FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedState.swift; sourceTree = "<group>"; };
+		FE3C508BA776F1D9C0AE5148 /* OnlineLinkSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnlineLinkSession.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -309,6 +311,7 @@
 				0A958E0CD980C3FF23A48260 /* NearbyLinkSession.swift */,
 				B73A464D9A5B4C551857E6F9 /* LinkPort.swift */,
 				E08562CC07BFCF9D4D79FB6F /* ShakeDetector.swift */,
+				FE3C508BA776F1D9C0AE5148 /* OnlineLinkSession.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -588,6 +591,7 @@
 				47EB8E7819F48AB9C030EFA5 /* AppIconPickerView.swift in Sources */,
 				E9EEDDCAA256AC1254F8DE8D /* ThemeBackground.swift in Sources */,
 				3D20B4B6234DFE2302A01B43 /* ShakeDetector.swift in Sources */,
+				B34B2BFA530BD47927C3DBCC /* OnlineLinkSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

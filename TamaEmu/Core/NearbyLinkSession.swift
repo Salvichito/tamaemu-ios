@@ -84,8 +84,15 @@ final class NearbyLinkSession: NSObject {
     ///   and the core does not emulate that on the iD side: the iD neither
     ///   hears the Plus Color nor sends anything.
     /// - iD Lovely Melody: not tried.
-    /// - 4U and 4U+: they connect by NFC touch, not infrared.
+    /// - 4U and 4U+: they connect by NFC touch, not infrared. Two emulated
+    ///   4Us start the handshake but neither takes the answering role.
+    /// - Tamagotchi Friends: its "bump" is a 125 kHz radio tag, not
+    ///   infrared, and nothing in the core emulates it.
+    ///
+    /// Tama-Go: GAME and VISIT complete between two emulated Tama-Gos
+    /// (headless, 2026-11-26); "OTHERS" (other toys) is not tried.
     private static let linkablePairs: [Set<String>] = [
+        ["tamago"],
         ["plus-color"],
         ["id"],
         ["idl"],

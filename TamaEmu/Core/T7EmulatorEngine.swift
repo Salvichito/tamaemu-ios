@@ -131,6 +131,75 @@ final class T7EmulatorEngine {
     private var figureToInsert: (data: Data, atFrame: UInt64)?
     private static let figureSwapFrames: UInt64 = 150
 
+    // MARK: - Connecting to another Tama-Go
+
+    /// Set from the main thread (T7PlayViewModel), read once per frame by
+    /// the stepping thread -- same pattern as EmulatorEngine's.
+    private let linkLock = NSLock()
+    private var requestedLinkPort: LinkPort?
+    /// Stepping thread only.
+    private var attachedLinkPort: LinkPort?
+    /// Stepping thread only: the frame the game was last seen listening
+    /// on its connection screen (ios_t7_link_activity went up).
+    private var linkActivity: UInt32 = 0
+    private var linkListeningFrame: UInt64 = 0
+    /// A packet from the other Tama is only handed over while this one is
+    /// listening (1.5 s, as Paramix), so an old one can't wait around for
+    /// the next connection.
+    private static let linkListenFrames: UInt64 = 90
+    private static let linkWaitLimitNanos: UInt64 = 500_000_000
+
+    /// Wires this Tama-Go's infrared to `port` (nil unplugs it). Takes
+    /// effect at the next frame. Safe from any thread, also before start().
+    ///
+    /// Unlike the color Tamas, nothing here is about light timing: the
+    /// core hands over each packet the game sends whole (32 bytes), and
+    /// takes the other side's whole. They still go through LinkPort's
+    /// frame lockstep, which keeps the two games in step while they talk.
+    func setLinkPort(_ port: LinkPort?) {
+        linkLock.lock(); requestedLinkPort = port; linkLock.unlock()
+    }
+
+    /// Before the frame's stepping. False if a stop came while waiting.
+    private func deliverLinkInput() -> Bool {
+        linkLock.lock(); let requested = requestedLinkPort; linkLock.unlock()
+        attachedLinkPort = requested
+        guard let port = attachedLinkPort else { return true }
+        let started = DispatchTime.now().uptimeNanoseconds
+        while true {
+            switch port.nextStep() {
+            case .run(let data):
+                if data.count == 32, liveFramesStepped &- linkListeningFrame < Self.linkListenFrames {
+                    data.withUnsafeBytes { raw in
+                        ios_t7_link_give(raw.bindMemory(to: UInt8.self).baseAddress)
+                    }
+                }
+                return true
+            case .wait:
+                stopLock.lock(); let stop = shouldStop; stopLock.unlock()
+                if stop { return false }
+                if DispatchTime.now().uptimeNanoseconds &- started > Self.linkWaitLimitNanos {
+                    port.giveUpWaiting()
+                    return true
+                }
+                Thread.sleep(forTimeInterval: 0.002)
+            }
+        }
+    }
+
+    /// After the frame's stepping: what the game sent, if anything.
+    private func collectLinkOutput() {
+        let activity = ios_t7_link_activity()
+        if activity != linkActivity {
+            linkActivity = activity
+            linkListeningFrame = liveFramesStepped
+        }
+        var packet = [UInt8](repeating: 0, count: 32)
+        let sent = ios_t7_link_take(&packet)
+        guard let port = attachedLinkPort else { return }
+        port.finishFrame(sent ? Data(packet) : Data())
+    }
+
     init(onFrame: @escaping (T7ScreenState) -> Void, onCallDetected: (() -> Void)? = nil) {
         self.onFrame = onFrame
         self.onCallDetected = onCallDetected
@@ -325,8 +394,10 @@ final class T7EmulatorEngine {
                 figureToInsert = nil
             }
 
+            if !deliverLinkInput() { break }
             _ = ios_t7_step_frame()
             liveFramesStepped += 1
+            collectLinkOutput()
             if fast {
                 _ = ios_t7_step_frame()
                 liveFramesStepped += 1

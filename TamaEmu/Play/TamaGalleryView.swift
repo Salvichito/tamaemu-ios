@@ -25,6 +25,8 @@ struct TamaGalleryView: View {
     /// One connection to another phone at a time, for the whole gallery --
     /// it outlives the sheet that sets it up (see NearbyLinkView).
     @State private var nearbyLink = NearbyLinkSession()
+    /// Same, for a friend far away (Game Center).
+    @State private var onlineLink = OnlineLinkSession()
     @State private var showingNearbyLink = false
     @State private var showingNewStarConfirm = false
 
@@ -122,7 +124,17 @@ struct TamaGalleryView: View {
         // Picked up here on a cold launch (the tap arrived before this
         // view existed), when coming forward (below), or right away if
         // the app was already open.
-        .onAppear { showNotifiedDevice() }
+        .onAppear {
+            showNotifiedDevice()
+            onlineLink.signInIfUsedBefore()
+        }
+        // A friend's Game Center invite was accepted: open Connect on the
+        // Tama on screen, which answers it (or says the models don't match).
+        .onChange(of: onlineLink.hasPendingInvite) { _, pending in
+            if pending, let device = selectedDevice, NearbyLinkSession.supports(device) {
+                showingNearbyLink = true
+            }
+        }
         .onChange(of: NotificationRouter.shared.pendingDeviceID) { _, _ in
             if scenePhase == .active { showNotifiedDevice() }
         }
@@ -389,11 +401,27 @@ struct TamaGalleryView: View {
         }
     }
 
+    /// Connect Nearby, for the models that have been seen to link.
+    @ViewBuilder
+    private func nearbyLinkButton(device: TamaDevice, peerName: String?) -> some View {
+        if NearbyLinkSession.supports(device) {
+            Button {
+                showingNearbyLink = true
+            } label: {
+                Label(
+                    peerName == nil ? "Connect…" : "Connection…",
+                    systemImage: "antenna.radiowaves.left.and.right"
+                )
+            }
+        }
+    }
+
     @ToolbarContentBuilder
     private func t7ToolbarContent(viewModel: T7PlayViewModel) -> some ToolbarContent {
         topBar {
             pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
             syncClockButton
+            nearbyLinkButton(device: viewModel.selectedDevice, peerName: viewModel.linkPeerName)
             if viewModel.supportsFigures {
                 figureMenu(viewModel: viewModel)
             }
@@ -452,16 +480,7 @@ struct TamaGalleryView: View {
         topBar {
             pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
             syncClockButton
-            if NearbyLinkSession.supports(viewModel.selectedDevice) {
-                Button {
-                    showingNearbyLink = true
-                } label: {
-                    Label(
-                        viewModel.linkPeerName == nil ? "Connect Nearby…" : "Nearby Connection…",
-                        systemImage: "antenna.radiowaves.left.and.right"
-                    )
-                }
-            }
+            nearbyLinkButton(device: viewModel.selectedDevice, peerName: viewModel.linkPeerName)
             if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
                 Button {
                     if purchases.isPremium {
@@ -628,8 +647,12 @@ struct TamaGalleryView: View {
                 }
                 .sheet(isPresented: $showingNearbyLink) {
                     if let device = selectedDevice {
-                        NearbyLinkView(session: nearbyLink, device: device) { linkedDevice, port, peerName in
-                            gallery.viewModel(for: linkedDevice).setLink(port: port, peerName: peerName)
+                        NearbyLinkView(session: nearbyLink, online: onlineLink, device: device) { linkedDevice, port, peerName in
+                            if linkedDevice.family == .t7 {
+                                gallery.t7ViewModel(for: linkedDevice).setLink(port: port, peerName: peerName)
+                            } else {
+                                gallery.viewModel(for: linkedDevice).setLink(port: port, peerName: peerName)
+                            }
                         }
                     }
                 }
@@ -638,6 +661,9 @@ struct TamaGalleryView: View {
                 .onChange(of: gallery.ownedDevices.map(\.id)) { _, ids in
                     if let linked = nearbyLink.device, !ids.contains(linked.id) {
                         nearbyLink.end()
+                    }
+                    if let linked = onlineLink.device, !ids.contains(linked.id) {
+                        onlineLink.end()
                     }
                 }
                 .sheet(isPresented: $gallery.showingReorder) {

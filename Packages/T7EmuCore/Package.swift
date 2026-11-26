@@ -28,6 +28,10 @@ let package = Package(
                 .define("T7_VIDEO_CYCLES"),
                 .define("T7_FASTRUN"),
                 .define("T7_IDLE"),
+                // - T7_LINK: takes each infrared packet the Tama-Go sends
+                //   (t7_ir_tx_take), for Connect Nearby. Only acts when the
+                //   game switches its infrared LED on.
+                .define("T7_LINK"),
                 .unsafeFlags(["-O3", "-fno-strict-aliasing"]),
                 // t7_cpu.c's __attribute__((hot, optimize("O2"))) is a GCC-only
                 // attribute combination; Clang understands `hot` but not

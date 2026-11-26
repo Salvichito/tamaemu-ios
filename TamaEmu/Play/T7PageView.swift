@@ -81,6 +81,16 @@ struct T7PageView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if let peerName = viewModel.linkPeerName {
+                Label("Connected to \(peerName)", systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.green.opacity(0.85), in: Capsule())
+                    .transition(.opacity)
+            }
+
             ButtonPad(
                 onPress: { viewModel.pressButton($0) },
                 onRelease: { viewModel.releaseButton($0) }

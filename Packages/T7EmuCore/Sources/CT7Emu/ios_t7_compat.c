@@ -473,3 +473,25 @@ uint64_t ios_t7_step_count(void)
 {
   return s_frame_count;
 }
+
+/* ----- Infrared link (Tama-Go) --------------------------------------- */
+
+/* Upstream's T7_LINK hooks (t7_cpu.c), as Paramix Studio uses them between
+ * two Paradise: each packet the game sends is taken whole and handed to the
+ * other Tama's receive hook. Measured headless 2026-11-26 with two cores in
+ * frame lockstep: GAME (YOU WIN / YOU LOSE, points) and VISIT (AWAY, both
+ * in the host's room, guest home ~1 min later) both complete. */
+bool ios_t7_link_take(uint8_t *out32)
+{
+  return t7_ir_tx_take(out32) != 0;
+}
+
+void ios_t7_link_give(const uint8_t *in32)
+{
+  t7_ir_bridge_rx(in32);
+}
+
+uint32_t ios_t7_link_activity(void)
+{
+  return t7_ir_activity();
+}

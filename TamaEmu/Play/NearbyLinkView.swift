@@ -1,12 +1,14 @@
 import SwiftUI
 import TamaCore
 
-/// The "Connect Nearby" sheet: find another phone, pair with it, then get
-/// out of the way -- the connection itself is played out on the Tama's own
-/// screen, so once two phones are paired this sheet only explains what to
-/// do next and offers a way to disconnect.
+/// The Connect sheet: find another phone nearby (or invite a friend far
+/// away through Game Center), pair with it, then get out of the way -- the
+/// connection itself is played out on the Tama's own screen, so once two
+/// phones are paired this sheet only explains what to do next and offers a
+/// way to disconnect.
 struct NearbyLinkView: View {
     let session: NearbyLinkSession
+    let online: OnlineLinkSession
     /// The Tama whose page the sheet was opened from.
     let device: TamaDevice
     let onLinkChange: (TamaDevice, LinkPort?, String?) -> Void
@@ -15,23 +17,30 @@ struct NearbyLinkView: View {
 
     /// While connected the sheet always describes the Tama that actually
     /// holds the connection, even if it was reopened from another page.
-    private var linkedDevice: TamaDevice { session.device ?? device }
+    private var linkedDevice: TamaDevice { online.device ?? session.device ?? device }
 
     var body: some View {
         NavigationStack {
             Group {
-                switch session.phase {
+                switch online.phase {
                 case .connected(let name):
-                    connected(to: name)
-                case .inviting(let name):
-                    waiting(for: name)
-                case .searching:
-                    searching
+                    connected(to: name, peerDeviceID: online.peerDeviceID) { online.end() }
+                case .signingIn, .choosing, .connecting:
+                    waitingOnline
                 case .idle:
-                    stopped
+                    switch session.phase {
+                    case .connected(let name):
+                        connected(to: name, peerDeviceID: session.peerDeviceID) { session.end() }
+                    case .inviting(let name):
+                        waiting(for: name)
+                    case .searching:
+                        searching
+                    case .idle:
+                        stopped
+                    }
                 }
             }
-            .navigationTitle("Connect Nearby")
+            .navigationTitle("Connect")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -41,12 +50,73 @@ struct NearbyLinkView: View {
         }
         .presentationDetents([.medium, .large])
         .onAppear { startIfNeeded() }
-        .onDisappear { session.sheetDidClose() }
+        .onDisappear {
+            session.sheetDidClose()
+            online.sheetDidClose()
+        }
+        .onChange(of: online.hasPendingInvite) { _, pending in
+            if pending { answerOnlineInvite() }
+        }
     }
 
     private func startIfNeeded() {
-        guard session.phase == .idle else { return }
+        if online.hasPendingInvite {
+            answerOnlineInvite()
+            return
+        }
+        guard session.phase == .idle, !online.isActive else { return }
         search()
+    }
+
+    /// One connection at a time: going online stops looking nearby.
+    private func inviteOnline() {
+        if !session.isConnected { session.end() }
+        let device = device
+        let onLinkChange = onLinkChange
+        online.inviteFriend(for: device) { port, name in
+            onLinkChange(device, port, name)
+        }
+    }
+
+    private func answerOnlineInvite() {
+        // An invite replaces whatever was going on here.
+        session.end()
+        let device = device
+        let onLinkChange = onLinkChange
+        online.acceptPendingInvite(for: device) { port, name in
+            onLinkChange(device, port, name)
+        }
+    }
+
+    private var onlineSection: some View {
+        Section {
+            Button {
+                inviteOnline()
+            } label: {
+                Label("Invite a Game Center Friend…", systemImage: "globe")
+            }
+        } header: {
+            Text("Far away")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("For a friend who isn't close by. They get your invite through Game Center, and you play over the internet.")
+                if let notice = online.notice {
+                    Text(notice).foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    private var waitingOnline: some View {
+        ContentUnavailableView {
+            ProgressView()
+                .controlSize(.large)
+                .padding(.bottom, 8)
+        } description: {
+            Text(online.phase == .connecting ? "Connecting over the internet…" : "Waiting for Game Center…")
+        } actions: {
+            Button("Cancel", role: .cancel) { online.end() }
+        }
     }
 
     private func search() {
@@ -114,12 +184,14 @@ struct NearbyLinkView: View {
                 Text("Nearby")
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Ask your friend to open Connect Nearby on their Tama too, then tap their name here.")
+                    Text("Ask your friend to open Connect on their Tama too, then tap their name here.")
                     if let notice = session.notice {
                         Text(notice).foregroundStyle(.orange)
                     }
                 }
             }
+
+            onlineSection
         }
     }
 
@@ -134,19 +206,19 @@ struct NearbyLinkView: View {
     }
 
     private var stopped: some View {
-        ContentUnavailableView {
-            Label("Not connected", systemImage: "antenna.radiowaves.left.and.right.slash")
-        } description: {
-            Text(session.notice ?? "Look for another Tomomix player nearby.")
-        } actions: {
-            Button("Look Again") { search() }
-                .buttonStyle(.borderedProminent)
+        List {
+            Section {
+                Button("Look Nearby Again") { search() }
+            } footer: {
+                Text(session.notice ?? "Look for another Tomomix player nearby.")
+            }
+            onlineSection
         }
     }
 
     // MARK: - Paired
 
-    private func connected(to name: String) -> some View {
+    private func connected(to name: String, peerDeviceID: String?, disconnect: @escaping () -> Void) -> some View {
         List {
             Section {
                 Label {
@@ -166,7 +238,7 @@ struct NearbyLinkView: View {
             }
 
             Section("What to do now") {
-                let steps = Self.steps(for: linkedDevice.id, with: session.peerDeviceID)
+                let steps = Self.steps(for: linkedDevice.id, with: peerDeviceID)
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, text in
                     step(index + 1, text)
                 }
@@ -174,7 +246,7 @@ struct NearbyLinkView: View {
 
             Section {
                 Button("Disconnect", role: .destructive) {
-                    session.end()
+                    disconnect()
                     dismiss()
                 }
             }
@@ -189,6 +261,12 @@ struct NearbyLinkView: View {
         let open = "Close this sheet. On both Tamas, press A until the heart icon lights up, then press B."
         let start = "When both screens show two hearts, one of you presses B."
         switch deviceID {
+        case "tamago":
+            return [
+                "Close this sheet. On both Tama-Gos, press A until the connection icon (heart with waves) is lit, then press B.",
+                "Choose TAMA-GO with B, then GAME or VISIT (press A to move to VISIT) with B. Both of you pick the same one.",
+                "When both screens show STAND BY, one of you presses B. For a visit, that Tama is the one who goes.",
+            ]
         case "id":
             return [open, "Choose たまごっちiD, the first option, with B.", start]
         case "idl":

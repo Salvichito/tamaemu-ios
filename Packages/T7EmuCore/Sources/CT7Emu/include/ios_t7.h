@@ -100,6 +100,17 @@ bool ios_t7_load_state(const uint8_t *data, uint32_t len);
 bool ios_t7_figure_insert(const uint8_t *data, uint32_t len);
 void ios_t7_figure_remove(void);
 
+/* Infrared link (Tama-Go only; Friends has no infrared). Packets are 32
+ * bytes, whole, as the game sends them. take: true if the game sent one
+ * during the last step (copied to out32). give: hand the other Tama's
+ * packet to this one; the game picks it up the next time it listens.
+ * activity: goes up while the game is on its connection screen listening
+ * -- give a packet only if it went up in the last ~1.5 s, or a stale one
+ * would wait for the next connection. Stepping thread only. */
+bool ios_t7_link_take(uint8_t *out32);
+void ios_t7_link_give(const uint8_t *in32);
+uint32_t ios_t7_link_activity(void);
+
 /* Diagnostics for a smoke test, not play. */
 uint64_t ios_t7_step_count(void);
 

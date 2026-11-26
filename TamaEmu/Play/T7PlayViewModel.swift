@@ -32,6 +32,12 @@ final class T7PlayViewModel: SaveBackupHost {
     /// When the widget's picture was last refreshed (see publishWidgetFrame).
     @ObservationIgnored private var lastWidgetFrame = Date.distantPast
     private var engine: T7EmulatorEngine?
+    /// Who this Tama is connected to (NearbyLinkSession), for the badge on
+    /// its page -- nil when not connected.
+    private(set) var linkPeerName: String?
+    /// Kept here, not only on the engine: the engine is rebuilt every time
+    /// the page comes back, and the connection should survive that.
+    private var linkPort: LinkPort?
     /// The last video frame drawn, reused while the screen hasn't changed.
     private var recordingFrameCache: (state: T7ScreenState, image: CGImage)?
     private var startGeneration = 0
@@ -126,6 +132,14 @@ final class T7PlayViewModel: SaveBackupHost {
     }
 
     /// Holding the screen down. A no-op without a running engine.
+    /// Plugs this Tama-Go's infrared into a connection to another one, or
+    /// unplugs it (nil). Same as PlayViewModel.setLink.
+    func setLink(port: LinkPort?, peerName: String?) {
+        linkPort = port
+        linkPeerName = port == nil ? nil : peerName
+        engine?.setLinkPort(port)
+    }
+
     func beginFastForward() {
         guard !isPaused, !isFastForwarding, let engine else { return }
         isFastForwarding = true
@@ -447,6 +461,7 @@ final class T7PlayViewModel: SaveBackupHost {
                 self.holdsGate = holdsGate
                 self.errorMessage = nil
                 self.isLoading = false
+                newEngine.setLinkPort(self.linkPort)
                 self.engine = newEngine
             }
         }
