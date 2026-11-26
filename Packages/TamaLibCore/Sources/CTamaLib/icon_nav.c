@@ -6,7 +6,7 @@
  * gets presses dropped -- but at most WAIT_US, then looks anyway (a press
  * that changed nothing, e.g. C on a cleared screen). SETTLE_US after a
  * change before the next press. */
-#define HOLD_US   80000u
+#define HOLD_US   160000u /* Tamaotch drops shorter presses */
 #define WAIT_US   700000u
 #define SETTLE_US 60000u
 /* Give-up limits: C presses while backing out, A presses that light

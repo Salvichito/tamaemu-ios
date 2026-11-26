@@ -80,7 +80,7 @@ struct P1ScreenView: View {
                     )
                     .position(x: slot.x * side, y: slot.y * side)
                 } else {
-                    let tappable = onIconTap != nil && slot.light < (V1IconProfile.tappableMenuLights(for: deviceID) ?? 0)
+                    let tappable = onIconTap != nil && V1IconProfile.isTappable(light: slot.light, for: deviceID)
                     TappableIcon(enabled: tappable, onTap: { onIconTap?(slot.light) }) {
                         icon(sheetSlot: i, asset: slot.asset)
                             .opacity(state.icons[slot.light] ? 1.0 : 0.35)
@@ -433,12 +433,21 @@ struct V1IconProfile {
 
     /// How many menu lights A cycles through on a model whose icons can
     /// be tapped to open their menu directly (icon_nav.c presses the
-    /// buttons), or nil where that isn't offered. P1/P2 only for now:
-    /// measured headless 2026-11-25 (100/100 random targets reached).
-    /// Angel, Umino and Genjintch measured the same 0-6 cycle and are the
-    /// natural next ones to try.
+    /// buttons), or nil where that isn't offered. Measured headless
+    /// 2026-11-25 on each model's ROM (every target, then 60 random ones):
+    /// P1/P1J/P2, Angel, Genjintch, Mothra, Tamaotch all reached; Umino
+    /// too, apart from runs started mid-game, where it gives up safely.
+    /// Yasashii has care buttons instead; Digimon isn't a menu of icons.
     static func tappableMenuLights(for deviceID: String) -> Int? {
-        deviceID == "p1" ? 7 : nil
+        ["p1", "angel", "morino", "umino", "genjintch", "tamaotch", "mothra"].contains(deviceID) ? 7 : nil
+    }
+
+    /// Whether one icon can be tapped. Morino's "? box" (light 4) is only
+    /// reachable during a predator attack -- A skips it otherwise -- so it
+    /// stays a plain picture.
+    static func isTappable(light: Int, for deviceID: String) -> Bool {
+        guard let count = tappableMenuLights(for: deviceID), light < count else { return false }
+        return !(deviceID == "morino" && light == 4)
     }
 
     /// True when this model's icons are buttons (see `onButton`).

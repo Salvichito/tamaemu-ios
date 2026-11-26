@@ -5,8 +5,9 @@
 #include <stdint.h>
 
 /* Tap-an-icon shortcut for first-gen models whose A button steps a cursor
- * through menu lights 0..(count-1) and then "none" (P1/P2 measured
- * headless 2026-11-25; see TamaEmu's icon-probe notes). There's no way to
+ * through menu lights 0..(count-1) and then "none" (P1/P2, Angel,
+ * Morino, Umino, Genjintch, Tamaotch, Mothra measured headless
+ * 2026-11-25; see TamaEmu's icon-probe notes). There's no way to
  * jump the toy's own program to a menu, so this presses the real buttons
  * for the user, fast, checking the lights after every press:
  *
