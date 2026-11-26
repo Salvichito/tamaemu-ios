@@ -1,13 +1,64 @@
 import SwiftUI
 import TamaCore
 
-/// Always scoped to one device — there's no more global "selected device"
-/// to switch between in here; switching is just swiping the gallery.
-/// Opened from TamaGalleryView's overflow menu, for whichever device is
-/// currently on screen.
+/// Which kind of Tama the Settings screen is for. Every model gets the
+/// same screen; each part shows only when that model supports it.
+enum SettingsTarget {
+    case color(PlayViewModel)
+    case firstGen(V1PlayViewModel)
+    case t7(T7PlayViewModel)
+    case tomomix(TomomixViewModel)
+
+    var backupHost: SaveBackupHost {
+        switch self {
+        case .color(let vm): vm
+        case .firstGen(let vm): vm
+        case .t7(let vm): vm
+        case .tomomix(let model): model
+        }
+    }
+
+    var isColor: Bool { if case .color = self { true } else { false } }
+    var isTomomix: Bool { if case .tomomix = self { true } else { false } }
+
+    /// Export/Import Save.
+    var supportsSaveTransfer: Bool {
+        if case .firstGen = self { false } else { true }
+    }
+
+    /// Restart (soft reset).
+    var supportsRestart: Bool { isColor }
+
+    @MainActor func prepareExportURL() -> URL? {
+        switch self {
+        case .color(let vm): vm.prepareExportURL()
+        case .t7(let vm): vm.prepareExportURL()
+        case .tomomix(let model): model.prepareExportURL()
+        case .firstGen: nil
+        }
+    }
+
+    @MainActor func importSave(from url: URL) throws {
+        switch self {
+        case .color(let vm): try vm.importSave(from: url)
+        case .t7(let vm): try vm.importSave(from: url)
+        case .tomomix(let model): try model.importSave(from: url)
+        case .firstGen: break
+        }
+    }
+
+    @MainActor func restart() {
+        if case .color(let vm) = self { vm.restartTama() }
+    }
+}
+
+/// The gear button's screen, for whichever Tama is on screen. The rule
+/// (see the ⋯ menus in TamaGalleryView): ⋯ holds what you reach for while
+/// playing; Settings holds this Tama's own settings and save, then the
+/// app-wide ones, so things like Appearance are reachable from every page.
 struct SettingsView: View {
     let device: TamaDevice
-    let viewModel: PlayViewModel
+    let target: SettingsTarget
     var onDelete: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(PurchaseManager.self) private var purchases
@@ -27,12 +78,20 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.reminderNotificationsEnabled) private var reminderNotificationsEnabled = false
     @AppStorage(AppSettings.Keys.reminderIntervalHours) private var reminderIntervalHours = 8.0
     @AppStorage(AppSettings.Keys.liveTranslationUsesCloud) private var liveTranslationUsesCloud = false
+    // Tomomix only.
+    @AppStorage(TomoRetroScreen.settingKey) private var tomoRetro = false
+    @AppStorage(TomoCareSettings.notificationsKey) private var tomoNotifications = true
+    @AppStorage(TomoCareSettings.noDeathsKey) private var tomoNoDeaths = false
+    @AppStorage(TomoCareSettings.difficultyKey) private var tomoDifficulty = TomoCareSettings.Difficulty.classic.rawValue
+    @State private var petName = ""
+    @State private var playerName = ""
 
     @State private var showingSaveImporter = false
     @State private var showingSaveExporter = false
     @State private var exportURL: URL?
     @State private var showingRemoveConfirm = false
     @State private var showingRestartConfirm = false
+    @State private var showingScreenStyle = false
     @State private var toast: String?
     @State private var showingAPIKeyPrompt = false
     @State private var apiKeyDraft = ""
@@ -40,11 +99,11 @@ struct SettingsView: View {
 
     init(
         device: TamaDevice,
-        viewModel: PlayViewModel,
+        target: SettingsTarget,
         onDelete: @escaping () -> Void
     ) {
         self.device = device
-        self.viewModel = viewModel
+        self.target = target
         self.onDelete = onDelete
         // Speed and stay-awake are per-device — the key itself depends on
         // `device`, so the usual static-key @AppStorage shorthand can't
@@ -54,19 +113,36 @@ struct SettingsView: View {
         _stayAwake = AppStorage(wrappedValue: true, AppSettings.Keys.stayAwake(for: device))
     }
 
+    private var colorViewModel: PlayViewModel? {
+        if case .color(let vm) = target { vm } else { nil }
+    }
+
+    private var tomomix: TomomixViewModel? {
+        if case .tomomix(let model) = target { model } else { nil }
+    }
+
+    /// "your tomomix" reads better than the device title in sentences.
+    private var deviceName: String { target.isTomomix ? "Tomomix" : device.title }
+
     var body: some View {
         NavigationStack {
             Form {
                 premiumSection
-                firmwareSection
-                soundAndGameplaySection
-                remindersSection
+                // This Tama
+                deviceSection
+                if let tomomix { tomomixCareSection(tomomix) }
+                if let colorViewModel { gameplaySection(colorViewModel) }
+                saveSection
+                // Every Tama
+                soundSection
                 displaySection
-                if #available(iOS 27.0, *) {
+                remindersSection
+                if #available(iOS 27.0, *), target.isColor {
                     liveTranslationSection
                 }
             }
-            .navigationTitle("Settings for \(device.title)")
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -76,8 +152,8 @@ struct SettingsView: View {
                 switch result {
                 case .success(let url):
                     do {
-                        try viewModel.importSave(from: url)
-                        toast = "Save imported."
+                        try target.importSave(from: url)
+                        toast = "Save imported. The save it replaced is in Backups."
                     } catch {
                         toast = error.localizedDescription
                     }
@@ -85,24 +161,32 @@ struct SettingsView: View {
                     toast = error.localizedDescription
                 }
             }
-            .fileMover(isPresented: $showingSaveExporter, file: exportURL) { result in
-                if case .failure(let error) = result {
-                    toast = error.localizedDescription
+            .background(
+                // Its own view: two file dialogs on one view can stop
+                // either from presenting.
+                Color.clear.fileMover(isPresented: $showingSaveExporter, file: exportURL) { result in
+                    if case .failure(let error) = result {
+                        toast = error.localizedDescription
+                    }
                 }
-            }
+            )
             .confirmationDialog(
-                "Remove \(device.title)'s save data?",
+                target.isTomomix ? "Delete your tomomix?" : "Delete \(device.title)?",
                 isPresented: $showingRemoveConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Remove", role: .destructive) {
+                Button("Delete", role: .destructive) {
                     showingRemoveConfirm = false
                     dismiss()
                     onDelete()
                 }
                 Button("Cancel", role: .cancel) { showingRemoveConfirm = false }
             } message: {
-                Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
+                if target.isTomomix {
+                    Text("Your tomomix and its progress will be gone. You can add a new one later from the ⋯ menu.")
+                } else {
+                    Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
+                }
             }
             .confirmationDialog(
                 "Restart \(device.title)?",
@@ -111,7 +195,7 @@ struct SettingsView: View {
             ) {
                 Button("Restart", role: .destructive) {
                     dismiss()
-                    viewModel.restartTama()
+                    target.restart()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -123,6 +207,10 @@ struct SettingsView: View {
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
             }
+            .sheet(isPresented: $showingScreenStyle) {
+                // Has its own navigation bar and Done button.
+                P1ScreenStyleView(deviceID: device.id)
+            }
             .alert("Gemini API Key", isPresented: $showingAPIKeyPrompt) {
                 TextField("Paste your Gemini API key", text: $apiKeyDraft)
                     .textInputAutocapitalization(.never)
@@ -132,6 +220,120 @@ struct SettingsView: View {
             } message: {
                 Text("Get a free key at aistudio.google.com — no credit card needed.")
             }
+            .onAppear {
+                if let tomomix {
+                    petName = tomomix.petName ?? ""
+                    playerName = TomomixViewModel.playerName ?? ""
+                }
+            }
+            .onDisappear {
+                if let tomomix {
+                    if tomomix.brain.phase == .alive, petName != (tomomix.petName ?? "") { tomomix.rename(pet: petName) }
+                    tomomix.rename(player: playerName)
+                }
+            }
+        }
+    }
+
+    // MARK: - This Tama
+
+    /// How this Tama looks, and (Tomomix) the names.
+    @ViewBuilder
+    private var deviceSection: some View {
+        Section {
+            if let tomomix {
+                if tomomix.brain.phase == .alive {
+                    nameField("Your tomomix", text: $petName)
+                }
+                nameField("You", text: $playerName)
+                Toggle("Sound", isOn: Binding(get: { !tomomix.muted }, set: { tomomix.setMuted(!$0) }))
+                Toggle("Retro Screen", isOn: $tomoRetro)
+            } else {
+                NavigationLink("Theme") {
+                    ThemePickerView(device: device)
+                }
+            }
+            if case .firstGen = target {
+                Button("Screen Style…") { showingScreenStyle = true }
+            }
+            if let colorViewModel, colorViewModel.supportsDownloads {
+                NavigationLink("Downloads") {
+                    DownloadsView(device: device, viewModel: colorViewModel)
+                }
+            }
+        } header: {
+            Text(deviceName)
+        } footer: {
+            if target.isTomomix {
+                Text("Tomomix's sky always fills your whole screen, free. Retro Screen adds big pixels and scan lines, like an old screen.")
+            } else {
+                Text("Theme is the backdrop color behind \(device.title) when Ambient Background is off. Each Tama keeps its own.")
+            }
+        }
+    }
+
+    private func tomomixCareSection(_ model: TomomixViewModel) -> some View {
+        Section {
+            Toggle("Notifications", isOn: Binding(
+                get: { tomoNotifications },
+                set: { tomoNotifications = $0; model.refreshNotifications() }
+            ))
+            Picker("Difficulty", selection: $tomoDifficulty) {
+                ForEach(TomoCareSettings.Difficulty.allCases) { d in
+                    Text(d.label).tag(d.rawValue)
+                }
+            }
+            Toggle("No Deaths", isOn: $tomoNoDeaths)
+        } header: {
+            Text("Care")
+        } footer: {
+            Text("Notifications let your tomomix call you when it needs something. Easy makes it get hungry, unhappy and sick about 1.5 times slower, with more time to answer a call; Hard about 1.3 times faster. With No Deaths, its life never ends: an old tomomix stays old, and leaving it hungry or unhappy too long makes it sick instead.")
+        }
+    }
+
+    private func nameField(_ label: String, text: Binding<String>) -> some View {
+        LabeledContent(label) {
+            TextField("Name", text: text)
+                .multilineTextAlignment(.trailing)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .onChange(of: text.wrappedValue) { _, new in
+                    if new.count > TomomixViewModel.maxNameLength {
+                        text.wrappedValue = String(new.prefix(TomomixViewModel.maxNameLength))
+                    }
+                }
+        }
+    }
+
+    // MARK: - Save
+
+    @ViewBuilder
+    private var saveSection: some View {
+        Section {
+            if target.supportsSaveTransfer {
+                Button("Export Save…") {
+                    exportURL = target.prepareExportURL()
+                    if exportURL != nil {
+                        showingSaveExporter = true
+                    } else {
+                        toast = "There's no save to export yet."
+                    }
+                }
+                Button("Import Save…") { showingSaveImporter = true }
+            }
+            NavigationLink("Backups") {
+                BackupListView(device: device, host: target.backupHost) { dismiss() }
+            }
+            if target.supportsRestart {
+                Button("Restart (soft reset)…") { showingRestartConfirm = true }
+            }
+            Button(target.isTomomix ? "Delete Tomomix…" : "Delete \(device.title)…", role: .destructive) {
+                showingRemoveConfirm = true
+            }
+        } header: {
+            Text("Save")
+        } footer: {
+            Text("A backup is kept automatically, about once an hour while you play.")
         }
     }
 
@@ -160,40 +362,9 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Firmware & Save
-
-    @ViewBuilder
-    private var firmwareSection: some View {
-        Section {
-            Button("Export save file…") {
-                exportURL = viewModel.prepareExportURL()
-                if exportURL != nil { showingSaveExporter = true }
-            }
-            .disabled(!viewModel.canExportSave)
-            Button("Import save file…") { showingSaveImporter = true }
-            NavigationLink("Backups") {
-                BackupListView(device: device, host: viewModel) { dismiss() }
-            }
-            if viewModel.supportsDownloads {
-                NavigationLink("Downloads") {
-                    DownloadsView(device: device, viewModel: viewModel)
-                }
-            }
-            Button("Restart (soft reset)…") { showingRestartConfirm = true }
-            Button("Remove this device's data…", role: .destructive) {
-                showingRemoveConfirm = true
-            }
-        } header: {
-            Text("Save")
-        } footer: {
-            Text("A backup of this Tama is kept automatically, about once an hour while you play. Add more devices with \"Add a Device\" in the \"⋯\" menu.")
-        }
-    }
-
     // MARK: - Sound & Gameplay
 
-    @ViewBuilder
-    private var soundAndGameplaySection: some View {
+    private var soundSection: some View {
         Section {
             HStack {
                 Image(systemName: "speaker.fill")
@@ -215,9 +386,13 @@ struct SettingsView: View {
         } header: {
             Text("Sound & Haptics")
         } footer: {
-            Text("The slider sets the Tama's own volume, from silent up to as loud as your device's volume allows. Respect Silent Mode mutes the Tama when your device is silenced. Other Audio chooses whether music and podcasts keep playing alongside the Tama or pause while it's open.")
+            Text("The slider sets the Tamas' volume, from silent up to as loud as your device's volume allows. Respect Silent Mode mutes them when your device is silenced. Other Audio chooses whether music and podcasts keep playing alongside or pause while the app is open. These apply to every Tama.")
         }
+    }
 
+    /// Speed, stay-awake and catch-up: only the color Tamas' engine has
+    /// these knobs.
+    private func gameplaySection(_ viewModel: PlayViewModel) -> some View {
         Section {
             Stepper(
                 "Speed: \(speedMultiplier)×",
@@ -246,7 +421,7 @@ struct SettingsView: View {
 
     private func setSpeed(_ value: Int) {
         speedMultiplier = value
-        viewModel.refreshSettings()
+        colorViewModel?.refreshSettings()
     }
 
     // MARK: - Reminders
@@ -295,9 +470,6 @@ struct SettingsView: View {
             ))
             Toggle("Ambient Background", isOn: purchases.isPremium ? $ambientBackgroundEnabled : .constant(false))
                 .disabled(!purchases.isPremium)
-            NavigationLink("Theme") {
-                ThemePickerView(device: device)
-            }
             if AppIconChoice.isSupported {
                 NavigationLink("App Icon") {
                     AppIconPickerView()
@@ -306,7 +478,7 @@ struct SettingsView: View {
         } header: {
             Text("Display")
         } footer: {
-            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it — a Premium feature. These apply app-wide, not just to this Tama — except Theme, the backdrop color used when Ambient Background is off, which each Tama keeps for itself.")
+            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it — a Premium feature. These apply to every Tama. Tomomix always shows its own sky.")
         }
     }
 

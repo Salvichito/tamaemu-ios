@@ -12,7 +12,6 @@ struct TamaGalleryView: View {
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
 
     @State private var showingSettings = false
-    @State private var showingDeleteConfirm = false
     @State private var showingSetClockConfirm = false
     @State private var showingSetPointsPrompt = false
     @State private var pointsInputText = ""
@@ -21,18 +20,11 @@ struct TamaGalleryView: View {
     @State private var activeRecorder: ScreenRecorder?
     @State private var recordingStartDate: Date?
     @State private var showingPaywall = false
-    @State private var showingBackups = false
-    @State private var showingT7SaveImporter = false
-    @State private var showingT7SaveExporter = false
-    @State private var t7ExportURL: URL?
-    @State private var showingP1ScreenStyle = false
     /// One connection to another phone at a time, for the whole gallery --
     /// it outlives the sheet that sets it up (see NearbyLinkView).
     @State private var nearbyLink = NearbyLinkSession()
     @State private var showingNearbyLink = false
     @State private var showingNewStarConfirm = false
-    @State private var showingTomomixSettings = false
-    @State private var showingThemePicker = false
 
     /// Ambient Background is a premium feature — forced off for free users
     /// regardless of their own stored preference, which is left untouched
@@ -87,6 +79,15 @@ struct TamaGalleryView: View {
     private var selectedV1ViewModel: V1PlayViewModel? {
         guard let device = selectedDevice, device.family == .v1 else { return nil }
         return gallery.v1ViewModel(for: device)
+    }
+
+    private func settingsTarget(for device: TamaDevice) -> SettingsTarget {
+        switch device.family {
+        case .ctama: .color(gallery.viewModel(for: device))
+        case .v1: .firstGen(gallery.v1ViewModel(for: device))
+        case .t7: .t7(gallery.t7ViewModel(for: device))
+        case .tomomix: .tomomix(gallery.tomomixViewModel())
+        }
     }
 
     private var selectedTomomix: TomomixViewModel? {
@@ -283,67 +284,69 @@ struct TamaGalleryView: View {
         }
     }
 
-    /// A P1-era page's toolbar: pause in the ⋯ menu, camera and video at
-    /// the bottom — the same buttons, gated the same way, as a color
-    /// Tama's, plus Screen Style (P1ScreenStyleView). No Settings, clock
-    /// sync or translation: none of those exist for this family (a P1 screen has no text to translate).
+    // MARK: - Top bar: gear + ⋯ (same on every page)
+    //
+    // The rule for every model, present and future: ⋯ holds what you
+    // reach for while playing (pause, model-specific actions), then
+    // moving between devices. Everything else -- this Tama's look, save,
+    // backups, restart, delete, and the app-wide settings -- lives in
+    // Settings (the gear), so it's reachable from every page.
+
     @ToolbarContentBuilder
-    private func v1ToolbarContent(viewModel: V1PlayViewModel) -> some ToolbarContent {
+    private func topBar<PlayItems: View>(@ViewBuilder playItems: () -> PlayItems) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                showingSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .accessibilityLabel("Settings")
+        }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                Button {
-                    viewModel.togglePause()
-                } label: {
-                    Label(
-                        viewModel.isPaused ? "Resume" : "Pause",
-                        systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
-                    )
-                }
-                Button {
-                    requestAddTama()
-                } label: {
-                    Label("Add a Device", systemImage: "plus")
-                }
-                if gallery.canAddTomomix {
+                Section { playItems() }
+                Section {
                     Button {
-                        gallery.addTomomix()
+                        requestAddTama()
                     } label: {
-                        Label("Add Tomomix", systemImage: "sparkles")
+                        Label("Add a Device", systemImage: "plus")
                     }
-                }
-                Button {
-                    gallery.showingReorder = true
-                } label: {
-                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
-                }
-                Button {
-                    showingP1ScreenStyle = true
-                } label: {
-                    Label("Screen Style", systemImage: "paintpalette")
-                }
-                Button {
-                    showingThemePicker = true
-                } label: {
-                    Label("Theme", systemImage: "swatchpalette")
-                }
-                Button {
-                    showingBackups = true
-                } label: {
-                    Label("Backups", systemImage: "clock.arrow.circlepath")
-                }
-                Button(role: .destructive) {
-                    showingDeleteConfirm = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
+                    if gallery.canAddTomomix {
+                        Button {
+                            gallery.addTomomix()
+                        } label: {
+                            Label("Add Tomomix", systemImage: "sparkles")
+                        }
+                    }
+                    Button {
+                        gallery.showingReorder = true
+                    } label: {
+                        Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
+                    }
                 }
             } label: {
                 Image(systemName: "ellipsis")
             }
         }
+    }
+
+    private func pauseButton(isPaused: Bool, toggle: @escaping () -> Void) -> some View {
+        Button(action: toggle) {
+            Label(isPaused ? "Resume" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill")
+        }
+    }
+
+    /// Camera and video, Premium on every model except Tomomix.
+    @ToolbarContentBuilder
+    private func captureButtons(
+        premiumOnly: Bool = true,
+        recordable: any ScreenRecordable,
+        screenshot: @escaping () -> CGImage?
+    ) -> some ToolbarContent {
         ToolbarItem(placement: .bottomBar) {
             Button {
-                if purchases.isPremium {
-                    saveScreenshot(viewModel.screenshot())
+                if !premiumOnly || purchases.isPremium {
+                    saveScreenshot(screenshot())
                 } else {
                     showingPaywall = true
                 }
@@ -353,8 +356,8 @@ struct TamaGalleryView: View {
         }
         ToolbarItem(placement: .bottomBar) {
             Button {
-                if purchases.isPremium {
-                    toggleRecording(for: viewModel)
+                if !premiumOnly || purchases.isPremium {
+                    toggleRecording(for: recordable)
                 } else {
                     showingPaywall = true
                 }
@@ -365,189 +368,34 @@ struct TamaGalleryView: View {
         }
     }
 
-    /// A Tama-Go/Friends page's whole toolbar: just enough to
-    /// add/rearrange/delete Tamas without being stranded on this page,
-    /// since it has no view model for the pause/settings/screenshot/
-    /// recording/translation/set-clock items to hook into.
+    @ToolbarContentBuilder
+    private func v1ToolbarContent(viewModel: V1PlayViewModel) -> some ToolbarContent {
+        topBar {
+            pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
+        }
+        captureButtons(recordable: viewModel) { viewModel.screenshot() }
+    }
+
+    @ToolbarContentBuilder
+    private func t7ToolbarContent(viewModel: T7PlayViewModel) -> some ToolbarContent {
+        topBar {
+            pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
+        }
+        captureButtons(recordable: viewModel) { viewModel.screenshot() }
+    }
+
     @ToolbarContentBuilder
     private func tomomixToolbarContent(model: TomomixViewModel) -> some ToolbarContent {
         // Screenshot and video, free on Tomomix (a taste of Premium).
-        ToolbarItem(placement: .bottomBar) {
+        captureButtons(premiumOnly: false, recordable: model) { model.recordingFrame(side: 1024) }
+        topBar {
+            pauseButton(isPaused: model.paused) { model.togglePause() }
             Button {
-                saveScreenshot(model.recordingFrame(side: 1024))
+                // Ask first only while it's alive: after the ending a
+                // new star is the expected next step.
+                if model.brain.phase == .departed { model.newStar() } else { showingNewStarConfirm = true }
             } label: {
-                Image(systemName: "camera")
-            }
-        }
-        ToolbarItem(placement: .bottomBar) {
-            Button {
-                toggleRecording(for: model)
-            } label: {
-                Image(systemName: isRecording ? "stop.circle.fill" : "video")
-                    .foregroundStyle(isRecording ? .red : .primary)
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    model.togglePause()
-                } label: {
-                    Label(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill")
-                }
-                Button {
-                    // Ask first only while it's alive: after the ending a
-                    // new star is the expected next step.
-                    if model.brain.phase == .departed { model.newStar() } else { showingNewStarConfirm = true }
-                } label: {
-                    Label("Send a New Shooting Star", systemImage: "moon.stars")
-                }
-                Button {
-                    showingTomomixSettings = true
-                } label: {
-                    Label("Tomomix Settings", systemImage: "gearshape")
-                }
-                Button {
-                    showingBackups = true
-                } label: {
-                    Label("Backups", systemImage: "clock.arrow.circlepath")
-                }
-                Button {
-                    t7ExportURL = model.prepareExportURL()
-                    if t7ExportURL != nil {
-                        showingT7SaveExporter = true
-                    } else {
-                        toast = "There's no save to export yet."
-                    }
-                } label: {
-                    Label("Export Save…", systemImage: "square.and.arrow.up")
-                }
-                Button {
-                    showingT7SaveImporter = true
-                } label: {
-                    Label("Import Save…", systemImage: "square.and.arrow.down")
-                }
-                if !purchases.isPremium {
-                    Button {
-                        showingPaywall = true
-                    } label: {
-                        Label("Unlock Premium…", systemImage: "star.fill")
-                    }
-                }
-                Button {
-                    requestAddTama()
-                } label: {
-                    Label("Add a Device", systemImage: "plus")
-                }
-                Button {
-                    gallery.showingReorder = true
-                } label: {
-                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
-                }
-                Button(role: .destructive) {
-                    showingDeleteConfirm = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-            }
-        }
-    }
-
-    /// Camera and video for a Tama-Go/Friends page: Premium, like every
-    /// other model's.
-    @ToolbarContentBuilder
-    private func t7BottomToolbarContent(viewModel: T7PlayViewModel) -> some ToolbarContent {
-        ToolbarItem(placement: .bottomBar) {
-            Button {
-                if purchases.isPremium {
-                    saveScreenshot(viewModel.screenshot())
-                } else {
-                    showingPaywall = true
-                }
-            } label: {
-                Image(systemName: "camera")
-            }
-        }
-        ToolbarItem(placement: .bottomBar) {
-            Button {
-                if purchases.isPremium {
-                    toggleRecording(for: viewModel)
-                } else {
-                    showingPaywall = true
-                }
-            } label: {
-                Image(systemName: isRecording ? "stop.circle.fill" : "video")
-                    .foregroundStyle(isRecording ? .red : .primary)
-            }
-        }
-    }
-
-    private func minimalToolbarContent() -> some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                if let device = selectedDevice, device.family == .t7 {
-                    let t7 = gallery.t7ViewModel(for: device)
-                    Button {
-                        t7.togglePause()
-                    } label: {
-                        Label(
-                            t7.isPaused ? "Resume" : "Pause",
-                            systemImage: t7.isPaused ? "play.fill" : "pause.fill"
-                        )
-                    }
-                }
-                Button {
-                    requestAddTama()
-                } label: {
-                    Label("Add a Device", systemImage: "plus")
-                }
-                if gallery.canAddTomomix {
-                    Button {
-                        gallery.addTomomix()
-                    } label: {
-                        Label("Add Tomomix", systemImage: "sparkles")
-                    }
-                }
-                Button {
-                    gallery.showingReorder = true
-                } label: {
-                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
-                }
-                Button {
-                    showingThemePicker = true
-                } label: {
-                    Label("Theme", systemImage: "swatchpalette")
-                }
-                Button {
-                    showingBackups = true
-                } label: {
-                    Label("Backups", systemImage: "clock.arrow.circlepath")
-                }
-                if let device = selectedDevice, device.family == .t7 {
-                    Button {
-                        t7ExportURL = gallery.t7ViewModel(for: device).prepareExportURL()
-                        if t7ExportURL != nil {
-                            showingT7SaveExporter = true
-                        } else {
-                            toast = "There's no save to export yet."
-                        }
-                    } label: {
-                        Label("Export Save…", systemImage: "square.and.arrow.up")
-                    }
-                    Button {
-                        showingT7SaveImporter = true
-                    } label: {
-                        Label("Import Save…", systemImage: "square.and.arrow.down")
-                    }
-                }
-                Button(role: .destructive) {
-                    showingDeleteConfirm = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
+                Label("Send a New Shooting Star", systemImage: "moon.stars")
             }
         }
     }
@@ -557,77 +405,37 @@ struct TamaGalleryView: View {
     /// resolve in reasonable time, not a design choice.
     @ToolbarContentBuilder
     private func topToolbarContent(viewModel: PlayViewModel) -> some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
+        topBar {
+            pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
             Button {
-                showingSettings = true
+                showingSetClockConfirm = true
             } label: {
-                Image(systemName: "gearshape")
+                Label("Sync Clock to Now", systemImage: "clock.arrow.2.circlepath")
             }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
+            if NearbyLinkSession.supports(viewModel.selectedDevice) {
                 Button {
-                    viewModel.togglePause()
+                    showingNearbyLink = true
                 } label: {
                     Label(
-                        viewModel.isPaused ? "Resume" : "Pause",
-                        systemImage: viewModel.isPaused ? "play.fill" : "pause.fill"
+                        viewModel.linkPeerName == nil ? "Connect Nearby…" : "Nearby Connection…",
+                        systemImage: "antenna.radiowaves.left.and.right"
                     )
                 }
+            }
+            if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
                 Button {
-                    requestAddTama()
-                } label: {
-                    Label("Add a Device", systemImage: "plus")
-                }
-                if gallery.canAddTomomix {
-                    Button {
-                        gallery.addTomomix()
-                    } label: {
-                        Label("Add Tomomix", systemImage: "sparkles")
+                    if purchases.isPremium {
+                        pointsInputText = ""
+                        showingSetPointsPrompt = true
+                    } else {
+                        showingPaywall = true
                     }
-                }
-                Button {
-                    gallery.showingReorder = true
                 } label: {
-                    Label("Rearrange Devices", systemImage: "arrow.up.arrow.down")
+                    Label(
+                        purchases.isPremium ? "Set Points…" : "Set Points… (Premium)",
+                        systemImage: purchases.isPremium ? "number.circle" : "star.fill"
+                    )
                 }
-                Button {
-                    showingSetClockConfirm = true
-                } label: {
-                    Label("Sync Clock to Now", systemImage: "clock.arrow.2.circlepath")
-                }
-                if NearbyLinkSession.supports(viewModel.selectedDevice) {
-                    Button {
-                        showingNearbyLink = true
-                    } label: {
-                        Label(
-                            viewModel.linkPeerName == nil ? "Connect Nearby…" : "Nearby Connection…",
-                            systemImage: "antenna.radiowaves.left.and.right"
-                        )
-                    }
-                }
-                if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
-                    Button {
-                        if purchases.isPremium {
-                            pointsInputText = ""
-                            showingSetPointsPrompt = true
-                        } else {
-                            showingPaywall = true
-                        }
-                    } label: {
-                        Label(
-                            purchases.isPremium ? "Set Points…" : "Set Points… (Premium)",
-                            systemImage: purchases.isPremium ? "number.circle" : "star.fill"
-                        )
-                    }
-                }
-                Button(role: .destructive) {
-                    showingDeleteConfirm = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
             }
         }
     }
@@ -703,28 +511,12 @@ struct TamaGalleryView: View {
         NavigationStack {
             tabViewWithToolbar
                 .sheet(isPresented: $showingSettings) {
-                    if let device = selectedDevice, let viewModel = selectedViewModel {
+                    if let device = selectedDevice {
                         SettingsView(
                             device: device,
-                            viewModel: viewModel,
+                            target: settingsTarget(for: device),
                             onDelete: { gallery.removeDevice(device) }
                         )
-                    }
-                }
-                .confirmationDialog(
-                    "Delete \(selectedDevice?.title ?? "")?",
-                    isPresented: $showingDeleteConfirm,
-                    titleVisibility: .visible
-                ) {
-                    Button("Delete", role: .destructive) {
-                        if let device = selectedDevice { gallery.removeDevice(device) }
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    if selectedDevice?.family == .tomomix {
-                        Text("Your tomomix and its progress will be gone. You can add a new one later from the ⋯ menu.")
-                    } else {
-                        Text("This deletes its firmware and save data from this device. It can be re-imported later, but progress will be lost.")
                     }
                 }
                 .confirmationDialog(
@@ -758,27 +550,6 @@ struct TamaGalleryView: View {
                 } message: {
                     Text("Up to 5 digits (max 99999). This replaces the current total.")
                 }
-                .sheet(isPresented: $showingThemePicker) {
-                    NavigationStack {
-                        Group {
-                            if let device = selectedDevice {
-                                ThemePickerView(device: device)
-                            }
-                        }
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") { showingThemePicker = false }
-                                }
-                            }
-                    }
-                    // Half height, so the new backdrop shows behind it.
-                    .presentationDetents([.medium, .large])
-                }
-                .sheet(isPresented: $showingP1ScreenStyle) {
-                    if let device = selectedDevice {
-                        P1ScreenStyleView(deviceID: device.id)
-                    }
-                }
                 .sheet(isPresented: $showingNearbyLink) {
                     if let device = selectedDevice {
                         NearbyLinkView(session: nearbyLink, device: device) { linkedDevice, port, peerName in
@@ -793,55 +564,8 @@ struct TamaGalleryView: View {
                         nearbyLink.end()
                     }
                 }
-                // Tama-Go/Friends and Tomomix save export/import (their ⋯ menus). Kept on
-                // separate background views: two file dialogs on one view
-                // can stop either from presenting.
-                .background(
-                    Color.clear.fileImporter(isPresented: $showingT7SaveImporter, allowedContentTypes: [.data]) { result in
-                        guard let device = selectedDevice, device.family == .t7 || device.family == .tomomix else { return }
-                        switch result {
-                        case .success(let url):
-                            do {
-                                if device.family == .tomomix {
-                                    try gallery.tomomixViewModel().importSave(from: url)
-                                } else {
-                                    try gallery.t7ViewModel(for: device).importSave(from: url)
-                                }
-                                toast = "Save imported. The save it replaced is in Backups."
-                            } catch {
-                                toast = error.localizedDescription
-                            }
-                        case .failure(let error):
-                            toast = error.localizedDescription
-                        }
-                    }
-                )
-                .background(
-                    Color.clear.fileMover(isPresented: $showingT7SaveExporter, file: t7ExportURL) { result in
-                        if case .failure(let error) = result {
-                            toast = error.localizedDescription
-                        }
-                    }
-                )
-                .sheet(isPresented: $showingBackups) {
-                    if let device = selectedDevice, let host = gallery.backupHost(for: device) {
-                        NavigationStack {
-                            BackupListView(device: device, host: host) {
-                                showingBackups = false
-                            }
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") { showingBackups = false }
-                                }
-                            }
-                        }
-                    }
-                }
                 .sheet(isPresented: $gallery.showingReorder) {
                     ReorderTamasView(gallery: gallery)
-                }
-                .sheet(isPresented: $showingTomomixSettings) {
-                    TomomixSettingsView(model: gallery.tomomixViewModel())
                 }
                 .confirmationDialog(
                     "Send a new shooting star?",
@@ -964,11 +688,8 @@ struct TamaGalleryView: View {
                     v1ToolbarContent(viewModel: viewModel)
                 } else if let model = selectedTomomix {
                     tomomixToolbarContent(model: model)
-                } else if let device = selectedDevice {
-                    minimalToolbarContent()
-                    if device.family == .t7 {
-                        t7BottomToolbarContent(viewModel: gallery.t7ViewModel(for: device))
-                    }
+                } else if let device = selectedDevice, device.family == .t7 {
+                    t7ToolbarContent(viewModel: gallery.t7ViewModel(for: device))
                 }
             }
     }
