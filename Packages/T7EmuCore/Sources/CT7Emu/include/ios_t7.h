@@ -92,6 +92,14 @@ bool ios_t7_eeprom_load(const uint8_t *data, uint32_t len);
 uint32_t ios_t7_save_state(uint8_t *out, uint32_t bufsize);
 bool ios_t7_load_state(const uint8_t *data, uint32_t len);
 
+/* Gotchi Figure (Tama-Go only). insert: plug in a figure, its flash dump
+ * (starts with ?? AA 55) copied into a buffer this port owns; the caller's
+ * bytes don't need to outlive the call. remove: unplug. Call only from the
+ * thread stepping the core, or between start and the first step. Every
+ * ios_t7_start begins with no figure; ios_t7_stop unplugs it. */
+bool ios_t7_figure_insert(const uint8_t *data, uint32_t len);
+void ios_t7_figure_remove(void);
+
 /* Diagnostics for a smoke test, not play. */
 uint64_t ios_t7_step_count(void);
 

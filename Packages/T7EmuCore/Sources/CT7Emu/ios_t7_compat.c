@@ -164,11 +164,37 @@ int persist_page_size(void) { return 0; }
 int persist_backup_page(int page, uint8_t *out) { (void)page; (void)out; return 0; }
 void persist_restore_page(int page, const uint8_t *in) { (void)page; (void)in; }
 
-/* ----- Figure accessory: not vendored (figure_data.c, Paradise-specific
- * figure ROM blobs) -- report "no figure plugged in" unconditionally. */
+/* ----- Figure accessory (replaces upstream figure_data.c). The figure's
+ * flash contents are a user-imported dump, copied into a buffer this port
+ * owns. t7_memory.c reads it over its emulated SPI bus; the "a figure is
+ * plugged in" pins are t7_figure_set (Paramix uses id 1 for every figure).
+ * Only touched from the thread stepping the core (or before it starts). */
 
-const unsigned char *figure_rom_ptr(void) { return NULL; }
-unsigned int figure_rom_length(void) { return 0; }
+static unsigned char *s_fig_data = NULL;
+static unsigned int s_fig_len = 0;
+
+const unsigned char *figure_rom_ptr(void) { return s_fig_data; }
+unsigned int figure_rom_length(void) { return s_fig_len; }
+
+void ios_t7_figure_remove(void)
+{
+  t7_figure_set(0);
+  free(s_fig_data);
+  s_fig_data = NULL;
+  s_fig_len = 0;
+}
+
+bool ios_t7_figure_insert(const uint8_t *data, uint32_t len)
+{
+  ios_t7_figure_remove();
+  if (!data || len < 3) return false;
+  s_fig_data = malloc(len);
+  if (!s_fig_data) return false;
+  memcpy(s_fig_data, data, len);
+  s_fig_len = len;
+  t7_figure_set(1);
+  return true;
+}
 
 /* ----- ios_t7.h entry points ------------------------------------------- */
 
@@ -179,6 +205,7 @@ static uint32_t s_frac = 0;        /* 0..59: sixtieths of a cycle owed */
 bool ios_t7_start(const uint8_t *romBytes, uint32_t romLen)
 {
   if (!rom_load(romBytes, romLen)) return false;
+  ios_t7_figure_remove();   /* every start begins with nothing plugged in */
   memset(s_persist, 0, sizeof(s_persist));
   s_cycle_debt = 0; s_frac = 0;
   if (!t7_init()) return false;
@@ -254,6 +281,7 @@ bool ios_t7_sound_busy(void)
 
 void ios_t7_stop(void)
 {
+  ios_t7_figure_remove();
   t7_release();
   rom_unload();
 }

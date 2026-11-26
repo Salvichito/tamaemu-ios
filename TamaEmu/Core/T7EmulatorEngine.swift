@@ -116,6 +116,21 @@ final class T7EmulatorEngine {
     /// Stepping thread only (start() resets it before the thread exists).
     private var nav = icon_nav_t()
 
+    /// Gotchi Figure (Tama-Go): plugs `figure` (a figure's flash dump, see
+    /// FigureLibrary) in, or unplugs with nil. Like on the real toy, a
+    /// swap takes the old figure off first and waits a moment before the
+    /// new one goes on (Paramix waits 2.5 s too). Applied by the stepping
+    /// thread between frames. Safe from any thread.
+    func setFigure(_ figure: Data?) {
+        figureLock.lock(); pendingFigure = .some(figure); figureLock.unlock()
+    }
+    private let figureLock = NSLock()
+    /// .some(nil) = unplug. Read and cleared by the stepping thread.
+    private var pendingFigure: Data??
+    /// Stepping thread only: a figure waiting to go on, and the frame it may.
+    private var figureToInsert: (data: Data, atFrame: UInt64)?
+    private static let figureSwapFrames: UInt64 = 150
+
     init(onFrame: @escaping (T7ScreenState) -> Void, onCallDetected: (() -> Void)? = nil) {
         self.onFrame = onFrame
         self.onCallDetected = onCallDetected
@@ -128,7 +143,7 @@ final class T7EmulatorEngine {
     /// resumes with the right data already in place. Returns false if the
     /// core failed to start.
     @discardableResult
-    func start(romData: Data, eepromData: Data? = nil, stateData: Data? = nil, setClockTo clockTime: Date? = nil) -> Bool {
+    func start(romData: Data, eepromData: Data? = nil, stateData: Data? = nil, figure: Data? = nil, setClockTo clockTime: Date? = nil) -> Bool {
         guard thread == nil else { return true }
 
         let started = romData.withUnsafeBytes { raw in
@@ -157,6 +172,12 @@ final class T7EmulatorEngine {
                 _ = ios_t7_set_clock(Int32(now.hour ?? 0), Int32(now.minute ?? 0), Int32(now.second ?? 0))
             }
         }
+
+        // Already plugged in when the save resumes, as on the real toy:
+        // no "figure arrived" scene each time the app opens.
+        if let figure { Self.insertFigure(figure) }
+        figureToInsert = nil
+        figureLock.lock(); pendingFigure = nil; figureLock.unlock()
 
         lastButtonMask = 0
         liveFramesStepped = 0
@@ -294,6 +315,16 @@ final class T7EmulatorEngine {
                 lastButtonMask = mask
             }
 
+            figureLock.lock(); let figureRequest = pendingFigure; pendingFigure = nil; figureLock.unlock()
+            if let figureRequest {
+                ios_t7_figure_remove()
+                figureToInsert = figureRequest.map { ($0, liveFramesStepped + Self.figureSwapFrames) }
+            }
+            if let waiting = figureToInsert, liveFramesStepped >= waiting.atFrame {
+                Self.insertFigure(waiting.data)
+                figureToInsert = nil
+            }
+
             _ = ios_t7_step_frame()
             liveFramesStepped += 1
             if fast {
@@ -354,6 +385,13 @@ final class T7EmulatorEngine {
 }
 
 extension T7EmulatorEngine {
+    /// Only between start and stepping, or on the stepping thread.
+    fileprivate static func insertFigure(_ figure: Data) {
+        _ = figure.withUnsafeBytes { raw in
+            ios_t7_figure_insert(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(figure.count))
+        }
+    }
+
     /// Advances a saved state by up to `backlogSeconds` of emulated time
     /// (time the app was closed), within `wallClockBudget` real seconds --
     /// same contract as the other two engines' own catch-up. Simpler than
@@ -375,6 +413,7 @@ extension T7EmulatorEngine {
         romData: Data,
         eepromData: Data?,
         from stateData: Data,
+        figure: Data? = nil,
         backlogSeconds: TimeInterval,
         wallClockBudget: TimeInterval,
         shouldAbort: (() -> Bool)? = nil,
@@ -397,6 +436,8 @@ extension T7EmulatorEngine {
             ios_t7_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(stateData.count))
         }
         guard loaded else { return (stateData, eepromData, 0) }
+        // Time away passes with the figure still plugged in.
+        if let figure { insertFigure(figure) }
 
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(max(0, wallClockBudget) * 1_000_000_000)
         // Rounded down: a leftover fraction of a frame stays owed and is

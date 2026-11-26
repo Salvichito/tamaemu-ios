@@ -47,9 +47,44 @@ final class T7PlayViewModel: SaveBackupHost {
 
     private nonisolated static let catchUpWallClockBudget: TimeInterval = 10.0
 
+    /// Gotchi Figures (Tama-Go only): the imported ones, and which one is
+    /// plugged in (nil = none). Stays plugged in across app launches.
+    private(set) var figures: [TamaFigure] = []
+    private(set) var pluggedFigureID: String?
+
     init(device: TamaDevice) {
         selectedDevice = device
         isPaused = DevicePauseState.isPaused(device)
+        if device.id == "tamago" {
+            figures = FigureLibrary.all()
+            pluggedFigureID = FigureLibrary.pluggedID(for: device)
+        }
+    }
+
+    var supportsFigures: Bool { selectedDevice.id == "tamago" }
+    var pluggedFigure: TamaFigure? { figures.first { $0.id == pluggedFigureID } }
+
+    /// Plugs a figure in (nil unplugs). A running Tama sees it right away.
+    func plugIn(_ figure: TamaFigure?) {
+        guard figure?.id != pluggedFigureID else { return }
+        pluggedFigureID = figure?.id
+        FigureLibrary.setPluggedID(figure?.id, for: selectedDevice)
+        engine?.setFigure(figure.flatMap { FigureLibrary.data(for: $0) })
+    }
+
+    @discardableResult
+    func importFigure(from url: URL) throws -> TamaFigure {
+        let figure = try FigureLibrary.importFile(at: url)
+        figures = FigureLibrary.all()
+        // Re-importing the plugged one: the Tama gets the new copy.
+        if figure.id == pluggedFigureID { engine?.setFigure(FigureLibrary.data(for: figure)) }
+        return figure
+    }
+
+    func deleteFigure(_ figure: TamaFigure) {
+        if figure.id == pluggedFigureID { plugIn(nil) }
+        FigureLibrary.delete(figure)
+        figures = FigureLibrary.all()
     }
 
     static func removeDeviceData(_ device: TamaDevice) {
@@ -318,6 +353,8 @@ final class T7PlayViewModel: SaveBackupHost {
         let gate = EngineGate.gate(for: device)
         isLoading = true
 
+        let figureData = FigureLibrary.pluggedFigureData(for: device)
+
         Task.detached(priority: .userInitiated) { [weak self] in
             // Same shape as V1PlayViewModel.startEngine() -- see its
             // comments for why each step is where it is.
@@ -341,6 +378,7 @@ final class T7PlayViewModel: SaveBackupHost {
                         romData: romData,
                         eepromData: eeprom,
                         from: current,
+                        figure: figureData,
                         backlogSeconds: owed,
                         wallClockBudget: Self.catchUpWallClockBudget,
                         shouldAbort: { cancel.isCancelled }
@@ -385,7 +423,7 @@ final class T7PlayViewModel: SaveBackupHost {
                 })
                 guard newEngine.start(
                     romData: romData, eepromData: eepromToLoad, stateData: stateToLoad,
-                    setClockTo: discardingGap ? Date() : nil
+                    figure: figureData, setClockTo: discardingGap ? Date() : nil
                 ) else {
                     releaseGate()
                     self.errorMessage = "Couldn't start this Tama's emulator core."
@@ -487,5 +525,105 @@ extension T7PlayViewModel: ScreenRecordable {
         guard let image = screenshot() else { return nil }
         recordingFrameCache = (screenState, image)
         return image
+    }
+}
+
+// MARK: - Gotchi Figures
+
+/// A Tama-Go figure the user imported: their own dump of a figure's flash
+/// chip (nothing is bundled). Files live in Application Support, shared
+/// by every Tama-Go.
+struct TamaFigure: Identifiable, Hashable {
+    let id: String // file name without extension
+    let name: String
+    let isFullDump: Bool
+    let url: URL
+}
+
+enum FigureLibrary {
+    private static var directory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("TamaEmu/figures", isDirectory: true)
+    }
+
+    /// A single-figure dump is ~340 KB; a full dump with the figure's own
+    /// extras is 4 MB.
+    private static let fullDumpThreshold = 1024 * 1024
+    private static let maxSize = 16 * 1024 * 1024
+
+    struct Failure: LocalizedError {
+        let message: String
+        var errorDescription: String? { message }
+    }
+
+    static func all() -> [TamaFigure] {
+        let urls = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey])) ?? []
+        return urls.filter { $0.pathExtension == "bin" }.map { url in
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            let id = url.deletingPathExtension().lastPathComponent
+            let full = size > fullDumpThreshold
+            return TamaFigure(id: id, name: displayName(id: id, full: full), isFullDump: full, url: url)
+        }
+        .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    static func data(for figure: TamaFigure) -> Data? {
+        try? Data(contentsOf: figure.url)
+    }
+
+    /// Checks the file is a figure dump (the game looks for AA 55 at
+    /// byte 1, as the real Tama-Go does), then copies it in. Importing the
+    /// same figure again replaces it.
+    static func importFile(at url: URL) throws -> TamaFigure {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        var data = try Data(contentsOf: url)
+        let notAFigure = Failure(message: "This isn't a Tama-Go figure dump.")
+        guard data.count >= 3, data.count <= maxSize,
+              data[data.startIndex + 1] == 0xAA, data[data.startIndex + 2] == 0x55 else { throw notAFigure }
+        // Some dumping tools add a text trailer ("DONE") past the 4 MB chip.
+        let chip = 4 * 1024 * 1024
+        if data.count > chip, data.count <= chip + 16 { data = data.prefix(chip) }
+
+        let full = data.count > fullDumpThreshold
+        var base = cleanName(url.deletingPathExtension().lastPathComponent)
+        if base.isEmpty { base = "Figure \(data.count > 0x13 ? Int(data[data.startIndex + 0x13]) : 0)" }
+        let id = full ? "\(base) (full)" : base
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let dest = directory.appendingPathComponent(id.replacingOccurrences(of: "/", with: "-")).appendingPathExtension("bin")
+        try data.write(to: dest, options: .atomic)
+        return TamaFigure(id: dest.deletingPathExtension().lastPathComponent, name: displayName(id: id, full: full), isFullDump: full, url: dest)
+    }
+
+    static func delete(_ figure: TamaFigure) {
+        try? FileManager.default.removeItem(at: figure.url)
+    }
+
+    /// "(03)_Tama-Go_Mametchi" or "Tama-Go_Mametchi_Figure" -> "Mametchi".
+    private static func cleanName(_ raw: String) -> String {
+        var s = raw.replacingOccurrences(of: "_", with: " ")
+        s = s.replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: #"(?i)^tama-?go\s*"#, with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: #"(?i)\s*figure$"#, with: "", options: .regularExpression)
+        return s.trimmingCharacters(in: .whitespaces)
+    }
+
+    private static func displayName(id: String, full: Bool) -> String { id }
+
+    // Which figure each Tama-Go has plugged in.
+    private static func key(_ device: TamaDevice) -> String { "figure.plugged.\(device.id)" }
+
+    static func pluggedID(for device: TamaDevice) -> String? {
+        UserDefaults.standard.string(forKey: key(device))
+    }
+
+    static func setPluggedID(_ id: String?, for device: TamaDevice) {
+        UserDefaults.standard.set(id, forKey: key(device))
+    }
+
+    /// The plugged-in figure's dump, or nil (none, or its file is gone).
+    static func pluggedFigureData(for device: TamaDevice) -> Data? {
+        guard device.id == "tamago", let id = pluggedID(for: device) else { return nil }
+        return try? Data(contentsOf: directory.appendingPathComponent(id).appendingPathExtension("bin"))
     }
 }

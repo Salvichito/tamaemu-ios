@@ -273,6 +273,13 @@ struct SettingsView: View {
             if case .firstGen = target {
                 Button("Screen Style…") { showingScreenStyle = true }
             }
+            if case .t7(let vm) = target, vm.supportsFigures {
+                NavigationLink {
+                    FigureListView(viewModel: vm)
+                } label: {
+                    LabeledContent("Figures", value: vm.pluggedFigure?.name ?? "")
+                }
+            }
             if let colorViewModel, colorViewModel.supportsDownloads {
                 NavigationLink("Downloads") {
                     DownloadsView(device: device, viewModel: colorViewModel)
@@ -677,6 +684,62 @@ private struct BackupRow: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+}
+
+/// Settings → Tama-Go → Figures: the user's own figure dumps. Tap one to
+/// plug it in (tap again to unplug); the ⋯ menu does the same mid-play.
+struct FigureListView: View {
+    let viewModel: T7PlayViewModel
+    @State private var showingImporter = false
+    @State private var toast: String?
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(viewModel.figures) { figure in
+                    Button {
+                        viewModel.plugIn(viewModel.pluggedFigureID == figure.id ? nil : figure)
+                    } label: {
+                        HStack {
+                            Text(figure.name).foregroundStyle(.primary)
+                            Spacer()
+                            if viewModel.pluggedFigureID == figure.id {
+                                Image(systemName: "checkmark").foregroundStyle(.tint)
+                            }
+                        }
+                    }
+                }
+                .onDelete { offsets in
+                    for i in offsets { viewModel.deleteFigure(viewModel.figures[i]) }
+                }
+                Button {
+                    showingImporter = true
+                } label: {
+                    Label("Import a Figure…", systemImage: "plus")
+                }
+            } footer: {
+                Text("Import your own dumps of Gotchi Figures (.bin files). Tap one to plug it into your Tama-Go, and tap it again to take it out. You can also do this from ⋯ while playing.")
+            }
+        }
+        .navigationTitle("Figures")
+        .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in
+            switch result {
+            case .success(let urls):
+                var failed: [String] = []
+                for url in urls {
+                    do { try viewModel.importFigure(from: url) } catch { failed.append(url.lastPathComponent) }
+                }
+                if !failed.isEmpty {
+                    toast = "These aren't Tama-Go figure dumps: \(failed.joined(separator: ", "))"
+                }
+            case .failure(let error):
+                toast = error.localizedDescription
+            }
+        }
+        .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
+            Button("OK") { toast = nil }
         }
     }
 }

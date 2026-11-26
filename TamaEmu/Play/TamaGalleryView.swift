@@ -12,6 +12,8 @@ struct TamaGalleryView: View {
     @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
 
     @State private var showingSettings = false
+    @State private var showingFigureImporter = false
+    @State private var figureImportError: String?
     @State private var showingSetClockConfirm = false
     @State private var showingSetPointsPrompt = false
     @State private var pointsInputText = ""
@@ -380,8 +382,38 @@ struct TamaGalleryView: View {
     private func t7ToolbarContent(viewModel: T7PlayViewModel) -> some ToolbarContent {
         topBar {
             pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
+            if viewModel.supportsFigures {
+                figureMenu(viewModel: viewModel)
+            }
         }
         captureButtons(recordable: viewModel) { viewModel.screenshot() }
+    }
+
+    /// Plug a Gotchi Figure in or out (Tama-Go). Importing them is in
+    /// Settings → Figures; with none yet, this opens the file picker.
+    @ViewBuilder
+    private func figureMenu(viewModel: T7PlayViewModel) -> some View {
+        if viewModel.figures.isEmpty {
+            Button {
+                showingFigureImporter = true
+            } label: {
+                Label("Import a Figure…", systemImage: "figure.stand")
+            }
+        } else {
+            Picker(selection: Binding(
+                get: { viewModel.pluggedFigureID },
+                set: { id in viewModel.plugIn(viewModel.figures.first { $0.id == id }) }
+            )) {
+                Text("None").tag(String?.none)
+                ForEach(viewModel.figures) { figure in
+                    Text(figure.name).tag(Optional(figure.id))
+                }
+            } label: {
+                Label("Figure", systemImage: "figure.stand")
+                Text(viewModel.pluggedFigure?.name ?? "None")
+            }
+            .pickerStyle(.menu)
+        }
     }
 
     @ToolbarContentBuilder
@@ -510,6 +542,36 @@ struct TamaGalleryView: View {
     private var galleryStack: some View {
         NavigationStack {
             tabViewWithToolbar
+                .background(
+                    // Its own view: two file dialogs on one view can stop
+                    // either from presenting.
+                    Color.clear.fileImporter(
+                        isPresented: $showingFigureImporter,
+                        allowedContentTypes: [.data],
+                        allowsMultipleSelection: true
+                    ) { result in
+                        guard let device = selectedDevice, device.family == .t7 else { return }
+                        let vm = gallery.t7ViewModel(for: device)
+                        switch result {
+                        case .success(let urls):
+                            var imported: [TamaFigure] = []
+                            for url in urls { if let f = try? vm.importFigure(from: url) { imported.append(f) } }
+                            if imported.count < urls.count {
+                                figureImportError = "Some files weren't Tama-Go figure dumps."
+                            }
+                            // One figure picked from ⋯: plug it straight in.
+                            if urls.count == 1, let first = imported.first { vm.plugIn(first) }
+                        case .failure(let error):
+                            figureImportError = error.localizedDescription
+                        }
+                    }
+                )
+                .alert(
+                    figureImportError ?? "",
+                    isPresented: Binding(get: { figureImportError != nil }, set: { if !$0 { figureImportError = nil } })
+                ) {
+                    Button("OK") { figureImportError = nil }
+                }
                 .sheet(isPresented: $showingSettings) {
                     if let device = selectedDevice {
                         SettingsView(

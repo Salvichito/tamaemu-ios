@@ -215,6 +215,7 @@ enum BackgroundRefresh {
                 romData: romData,
                 eepromData: savedEeprom,
                 from: savedState,
+                figure: FigureLibrary.pluggedFigureData(for: device),
                 backlogSeconds: owed,
                 wallClockBudget: budget,
                 shouldAbort: shouldAbort,
