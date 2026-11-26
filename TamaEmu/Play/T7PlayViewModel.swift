@@ -238,6 +238,11 @@ final class T7PlayViewModel: SaveBackupHost {
         DevicePauseState.setPaused(false, for: selectedDevice)
     }
 
+    /// Tap-an-icon shortcut; see T7EmulatorEngine.openMenuIcon.
+    func openMenuIcon(light: Int) {
+        engine?.openMenuIcon(light: light)
+    }
+
     func pressButton(_ button: InputController.Button) {
         engine?.input.press(button)
     }

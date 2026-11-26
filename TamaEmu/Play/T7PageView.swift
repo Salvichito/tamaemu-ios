@@ -39,7 +39,8 @@ struct T7PageView: View {
             ZStack {
                 T7ScreenView(
                     state: viewModel.screenState,
-                    isFriends: viewModel.selectedDevice.id == "tamagotchi-friends"
+                    isFriends: viewModel.selectedDevice.id == "tamagotchi-friends",
+                    onIconTap: buttonsDisabled ? nil : { viewModel.openMenuIcon(light: $0) }
                 )
                     .frame(maxWidth: 280)
                     .glassScreenFrame(cornerRadius: T7ScreenView.cornerRadius, glare: true)
@@ -63,14 +64,24 @@ struct T7PageView: View {
                     .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
-            .contentShape(Rectangle())
-            // Tap to pause / hold to fast-forward, same gesture as
-            // V1PageView (see TamaPageView for why it's built this way).
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in beginPress() }
-                    .onEnded { _ in endPress() }
-            )
+            .overlay {
+                // Tap to pause / hold to fast-forward, same gesture as
+                // V1PageView (see TamaPageView for why it's built this
+                // way). Only the pixel band takes it: the icons above and
+                // below are tappable shortcuts.
+                GeometryReader { geo in
+                    let side = min(geo.size.width, geo.size.height)
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .frame(width: side, height: side * 0.6)
+                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in beginPress() }
+                                .onEnded { _ in endPress() }
+                        )
+                }
+            }
 
             if ambientBackgroundEnabled {
                 Text(viewModel.selectedDevice.title)

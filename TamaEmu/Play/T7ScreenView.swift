@@ -12,6 +12,10 @@ import SwiftUI
 struct T7ScreenView: View {
     let state: T7ScreenState
     var isFriends = false
+    /// Tap-an-icon shortcut (see T7EmulatorEngine.openMenuIcon): called
+    /// with the icon's index when a tappable one is tapped. nil draws
+    /// them inert.
+    var onIconTap: ((Int) -> Void)?
 
     static let cornerRadius: CGFloat = 16
     private static let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
@@ -46,6 +50,13 @@ struct T7ScreenView: View {
         "cross.case.fill", // 8 medicine
         "exclamationmark.circle.fill" // 9 attention
     ]
+
+    /// A steps through icons 0-8 on both toys; attention (9) only lights
+    /// by itself. The Tama-Go's Figure icon (4) is skipped by A without a
+    /// figure attached, so it stays a plain picture.
+    static func isTappable(_ icon: Int, isFriends: Bool) -> Bool {
+        icon < T7EmulatorEngine.menuIconCount && (isFriends || icon != 4)
+    }
 
     private var iconSymbolNames: [String] {
         isFriends ? Self.friendsSymbolNames : Self.tamaGoSymbolNames
@@ -83,13 +94,18 @@ struct T7ScreenView: View {
                 let column = CGFloat(i % 5)
                 let x = side * (0.1 + column * 0.2)
                 let y = i < 5 ? band / 2 : side - band / 2
-                Image(systemName: iconSymbolNames[i])
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: iconSize, height: iconSize)
-                    .foregroundStyle(Self.onColor)
-                    .opacity(state.icons[i] > 0 ? Double(state.icons[i]) / 3.0 * 0.65 + 0.35 : 0.12)
-                    .position(x: x, y: y)
+                TappableIcon(
+                    enabled: onIconTap != nil && Self.isTappable(i, isFriends: isFriends),
+                    onTap: { onIconTap?(i) }
+                ) {
+                    Image(systemName: iconSymbolNames[i])
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: iconSize, height: iconSize)
+                        .foregroundStyle(Self.onColor)
+                        .opacity(state.icons[i] > 0 ? Double(state.icons[i]) / 3.0 * 0.65 + 0.35 : 0.12)
+                }
+                .position(x: x, y: y)
             }
         }
         .frame(width: side, height: side)

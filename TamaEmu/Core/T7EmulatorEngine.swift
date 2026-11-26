@@ -1,5 +1,6 @@
 import AVFoundation
 import CT7Emu
+import CTamaLib // icon_nav.c, the tap-an-icon shortcut shared with first-gen
 import Foundation
 
 /// A Tama-Go / Tamagotchi Friends (T7Emu) screen snapshot: 48x31 pixels at
@@ -89,6 +90,21 @@ final class T7EmulatorEngine {
     private static let audioTargetSamples: UInt32 = 1920
     private var audioCapturing = false
 
+    /// Tap-an-icon shortcut (icon_nav.c, same one the first-gen engine
+    /// uses): the stepping thread presses the buttons for the user until
+    /// `light` is selected, then opens it. A steps through icons 0-8 on
+    /// both toys (measured headless 2026-11-25). Any press of the user's
+    /// own cancels it. Safe from any thread.
+    func openMenuIcon(light: Int) {
+        guard (0..<Self.menuIconCount).contains(light) else { return }
+        navLock.lock(); pendingNav = UInt8(light); navLock.unlock()
+    }
+    static let menuIconCount = 9
+    private let navLock = NSLock()
+    private var pendingNav: UInt8?
+    /// Stepping thread only (start() resets it before the thread exists).
+    private var nav = icon_nav_t()
+
     init(onFrame: @escaping (T7ScreenState) -> Void, onCallDetected: (() -> Void)? = nil) {
         self.onFrame = onFrame
         self.onCallDetected = onCallDetected
@@ -133,6 +149,8 @@ final class T7EmulatorEngine {
 
         lastButtonMask = 0
         liveFramesStepped = 0
+        nav = icon_nav_t()
+        navLock.lock(); pendingNav = nil; navLock.unlock()
         fastForwardExtraFrames = 0
         stopLock.lock(); shouldStop = false; fastForward = false; stopLock.unlock()
         let t = Thread { [weak self] in
@@ -238,7 +256,22 @@ final class T7EmulatorEngine {
             stopLock.lock(); let stop = shouldStop; let fast = fastForward; stopLock.unlock()
             if stop { break }
 
-            let mask = input.currentMask()
+            var mask = input.currentMask()
+            // Tap-an-icon shortcut: while it runs it drives the buttons
+            // itself, timed by emulated frames and reading last frame's
+            // icons, until the user presses anything.
+            let emulatedMicros = UInt32(truncatingIfNeeded: liveFramesStepped &* 16_667)
+            navLock.lock(); let request = pendingNav; pendingNav = nil; navLock.unlock()
+            if let request { icon_nav_start(&nav, request, UInt8(Self.menuIconCount), emulatedMicros) }
+            if icon_nav_active(&nav) {
+                if mask != 0 {
+                    icon_nav_cancel(&nav)
+                } else {
+                    var lights: UInt16 = 0
+                    for i in 0..<icons.count where icons[i] != 0 { lights |= UInt16(1 << i) }
+                    mask = icon_nav_tick(&nav, emulatedMicros, lights)
+                }
+            }
             if mask != lastButtonMask {
                 let changed = mask ^ lastButtonMask
                 // InputController's bit order (A=0, B=1, C=2) matches

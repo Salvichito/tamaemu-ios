@@ -241,7 +241,8 @@ private struct LampButton<Icon: View>: View {
 /// toy's own buttons to get there, see icon_nav.c). A comfortable hit
 /// area around the small glyph, a quick press-in and a light tap of
 /// haptics; inert when not enabled.
-private struct TappableIcon<Content: View>: View {
+/// Also used by T7ScreenView.
+struct TappableIcon<Content: View>: View {
     let enabled: Bool
     let onTap: () -> Void
     @ViewBuilder let content: Content

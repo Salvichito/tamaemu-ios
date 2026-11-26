@@ -111,6 +111,8 @@ final class V1EmulatorEngine {
     }
     private let navLock = NSLock()
     private var pendingNav: (light: UInt8, count: UInt8)?
+    /// Stepping thread only (start() resets it before the thread exists).
+    private var nav = icon_nav_t()
 
     /// For ScreenRecorder -- same pass-throughs the CTama engine has.
     var audioFormat: AVAudioFormat { audioOutput.outputFormat }
@@ -176,7 +178,7 @@ final class V1EmulatorEngine {
         }
 
         lastButtonMask = 0
-        icon_nav_cancel()
+        nav = icon_nav_t()
         navLock.lock(); pendingNav = nil; navLock.unlock()
         fastForwardBeganAt = nil
         fastForwardExtraSeconds = 0
@@ -271,15 +273,15 @@ final class V1EmulatorEngine {
             // Tap-an-icon shortcut: while it runs it drives the buttons
             // itself, timed by the core's own clock, until the user
             // presses anything.
-            navLock.lock(); let nav = pendingNav; pendingNav = nil; navLock.unlock()
-            if let nav { icon_nav_start(nav.light, nav.count, ios_hal_elapsed_us()) }
-            if icon_nav_active() {
+            navLock.lock(); let request = pendingNav; pendingNav = nil; navLock.unlock()
+            if let request { icon_nav_start(&nav, request.light, request.count, ios_hal_elapsed_us()) }
+            if icon_nav_active(&nav) {
                 if mask != 0 {
-                    icon_nav_cancel()
+                    icon_nav_cancel(&nav)
                 } else {
-                    var lights: UInt8 = 0
-                    for i in 0..<8 where ios_hal_get_icon(UInt8(i)) { lights |= UInt8(1 << i) }
-                    mask = icon_nav_tick(ios_hal_elapsed_us(), lights)
+                    var lights: UInt16 = 0
+                    for i in 0..<8 where ios_hal_get_icon(UInt8(i)) { lights |= UInt16(1 << i) }
+                    mask = icon_nav_tick(&nav, ios_hal_elapsed_us(), lights)
                 }
             }
             let changed = mask ^ lastButtonMask
