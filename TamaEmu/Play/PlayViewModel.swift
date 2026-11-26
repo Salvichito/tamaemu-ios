@@ -123,10 +123,11 @@ final class PlayViewModel: SaveBackupHost {
             // would measure the entire paused interval as a backlog to
             // fast-forward through, the opposite of what pausing means.
             SavePaths(device: selectedDevice).markSyncedNow()
-            // ...but the Tama's own clock should still show the real time,
-            // not the moment it was paused. Jumping it (like "Sync Clock to
-            // Now") moves only the clock — nothing ages in between.
-            startEngine(syncClockToNow: true)
+            // The Tama's own clock is NOT jumped to now: players keep some
+            // Tamas on a deliberate offset (so bedtime lands when they can
+            // play), and pausing must not undo that. "Sync Clock to Now"
+            // in ⋯ is the manual way to catch the clock up.
+            startEngine()
         }
     }
 

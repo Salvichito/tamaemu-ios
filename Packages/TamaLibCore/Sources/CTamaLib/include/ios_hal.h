@@ -100,6 +100,15 @@ void ios_hal_set_button(int btn, bool pressed);
 #define IOS_HAL_LAMP_STATUS     (1 << 5)
 uint8_t ios_hal_get_lamps(void);
 
+/* Sets the toy's own clock (hour 0-23), for the manual "Sync Clock to
+ * Now": the clock jumps, the pet lives none of the time in between. Writes the
+ * time straight into the ROM's clock RAM, which is in a different place and
+ * format on each toy (measured headless 2026-11-26, see hal_ios.c). Call
+ * only after ios_hal_load_state() and before stepping starts. Returns false,
+ * changing nothing, for a toy whose clock isn't known (Digimon) or whose
+ * clock RAM doesn't hold a valid time yet (never set). */
+bool ios_hal_set_clock(int hour, int minute, int second);
+
 bool ios_hal_tone_on(void);
 uint32_t ios_hal_tone_freq_dhz(void); /* deci-hertz, matches set_frequency()'s unit */
 

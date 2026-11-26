@@ -374,14 +374,26 @@ struct TamaGalleryView: View {
     private func v1ToolbarContent(viewModel: V1PlayViewModel) -> some ToolbarContent {
         topBar {
             pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
+            if viewModel.canSyncClock { syncClockButton }
         }
         captureButtons(recordable: viewModel) { viewModel.screenshot() }
+    }
+
+    /// Same item on every model whose clock can be set; the confirmation
+    /// dialog decides which page it applies to.
+    private var syncClockButton: some View {
+        Button {
+            showingSetClockConfirm = true
+        } label: {
+            Label("Sync Clock to Now", systemImage: "clock.arrow.2.circlepath")
+        }
     }
 
     @ToolbarContentBuilder
     private func t7ToolbarContent(viewModel: T7PlayViewModel) -> some ToolbarContent {
         topBar {
             pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
+            syncClockButton
             if viewModel.supportsFigures {
                 figureMenu(viewModel: viewModel)
             }
@@ -439,11 +451,7 @@ struct TamaGalleryView: View {
     private func topToolbarContent(viewModel: PlayViewModel) -> some ToolbarContent {
         topBar {
             pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
-            Button {
-                showingSetClockConfirm = true
-            } label: {
-                Label("Sync Clock to Now", systemImage: "clock.arrow.2.circlepath")
-            }
+            syncClockButton
             if NearbyLinkSession.supports(viewModel.selectedDevice) {
                 Button {
                     showingNearbyLink = true
@@ -587,7 +595,13 @@ struct TamaGalleryView: View {
                     titleVisibility: .visible
                 ) {
                     Button("Set clock", role: .destructive) {
-                        if let viewModel = selectedViewModel { syncClockToNow(for: viewModel) }
+                        if let viewModel = selectedViewModel {
+                            syncClockToNow(for: viewModel)
+                        } else if let viewModel = selectedV1ViewModel {
+                            viewModel.syncClockToNow()
+                        } else if let device = selectedDevice, device.family == .t7 {
+                            gallery.t7ViewModel(for: device).syncClockToNow()
+                        }
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {

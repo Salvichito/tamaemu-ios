@@ -408,6 +408,104 @@ uint8_t ios_hal_get_lamps(void)
 	return lamps;
 }
 
+/* Every one of these toys keeps its clock as a run of RAM nibbles: seconds
+ * (ones, tens), minutes (ones, tens), then the hour. Only where the run
+ * starts and how the hour is written differ. Found 2026-11-26 by running
+ * each ROM headless for 26 emulated hours after setting the clock and
+ * watching which nibbles change every 1 s / 10 s / 1 min / 10 min / 1 h:
+ *   P1, P2, Angel, Morino  at 0x010: hour 0-23 as one binary byte (lo, hi)
+ *   Genjintch, Mothra,
+ *   Yasashii              at 0x01A: hour 1-12, then a PM flag nibble (0/1)
+ *   Tamaotch              at 0x102: hour 0-11 as two decimal digits, PM =
+ *                                   bit 3 of the tens nibble
+ *   Umino                 at 0x011: hour 1-12 as two decimal digits, then
+ *                                   the same hour 0-23 as two more, and a
+ *                                   PM flag (0/1) just before, at 0x010
+ *                                   (without it the ROM rebuilt the 0-23
+ *                                   copy 12 hours off at the next noon)
+ * Digimon's matching run counts hours past 24 and never wraps, so it isn't
+ * a wall clock; left alone. */
+enum { CLK_NONE, CLK_BIN24, CLK_12_PMFLAG, CLK_BCD11_PMBIT, CLK_UMINO };
+
+static void s_ram_put(u12_t addr, u4_t v)
+{
+	MEM_BUFFER_TYPE *mem = cpu_get_state()->memory;
+	SET_RAM_MEMORY(mem, addr, v);
+}
+
+static u4_t s_ram_get(u12_t addr)
+{
+	MEM_BUFFER_TYPE *mem = cpu_get_state()->memory;
+	return GET_RAM_MEMORY(mem, addr);
+}
+
+bool ios_hal_set_clock(int hour, int minute, int second)
+{
+	if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return false;
+	int kind;
+	u12_t b;
+	switch (s_model) {
+	case IOS_HAL_MODEL_P1:               kind = CLK_BIN24;       b = 0x010; break;
+	case IOS_HAL_MODEL_GENJINTCH:
+	case IOS_HAL_MODEL_MOTHRA:
+	case IOS_HAL_MODEL_YASASHII:         kind = CLK_12_PMFLAG;   b = 0x01A; break;
+	case IOS_HAL_MODEL_TAMAOTCH:         kind = CLK_BCD11_PMBIT; b = 0x102; break;
+	case IOS_HAL_MODEL_ICON_PER_SEGMENT: kind = CLK_UMINO;       b = 0x011; break;
+	default: return false;
+	}
+
+	/* Refuse unless what's there already reads as a valid time, so a wrong
+	 * guess about a ROM can't scribble over unrelated RAM. */
+	u4_t s0 = s_ram_get(b), s1 = s_ram_get(b + 1), m0 = s_ram_get(b + 2), m1 = s_ram_get(b + 3);
+	u4_t h0 = s_ram_get(b + 4), h1 = s_ram_get(b + 5);
+	if (s0 > 9 || s1 > 5 || m0 > 9 || m1 > 5) return false;
+	int h12 = hour % 12 == 0 ? 12 : hour % 12;
+	switch (kind) {
+	case CLK_BIN24:
+		if ((h1 << 4 | h0) > 23) return false;
+		break;
+	case CLK_12_PMFLAG:
+		if (h0 < 1 || h0 > 12 || h1 > 1) return false;
+		break;
+	case CLK_BCD11_PMBIT:
+		if (h0 > 9 || (h1 & 7) > 1 || (h1 & 7) * 10 + h0 > 11) return false;
+		break;
+	case CLK_UMINO: {
+		u4_t g0 = s_ram_get(b + 6), g1 = s_ram_get(b + 7);
+		int v12 = h1 * 10 + h0, v24 = g1 * 10 + g0;
+		if (h0 > 9 || g0 > 9 || v12 < 1 || v12 > 12 || v24 > 23 || s_ram_get(b - 1) > 1) return false;
+		break;
+	}
+	}
+
+	s_ram_put(b,     (u4_t)(second % 10));
+	s_ram_put(b + 1, (u4_t)(second / 10));
+	s_ram_put(b + 2, (u4_t)(minute % 10));
+	s_ram_put(b + 3, (u4_t)(minute / 10));
+	switch (kind) {
+	case CLK_BIN24:
+		s_ram_put(b + 4, (u4_t)(hour & 0xF));
+		s_ram_put(b + 5, (u4_t)(hour >> 4));
+		break;
+	case CLK_12_PMFLAG:
+		s_ram_put(b + 4, (u4_t)h12);
+		s_ram_put(b + 5, hour >= 12);
+		break;
+	case CLK_BCD11_PMBIT:
+		s_ram_put(b + 4, (u4_t)(hour % 12 % 10));
+		s_ram_put(b + 5, (u4_t)(hour % 12 / 10 | (hour >= 12 ? 8 : 0)));
+		break;
+	case CLK_UMINO:
+		s_ram_put(b + 4, (u4_t)(h12 % 10));
+		s_ram_put(b + 5, (u4_t)(h12 / 10));
+		s_ram_put(b + 6, (u4_t)(hour % 10));
+		s_ram_put(b + 7, (u4_t)(hour / 10));
+		s_ram_put(b - 1, hour >= 12);
+		break;
+	}
+	return true;
+}
+
 bool ios_hal_tone_on(void)
 {
 	return s_tone_on;

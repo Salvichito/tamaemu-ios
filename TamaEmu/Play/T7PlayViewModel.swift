@@ -109,10 +109,20 @@ final class T7PlayViewModel: SaveBackupHost {
         if isPaused {
             stopEngine()
         } else {
-            // Nothing is owed for the time spent paused, but the Tama's
-            // clock still jumps to the real time (same as a color Tama).
+            // Nothing is owed for the time spent paused, and the clock is
+            // left where it was: players keep some Tamas on a deliberate
+            // offset. "Sync Clock to Now" (⋯) is the manual catch-up.
             startEngine(discardingGap: true)
         }
+    }
+
+    /// ⋯ "Sync Clock to Now": the clock jumps to the real time and nothing
+    /// ages in between: a quick stop and restart with the clock set on the
+    /// way back in. Never automatic (not on unpause).
+    func syncClockToNow() {
+        guard engine != nil, !isPaused else { return }
+        stopEngine()
+        startEngine(discardingGap: true, syncClock: true)
     }
 
     /// Holding the screen down. A no-op without a running engine.
@@ -339,7 +349,7 @@ final class T7PlayViewModel: SaveBackupHost {
 
     /// `discardingGap` is for unpausing: the time spent paused is not
     /// owed (see V1PlayViewModel.startEngine(discardingGap:)).
-    private func startEngine(discardingGap: Bool = false) {
+    private func startEngine(discardingGap: Bool = false, syncClock: Bool = false) {
         let device = selectedDevice
         let paths = SavePaths(device: device)
         guard let romData = try? Data(contentsOf: paths.importedROMPath) else {
@@ -423,7 +433,7 @@ final class T7PlayViewModel: SaveBackupHost {
                 })
                 guard newEngine.start(
                     romData: romData, eepromData: eepromToLoad, stateData: stateToLoad,
-                    figure: figureData, setClockTo: discardingGap ? Date() : nil
+                    figure: figureData, setClockTo: syncClock ? Date() : nil
                 ) else {
                     releaseGate()
                     self.errorMessage = "Couldn't start this Tama's emulator core."

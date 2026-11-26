@@ -92,9 +92,23 @@ final class V1PlayViewModel: SaveBackupHost {
             stopEngine()
         } else {
             // Nothing is owed for the time spent paused -- see
-            // startEngine(discardingGap:).
+            // startEngine(discardingGap:). The clock is left where it was
+            // (players keep some Tamas on a deliberate offset); "Sync
+            // Clock to Now" in ⋯ is the manual catch-up.
             startEngine(discardingGap: true)
         }
+    }
+
+    /// ⋯ "Sync Clock to Now": the Tama's clock jumps to the real time and
+    /// nothing ages in between: a quick stop and restart with the clock set
+    /// on the way back in. Never automatic (not on unpause). Not offered on the Digimon,
+    /// whose clock the core can't set (ios_hal_set_clock).
+    var canSyncClock: Bool { !selectedDevice.id.hasPrefix("digimon") }
+
+    func syncClockToNow() {
+        guard engine != nil, !isPaused, canSyncClock else { return }
+        stopEngine()
+        startEngine(discardingGap: true, syncClock: true)
     }
 
     /// Holding the screen down. A no-op without a running engine.
@@ -283,7 +297,7 @@ final class V1PlayViewModel: SaveBackupHost {
     /// of the paused time counts as time away. The stamp is moved inside
     /// the gate, not before it, so a catch-up that was interrupted by the
     /// pause and is still writing its own progress can't overwrite it.
-    private func startEngine(discardingGap: Bool = false) {
+    private func startEngine(discardingGap: Bool = false, syncClock: Bool = false) {
         let device = selectedDevice
         let paths = SavePaths(device: device)
         guard let romData = try? Data(contentsOf: paths.importedROMPath) else {
@@ -368,7 +382,8 @@ final class V1PlayViewModel: SaveBackupHost {
                 }, onCallDetected: {
                     NotificationScheduler.fireCallingNotification(device: device)
                 })
-                guard newEngine.start(romData: romData, savedState: stateToLoad) else {
+                guard newEngine.start(romData: romData, savedState: stateToLoad,
+                                      setClockTo: syncClock ? Date() : nil) else {
                     releaseGate()
                     self.errorMessage = "Couldn't start this Tama's emulator core."
                     self.isLoading = false

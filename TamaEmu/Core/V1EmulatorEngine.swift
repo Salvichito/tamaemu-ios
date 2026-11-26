@@ -138,7 +138,7 @@ final class V1EmulatorEngine {
     /// restores and why that's safe to do between those two points.
     /// Returns false if the core failed to start.
     @discardableResult
-    func start(romData: Data, savedState: Data? = nil) -> Bool {
+    func start(romData: Data, savedState: Data? = nil, setClockTo clockTime: Date? = nil) -> Bool {
         guard thread == nil else { return true }
 
         romWords = Self.parseROM(romData)
@@ -176,6 +176,14 @@ final class V1EmulatorEngine {
         if let savedState {
             _ = savedState.withUnsafeBytes { raw in
                 ios_hal_load_state(raw.bindMemory(to: UInt8.self).baseAddress, UInt32(savedState.count))
+            }
+            // ⋯ "Sync Clock to Now": the clock jumps to the given time (the
+            // pet lives none of the time in between). Only on top of a loaded save: a fresh boot is
+            // still in its own clock-setting screen. The core refuses for
+            // Digimon and for a clock that was never set.
+            if let clockTime {
+                let now = Calendar.current.dateComponents([.hour, .minute, .second], from: clockTime)
+                _ = ios_hal_set_clock(Int32(now.hour ?? 0), Int32(now.minute ?? 0), Int32(now.second ?? 0))
             }
         }
 
