@@ -74,9 +74,9 @@ private struct GlassScreenFrame: ViewModifier {
                                 startPoint: .top,
                                 endPoint: .bottom
                             ),
-                            lineWidth: 5
+                            lineWidth: 2.5
                         )
-                        .blur(radius: 3)
+                        .blur(radius: 1.5)
                     if glare {
                         LinearGradient(
                             stops: [
