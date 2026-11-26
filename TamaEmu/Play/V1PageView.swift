@@ -42,7 +42,8 @@ struct V1PageView: View {
                     deviceID: viewModel.selectedDevice.id,
                     onButton: buttonsDisabled ? nil : { button, down in
                         if down { viewModel.pressButton(button) } else { viewModel.releaseButton(button) }
-                    }
+                    },
+                    onIconTap: buttonsDisabled ? nil : { viewModel.openMenuIcon(light: $0) }
                 )
                 .frame(maxWidth: 280)
                 .glassScreenFrame(cornerRadius: P1ScreenView.cornerRadius, glare: true)
@@ -68,9 +69,9 @@ struct V1PageView: View {
             }
             .overlay {
                 // Tap to pause / hold to fast-forward. On a model whose
-                // icons are buttons (Yasashii), only the middle band around
-                // the pixels takes it, so pressing a care button doesn't
-                // also pause the Tama.
+                // icons take touches (Yasashii, tappable P1 icons), only
+                // the middle band around the pixels takes it, so pressing
+                // an icon doesn't also pause the Tama.
                 GeometryReader { geo in
                     let side = min(geo.size.width, geo.size.height)
                     Color.clear
@@ -115,8 +116,11 @@ struct V1PageView: View {
 
     private var buttonsDisabled: Bool { viewModel.isLoading || viewModel.isPaused }
 
+    /// Icons that take touches (Yasashii's care buttons, or tappable
+    /// menu icons): pause/fast-forward then only listens to the middle band.
     private var hasScreenButtons: Bool {
-        V1IconProfile.forDevice(viewModel.selectedDevice.id).hasButtons
+        let id = viewModel.selectedDevice.id
+        return V1IconProfile.forDevice(id).hasButtons || V1IconProfile.tappableMenuLights(for: id) != nil
     }
 
     private func beginPress() {

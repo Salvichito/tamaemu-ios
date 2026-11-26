@@ -21,6 +21,10 @@ struct P1ScreenView: View {
     /// buttons): called with true on touch-down and false on release.
     /// nil draws them inert, as in screenshots and recordings.
     var onButton: ((InputController.Button, Bool) -> Void)?
+    /// For a model with tappable menu icons (see
+    /// V1IconProfile.tappableMenuLights): called with the core's light
+    /// index when one is tapped. nil draws them inert.
+    var onIconTap: ((Int) -> Void)?
     /// False for screenshots and video, which can't carry transparent
     /// corners -- see renderP1Snapshot.
     var rounded: Bool = true
@@ -76,9 +80,12 @@ struct P1ScreenView: View {
                     )
                     .position(x: slot.x * side, y: slot.y * side)
                 } else {
-                    icon(sheetSlot: i, asset: slot.asset)
-                        .opacity(state.icons[slot.light] ? 1.0 : 0.35)
-                        .position(x: slot.x * side, y: slot.y * side)
+                    let tappable = onIconTap != nil && slot.light < (V1IconProfile.tappableMenuLights(for: deviceID) ?? 0)
+                    TappableIcon(enabled: tappable, onTap: { onIconTap?(slot.light) }) {
+                        icon(sheetSlot: i, asset: slot.asset)
+                            .opacity(state.icons[slot.light] ? 1.0 : 0.35)
+                    }
+                    .position(x: slot.x * side, y: slot.y * side)
                 }
             }
         }
@@ -228,6 +235,39 @@ private struct LampButton<Icon: View>: View {
 #Preview {
     P1ScreenView(state: .blank, deviceID: "p1")
         .padding()
+}
+
+/// A menu icon that opens its menu when tapped (the engine presses the
+/// toy's own buttons to get there, see icon_nav.c). A comfortable hit
+/// area around the small glyph, a quick press-in and a light tap of
+/// haptics; inert when not enabled.
+private struct TappableIcon<Content: View>: View {
+    let enabled: Bool
+    let onTap: () -> Void
+    @ViewBuilder let content: Content
+
+    @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
+    @State private var taps = 0
+    @State private var pressed = false
+
+    var body: some View {
+        content
+            .frame(width: 56, height: 56)
+            .contentShape(Rectangle())
+            .scaleEffect(pressed ? 0.85 : 1)
+            .animation(.spring(duration: 0.25, bounce: 0.5), value: pressed)
+            .sensoryFeedback(trigger: taps) { _, _ in hapticsEnabled ? .impact(weight: .light) : nil }
+            .onTapGesture {
+                taps += 1
+                pressed = true
+                onTap()
+                Task {
+                    try? await Task.sleep(for: .milliseconds(120))
+                    pressed = false
+                }
+            }
+            .allowsHitTesting(enabled)
+    }
 }
 
 // MARK: - Per-model icon profiles
@@ -389,6 +429,16 @@ struct V1IconProfile {
     /// of A/B/C: select (B pin) and cancel (C pin).
     static func padButtons(for deviceID: String) -> [InputController.Button] {
         deviceID == "yasashii" ? [.b, .c] : [.a, .b, .c]
+    }
+
+    /// How many menu lights A cycles through on a model whose icons can
+    /// be tapped to open their menu directly (icon_nav.c presses the
+    /// buttons), or nil where that isn't offered. P1/P2 only for now:
+    /// measured headless 2026-11-25 (100/100 random targets reached).
+    /// Angel, Umino and Genjintch measured the same 0-6 cycle and are the
+    /// natural next ones to try.
+    static func tappableMenuLights(for deviceID: String) -> Int? {
+        deviceID == "p1" ? 7 : nil
     }
 
     /// True when this model's icons are buttons (see `onButton`).

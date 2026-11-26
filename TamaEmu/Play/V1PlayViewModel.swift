@@ -203,6 +203,12 @@ final class V1PlayViewModel: SaveBackupHost {
         engine?.input.release(button)
     }
 
+    /// Tap-an-icon shortcut; see V1IconProfile.tappableMenuLights.
+    func openMenuIcon(light: Int) {
+        guard let count = V1IconProfile.tappableMenuLights(for: selectedDevice.id) else { return }
+        engine?.openMenuIcon(light: light, count: count)
+    }
+
     // MARK: - Screenshot / video
 
     /// The screen as a picture, at the size it's drawn in the gallery.

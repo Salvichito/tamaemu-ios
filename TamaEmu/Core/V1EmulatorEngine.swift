@@ -101,6 +101,17 @@ final class V1EmulatorEngine {
         }
     }
 
+    /// Tap-an-icon shortcut (icon_nav.c): the stepping thread presses the
+    /// buttons for the user until `light` is selected, then opens it.
+    /// `count` is how many lights A cycles through. Any press of the
+    /// user's own cancels it. Safe from any thread.
+    func openMenuIcon(light: Int, count: Int) {
+        guard (0..<count).contains(light) else { return }
+        navLock.lock(); pendingNav = (UInt8(light), UInt8(count)); navLock.unlock()
+    }
+    private let navLock = NSLock()
+    private var pendingNav: (light: UInt8, count: UInt8)?
+
     /// For ScreenRecorder -- same pass-throughs the CTama engine has.
     var audioFormat: AVAudioFormat { audioOutput.outputFormat }
 
@@ -165,6 +176,8 @@ final class V1EmulatorEngine {
         }
 
         lastButtonMask = 0
+        icon_nav_cancel()
+        navLock.lock(); pendingNav = nil; navLock.unlock()
         fastForwardBeganAt = nil
         fastForwardExtraSeconds = 0
         stopLock.lock(); shouldStop = false; stopLock.unlock()
@@ -254,7 +267,21 @@ final class V1EmulatorEngine {
             // ~33ms for no reason -- the actual cause of P1/P2 feeling
             // laggy, not the CTama engine's frame ordering (that engine
             // doesn't even run this device; see DeviceCatalog's .v1 family).
-            let mask = input.currentMask()
+            var mask = input.currentMask()
+            // Tap-an-icon shortcut: while it runs it drives the buttons
+            // itself, timed by the core's own clock, until the user
+            // presses anything.
+            navLock.lock(); let nav = pendingNav; pendingNav = nil; navLock.unlock()
+            if let nav { icon_nav_start(nav.light, nav.count, ios_hal_elapsed_us()) }
+            if icon_nav_active() {
+                if mask != 0 {
+                    icon_nav_cancel()
+                } else {
+                    var lights: UInt8 = 0
+                    for i in 0..<8 where ios_hal_get_icon(UInt8(i)) { lights |= UInt8(1 << i) }
+                    mask = icon_nav_tick(ios_hal_elapsed_us(), lights)
+                }
+            }
             let changed = mask ^ lastButtonMask
             if changed != 0 {
                 // InputController's bit order (A=0, B=1, C=2, then the
