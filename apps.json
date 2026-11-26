@@ -11,8 +11,17 @@
       "localizedDescription": "An iOS emulator for Tamagotchi-family devices. Does not include any firmware/ROM — bring your own.",
       "iconURL": "https://raw.githubusercontent.com/Salvichito/tomomix/main/apps-icon.png",
       "tintColor": "FF6FA5",
-      "size": 25329026,
+      "size": 65588530,
       "versions": [
+        {
+          "version": "1.5",
+          "buildVersion": "12",
+          "date": "2026-11-26T00:00:00Z",
+          "localizedDescription": "Tama-Go and Tamagotchi Friends get sound, pause, fast-forward, calling notifications, screenshots and video, a home-screen widget and Restart. Tap a menu icon to open it on Tama-Go/Friends and first-generation models. One Settings screen for every pet, with light/dark mode always within reach. Themes, a glass screen bezel and a choice of app icons (iOS 26+). Tomomix gets backups, export/import and a widget. Fixes for the Yasashii, Mothra, Genjintch and Tamaotch, and iOS 18 support again. Everything is unlocked in this build.",
+          "downloadURL": "https://github.com/Salvichito/tomomix/releases/download/v1.5-build12/TamaEmu.ipa",
+          "size": 65588530,
+          "minOSVersion": "18.0"
+        },
         {
           "version": "1.5",
           "buildVersion": "9",
