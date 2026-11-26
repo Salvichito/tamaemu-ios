@@ -26,8 +26,8 @@ enum SettingsTarget {
         if case .firstGen = self { false } else { true }
     }
 
-    /// Restart (soft reset).
-    var supportsRestart: Bool { isColor }
+    /// Restart (soft reset). Every model has one (a baseline feature).
+    var supportsRestart: Bool { !isTomomix }
 
     @MainActor func prepareExportURL() -> URL? {
         switch self {
@@ -48,7 +48,24 @@ enum SettingsTarget {
     }
 
     @MainActor func restart() {
-        if case .color(let vm) = self { vm.restartTama() }
+        switch self {
+        case .color(let vm): vm.restartTama()
+        case .firstGen(let vm): vm.restartTama()
+        case .t7(let vm): vm.restartTama()
+        case .tomomix: break // its restart is "Send a New Shooting Star" in ⋯
+        }
+    }
+
+    /// What Restart does to the game, in the confirmation.
+    var restartMessage: String {
+        switch self {
+        case .color, .tomomix:
+            "Same save data, but the CPU and clock reset — like taking the battery out and back in."
+        case .firstGen:
+            "Like taking the battery out and back in: this model keeps everything in memory, so the game starts over from the beginning. What's there now is kept in Backups, so you can undo this."
+        case .t7:
+            "Like pressing the toy's reset button. What's there now is kept in Backups, so you can undo this."
+        }
     }
 }
 
@@ -199,7 +216,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Same save data, but the CPU and clock reset — like taking the battery out and back in.")
+                Text(target.restartMessage)
             }
             .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
                 Button("OK") { toast = nil }

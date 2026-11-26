@@ -236,6 +236,19 @@ final class T7PlayViewModel: SaveBackupHost {
         startEngine()
     }
 
+    /// Restart: like the toy's reset button. The game save (EEPROM) is
+    /// kept; the CPU/RAM snapshot is dropped so it boots fresh from that
+    /// save -- the same thing importing a save without a snapshot does.
+    /// What's there is backed up first, so Backups can undo this.
+    func restartTama() {
+        stopEngine()
+        let paths = SavePaths(device: selectedDevice)
+        paths.makeBackup(reason: .beforeRestart)
+        try? FileManager.default.removeItem(at: paths.t7StatePath)
+        unpauseQuietly()
+        startEngine(discardingGap: true)
+    }
+
     private func unpauseQuietly() {
         guard isPaused else { return }
         isPaused = false

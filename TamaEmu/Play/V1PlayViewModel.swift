@@ -184,6 +184,22 @@ final class V1PlayViewModel: SaveBackupHost {
         startEngine()
     }
 
+    /// Restart: like taking the battery out and back in. First-gen toys
+    /// keep everything in RAM, so the game starts over from the
+    /// beginning. Stops (which saves), backs that save up so Backups can
+    /// undo this, then drops the CPU/RAM snapshot and boots fresh.
+    func restartTama() {
+        stopEngine()
+        let paths = SavePaths(device: selectedDevice)
+        paths.makeBackup(reason: .beforeRestart)
+        try? FileManager.default.removeItem(at: paths.v1StatePath)
+        if isPaused {
+            isPaused = false
+            DevicePauseState.setPaused(false, for: selectedDevice)
+        }
+        startEngine(discardingGap: true)
+    }
+
     func restoreBackup(_ backup: SaveBackup) throws {
         stopEngine()
         try SavePaths(device: selectedDevice).restore(backup)
