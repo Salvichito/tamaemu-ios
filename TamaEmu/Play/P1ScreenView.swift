@@ -453,6 +453,16 @@ struct V1IconProfile {
         return !(deviceID == "morino" && light == 4)
     }
 
+    /// Models with a tap sensor in the shell: the Angel scares off the
+    /// bat that steals its candy, the Morino its predators and the Umino
+    /// the polar bear, all by tapping (or shaking) the toy. TamaLib wires
+    /// the sensor to pin K03 (BTN_TAP), and the Umino's program tests that
+    /// pin's bit (found 2026-11-26). Confirmed on a real phone scaring
+    /// the Angel's bat away; Morino and Umino not yet tried.
+    static func hasTapSensor(_ deviceID: String) -> Bool {
+        ["angel", "morino", "umino"].contains(deviceID)
+    }
+
     /// True when this model's icons are buttons (see `onButton`).
     var hasButtons: Bool { slots.contains { $0.button != nil } }
     ///

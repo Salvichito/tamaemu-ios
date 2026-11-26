@@ -224,6 +224,22 @@ final class V1PlayViewModel: SaveBackupHost {
         engine?.input.release(button)
     }
 
+    /// True while a live engine is running (not paused, not loading).
+    var isLive: Bool { engine != nil && !isLoading && !isPaused }
+
+    /// Bumped on every sensor tap, so the screen can wobble and buzz.
+    private(set) var sensorTaps = 0
+
+    /// One tap on the shell's tap sensor (V1IconProfile.hasTapSensor):
+    /// from a tap on the page around the screen, or a shake of the phone. The press is held long
+    /// enough for the toy to notice (see V1EmulatorEngine's timing).
+    func tapSensor() {
+        guard V1IconProfile.hasTapSensor(selectedDevice.id), let engine, isLive else { return }
+        engine.input.press(.tap)
+        engine.input.release(.tap)
+        sensorTaps += 1
+    }
+
     /// Tap-an-icon shortcut; see V1IconProfile.tappableMenuLights.
     func openMenuIcon(light: Int) {
         guard let count = V1IconProfile.tappableMenuLights(for: selectedDevice.id) else { return }

@@ -25,6 +25,7 @@
 		34FFC4BF7D11F08E57C2F917 /* TranslationBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C882B35EC13DBF00890164 /* TranslationBubble.swift */; };
 		376943024E12FD504C0B1EA9 /* T7EmuCore in Frameworks */ = {isa = PBXBuildFile; productRef = 25705C1AFE21BBBE608456B1 /* T7EmuCore */; };
 		39573BC6B67E6F2995EBF058 /* TamaEmu-clearblue.icon in Resources */ = {isa = PBXBuildFile; fileRef = FBF0829034B81AFFB641BD6F /* TamaEmu-clearblue.icon */; };
+		3D20B4B6234DFE2302A01B43 /* ShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = E08562CC07BFCF9D4D79FB6F /* ShakeDetector.swift */; };
 		4455667788990011AABBCCDD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppSettings.swift */; };
 		47EB8E7819F48AB9C030EFA5 /* AppIconPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 460F3B99588EEF9FCA8CFB31 /* AppIconPickerView.swift */; };
 		4B49915563A84DBD8D57C240 /* WidgetSharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF68407DC4F46E7A7C9C951 /* WidgetSharedState.swift */; };
@@ -194,6 +195,7 @@
 		D635093F6B5D1E5ABA81B801 /* ReorderTamasView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReorderTamasView.swift; sourceTree = "<group>"; };
 		D8974B5F9B6844D19EA081CD /* TamaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TamaWidgetBundle.swift; sourceTree = "<group>"; };
 		DDC96E110C87F61493FCCEBE /* CGImage+GlowColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "CGImage+GlowColor.swift"; path = "CGImage+GlowColor.swift"; sourceTree = "<group>"; };
+		E08562CC07BFCF9D4D79FB6F /* ShakeDetector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShakeDetector.swift; sourceTree = "<group>"; };
 		E4188174545C83BE2D508C72 /* TamaEmu-blueyellow.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-blueyellow.icon"; sourceTree = "<group>"; };
 		F058EEC27A45730B3595D812 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		F396781857FA48021B9F38A2 /* TamaEmu-pastelorange.icon */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.iconcomposer.icon; path = "TamaEmu-pastelorange.icon"; sourceTree = "<group>"; };
@@ -306,6 +308,7 @@
 				1BBD0D1B0503923459126E75 /* PurchaseManager.swift */,
 				0A958E0CD980C3FF23A48260 /* NearbyLinkSession.swift */,
 				B73A464D9A5B4C551857E6F9 /* LinkPort.swift */,
+				E08562CC07BFCF9D4D79FB6F /* ShakeDetector.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -584,6 +587,7 @@
 				65C3C829A2C6F004A14D8A70 /* WelcomeView.swift in Sources */,
 				47EB8E7819F48AB9C030EFA5 /* AppIconPickerView.swift in Sources */,
 				E9EEDDCAA256AC1254F8DE8D /* ThemeBackground.swift in Sources */,
+				3D20B4B6234DFE2302A01B43 /* ShakeDetector.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

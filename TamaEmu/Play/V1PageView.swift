@@ -12,13 +12,42 @@ struct V1PageView: View {
     @State private var showingPaywall = false
     @State private var holdTask: Task<Void, Never>?
     @State private var heldForPaywall = false
+    @State private var shakeDetector = ShakeDetector()
+    @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(AppSettings.Keys.hapticsEnabled) private var hapticsEnabled = true
 
     private static let holdThreshold: Duration = .milliseconds(180)
 
     var body: some View {
         pageContent
+            // Tapping the "shell" -- anywhere on the page that isn't the
+            // screen or a button -- taps the toy's tap sensor (Angel,
+            // Morino, Umino). The screen and buttons sit on top and keep
+            // their own touches.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                if V1IconProfile.hasTapSensor(viewModel.selectedDevice.id) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { viewModel.tapSensor() }
+                }
+            }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+            }
+            // Shake the phone = tap the toy's shell (Angel, Morino, Umino).
+            // The motion sensor runs only while this page is live and the
+            // app is in front.
+            .onChange(of: listensForShake, initial: true) { _, listen in
+                if listen {
+                    shakeDetector.start { viewModel.tapSensor() }
+                } else {
+                    shakeDetector.stop()
+                }
+            }
+            .onDisappear { shakeDetector.stop() }
+            .sensoryFeedback(trigger: viewModel.sensorTaps) { _, _ in
+                hapticsEnabled ? .impact(weight: .medium) : nil
             }
     }
 
@@ -35,6 +64,7 @@ struct V1PageView: View {
                 )
                 .frame(maxWidth: 280)
                 .glassScreenFrame(cornerRadius: P1ScreenView.cornerRadius, glare: true)
+                .modifier(ShellWobble(taps: viewModel.sensorTaps))
                 .overlay(alignment: .topTrailing) {
                     if viewModel.isFastForwarding && !viewModel.isPaused {
                         FastForwardIndicator()
@@ -104,6 +134,10 @@ struct V1PageView: View {
 
     private var buttonsDisabled: Bool { viewModel.isLoading || viewModel.isPaused }
 
+    private var listensForShake: Bool {
+        V1IconProfile.hasTapSensor(viewModel.selectedDevice.id) && viewModel.isLive && scenePhase == .active
+    }
+
     /// Icons that take touches (Yasashii's care buttons, or tappable
     /// menu icons): pause/fast-forward then only listens to the middle band.
     private var hasScreenButtons: Bool {
@@ -136,5 +170,25 @@ struct V1PageView: View {
         } else if !wasHeldForPaywall {
             viewModel.togglePause()
         }
+    }
+}
+
+/// A quick side-to-side wobble of the screen each time the shell is
+/// tapped, so a shake visibly "lands".
+private struct ShellWobble: ViewModifier {
+    let taps: Int
+    @State private var offset: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: offset)
+            .onChange(of: taps) {
+                Task { @MainActor in
+                    for x in [6.0, -5.0, 3.0, -2.0, 0.0] {
+                        withAnimation(.easeInOut(duration: 0.05)) { offset = x }
+                        try? await Task.sleep(for: .milliseconds(50))
+                    }
+                }
+            }
     }
 }

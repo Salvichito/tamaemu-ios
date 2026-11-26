@@ -161,7 +161,9 @@ final class V1EmulatorEngine {
             input.setTiming(minimumHoldMs: 250, minimumGapMs: 300)
             input.setAckHold(buttons: [.a, .b, .tap, .k10, .k11, .k12, .k13], floorMs: 150, capMs: 600)
         default:
-            input.setTiming(minimumHoldMs: 60, minimumGapMs: 25)
+            // The tap sensor (Angel, Morino, Umino) is a one-shot press,
+            // held 0.2 s so a toy busy animating still sees it.
+            input.setTiming(minimumHoldMs: 60, minimumGapMs: 25, holdOverrides: [.tap: 200])
         }
         if model != IOS_HAL_MODEL_YASASHII {
             input.setAckHold(buttons: [], floorMs: 0, capMs: 0)
