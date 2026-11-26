@@ -77,6 +77,10 @@ struct TomoBrain: Codable, Sendable {
     private(set) var departureCause: DepartureCause?
 
     private(set) var ageYears = 0
+    /// When it last grew up, on its clock. Lets the app replay a change it
+    /// missed while closed (optional, so older saves load as nil).
+    private(set) var evolvedAt: Date?
+    private(set) var evolvedFrom: TomoCharacter?
     private(set) var weight = 5
     /// 0-4 each (§4).
     private(set) var hunger = 0
@@ -441,6 +445,8 @@ struct TomoBrain: Codable, Sendable {
         if misbehaviorCountdown == nil || from.stage == .teen {
             misbehaviorCountdown = rng.int(in: misbehaviorRange)
         }
+        evolvedAt = clock
+        evolvedFrom = from
         events.append(.evolved(from: from, to: next))
     }
 
@@ -562,7 +568,7 @@ struct TomoBrain: Codable, Sendable {
         guard canPlay else { return 0 }
         let reward = TomoRules.gameReward(score: score)
         happiness = min(TomoRules.maxLevel, happiness + reward)
-        weight = clampWeight(weight - 1)
+        weight = clampWeight(weight - TomoRules.gameWeightPerRound * max(0, score))
         careAnswered()
         return reward
     }

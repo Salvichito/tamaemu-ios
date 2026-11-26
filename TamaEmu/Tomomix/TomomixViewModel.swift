@@ -66,6 +66,9 @@ final class TomomixViewModel {
     /// The tomomix's name; "" when the player skipped naming it, nil when
     /// they haven't been asked yet.
     private(set) var petName: String?
+    /// The last growing-up (its `brain.evolvedAt`) already shown or let
+    /// go, so a missed one is replayed at most once.
+    @ObservationIgnored private var evolutionShown: Date?
     /// A name question on screen, if any.
     enum Prompt { case playerName, petName }
     private(set) var prompt: Prompt?
@@ -133,6 +136,7 @@ final class TomomixViewModel {
         waitingForStar = save.waitingForStar ?? false
         petName = save.petName
         outdoors = save.outdoors ?? false
+        evolutionShown = save.evolutionShown
         // Older pauses and the old speed/skip tools left its clock off
         // the phone's time. Put it back in step without living or undoing
         // anything (a gap from the app being closed is still caught up).
@@ -334,6 +338,7 @@ final class TomomixViewModel {
         // the app was closed (or a debug skip).
         handle(events, live: lived <= 180)
         if !paused, let m = moment, m.isOver(at: now) { endMoment() }
+        replayMissedEvolution()
         beeper.idleTick()
         if let until = captionUntil, now >= until { caption = nil; captionUntil = nil }
         if case .game = screen, !brain.canPlay { endGameEarly() }
@@ -355,6 +360,26 @@ final class TomomixViewModel {
         if now.timeIntervalSince(lastWidgetFrame) > Self.widgetFrameInterval { publishWidgetFrame() }
     }
 
+    /// Grew up while the app was closed: opened within this long, the
+    /// player still gets to watch it happen instead of finding it changed.
+    static let missedEvolutionReplay: TimeInterval = 2 * 60 * 60
+
+    /// Works from the save rather than from catch-up events, because a
+    /// background refresh may have played those minutes already. Each
+    /// change is handled once (`evolutionShown`): replayed when the page
+    /// opens within the window, awake and alive (an evolution that cuts to
+    /// it asleep looks wrong), otherwise just left as it is.
+    private func replayMissedEvolution() {
+        guard let at = brain.evolvedAt, at != evolutionShown, let from = brain.evolvedFrom,
+              moment == nil, !paused, !waitingForStar else { return }
+        evolutionShown = at
+        guard brain.phase == .alive, !brain.asleep,
+              brain.clock.timeIntervalSince(at) <= Self.missedEvolutionReplay else { return }
+        foodChoiceAfterMoment = nil
+        play(.evolve(from: from, to: brain.character))
+        beep(.fanfare)
+    }
+
     private func handle(_ events: [TomoBrain.Event], live: Bool) {
         for event in events {
             switch event {
@@ -364,8 +389,11 @@ final class TomomixViewModel {
                 beep(.birth)
             case .evolved(let from, let to):
                 foodChoiceAfterMoment = nil
-                if live { play(.evolve(from: from, to: to)) }
-                beep(.fanfare)
+                if live {
+                    play(.evolve(from: from, to: to))
+                    beep(.fanfare)
+                    evolutionShown = brain.evolvedAt
+                }
             case .pooped:
                 if live, moment == nil { play(.poop) }
             case .callStarted:
@@ -873,7 +901,8 @@ final class TomomixViewModel {
 
     private var saveFile: TomomixStore.SaveFile {
         TomomixStore.SaveFile(brain: brain, timeOffset: timeOffset, pausedAt: pausedAt, muted: muted,
-                              waitingForStar: waitingForStar, petName: petName, outdoors: outdoors)
+                              waitingForStar: waitingForStar, petName: petName, outdoors: outdoors,
+                              evolutionShown: evolutionShown)
     }
 }
 
@@ -1011,6 +1040,7 @@ enum TomomixStore {
         var waitingForStar: Bool?
         var petName: String?
         var outdoors: Bool?
+        var evolutionShown: Date?
     }
 
     static var saveURL: URL {
@@ -1099,6 +1129,7 @@ enum TomomixNotifications {
             }
             minute += 1
         }
+        let growUp = nextGrowUp(from: file.brain, simNow: simNow, timeOffset: file.timeOffset)
 
         let center = UNUserNotificationCenter.current()
         // Each kind takes its messages in turn, from a random start, so
@@ -1118,12 +1149,64 @@ enum TomomixNotifications {
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
             center.add(UNNotificationRequest(identifier: "\(prefix)\(index)", content: content, trigger: trigger))
         }
+
+        if let growUp, case let wait = growUp.0.timeIntervalSince(now), wait >= 1 {
+            let content = UNMutableNotificationContent()
+            content.title = pet ?? "Tomomix"
+            content.body = growUpMessage(to: growUp.1, pet: pet, player: player)
+            content.sound = .default
+            content.userInfo = [NotificationScheduler.deviceIDKey: DeviceCatalog.tomomix.id]
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
+            center.add(UNNotificationRequest(identifier: growID, content: content, trigger: trigger))
+        }
+    }
+
+    private static let growID = "tomomix-grow"
+
+    /// When it next grows up, on the phone's clock, within the look-ahead.
+    /// Growing up runs on awake time alone (§11), so the moment is known
+    /// ahead, but the call look-ahead above gives no care and a neglected
+    /// tomomix can depart before it gets there. So this plays its own copy
+    /// that's looked after every minute. Only the next change is reported:
+    /// who it becomes, and so how long the stage after lasts, depends on
+    /// the real care to come, which is also why the message never names
+    /// the new character.
+    static func nextGrowUp(from start: TomoBrain, simNow: Date, timeOffset: TimeInterval) -> (Date, TomoCharacter.Stage)? {
+        var brain = start
+        brain.advance(to: simNow)
+        for minute in 1...lookAheadMinutes {
+            guard brain.phase != .departed else { return nil }
+            for event in brain.advance(to: simNow.addingTimeInterval(Double(minute) * 60)) {
+                if case .evolved(_, let to) = event {
+                    return (brain.clock.addingTimeInterval(-timeOffset), to.stage)
+                }
+            }
+            if brain.misbehaving { _ = brain.scold() }
+            while brain.hunger < TomoRules.maxLevel, brain.feedMeal() == .ate {}
+            while brain.happiness < TomoRules.maxLevel, brain.feedSnack() == .ate {}
+            if brain.poop > 0 { _ = brain.clean() }
+            if brain.sick { _ = brain.giveMedicine() }
+            if brain.asleep && brain.lightsOn { brain.setLights(on: false) }
+        }
+        return nil
     }
 
     private static func cancelNow() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: (0..<maxScheduled).map { "\(prefix)\($0)" }
+            withIdentifiers: (0..<maxScheduled).map { "\(prefix)\($0)" } + [growID]
         )
+    }
+
+    /// It grew up. Says which stage it reached, never which character.
+    static func growUpMessage(to stage: TomoCharacter.Stage, pet: String?, player: String?) -> String {
+        let it = pet ?? "Your tomomix"
+        let you = player.map { ", \($0)" } ?? ""
+        switch stage {
+        case .baby: return "\(it) is here\(you)!"
+        case .child: return "\(it) isn't a baby anymore! Come see who they became\(you)."
+        case .teen: return "\(it) just became a teen! Come see who they became\(you)."
+        case .adult: return "\(it) is all grown up! Come meet the adult\(you)."
+        }
     }
 
     /// Varied wording, so it doesn't read like an alarm clock (§16), with

@@ -147,6 +147,10 @@ enum TomoRules {
         }
     }
 
+    /// §6: weight a finished game takes off, 2 per round completed
+    /// (a perfect game, 10). Never below the character's minimum.
+    static let gameWeightPerRound = 2
+
     /// §11: Baby → Child.
     static func child(careMistakes c: Int) -> TomoCharacter {
         c == 0 ? .childGood : .childBad

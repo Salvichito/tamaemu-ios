@@ -141,7 +141,7 @@ It's played **right where the tomomix is** (the room or outdoors), with nothing 
 | Rule | Tag |
 |---|---|
 | Happiness never goes above 4 steps. | Classic `GM01` |
-| Finishing a game, whatever the result, costs **1 weight** (never below the character's minimum). A game that ends on a wrong direction counts as finished. | Classic `GM02` |
+| Finishing a game takes off **2 weight per round completed**: 10 for a perfect game, 8, 6, 4, 2, and none for 0 rounds. Never below the character's minimum. A game that ends on a wrong direction counts as finished. | Change (classic `GM02`: 1 per game) |
 | Quitting with C before the end gives no happiness and costs no weight. | Choice |
 | The result shows for **2.5 seconds**, then the game closes by itself. A tap or a button closes it sooner. | Choice |
 | The game can't be played while asleep, sick or refusing. | Classic `GM03` |
@@ -334,6 +334,8 @@ Hunger and happiness have 4 steps; discipline has 10, so it fills more slowly.
 |---|---|
 | **Time keeps passing while the app is closed**, like a toy left in a drawer. When the app opens, it catches up straight away. | Phone |
 | The app knows when the next call will happen, so it can schedule notifications even while it's closed. | Phone |
+| **Growing up is announced.** The app also knows when it will next grow up (growth runs on awake time only), so it sends a notification at that moment, without saying who it became. | Phone |
+| **A missed evolution is replayed.** If it grew up while the app was closed and the player opens it within **2 hours**, they see the old character, then the evolution animation. Later than that, or if it has fallen asleep since, it has simply changed. | Phone |
 | **Pause** freezes the tomomix: while paused it doesn't age, grow, get hungry or unhappy, poop or get sick, and a pulsing star doesn't get closer to hatching. All its timers resume exactly where they stopped. **The clock doesn't stop**: on resume the sky, bedtime and everything else follow the phone's real time again; the paused stretch is simply skipped. | Phone `LS03` |
 | Sleep and wake times use the phone's local time (plus any offset, §17). When time zones change, the tomomix follows the new local time. | Phone |
 | Changing the phone's clock by hand doesn't add or remove awake minutes. | Phone `SL04` |
