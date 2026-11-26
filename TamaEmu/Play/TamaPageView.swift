@@ -65,15 +65,7 @@ struct TamaPageView: View {
                     }
 
                 if viewModel.isPaused {
-                    VStack(spacing: 6) {
-                        Image(systemName: "pause.circle.fill")
-                            .font(.title2)
-                        Text("Paused — tap to resume")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(10)
-                    .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    PausedBadge()
                 } else if viewModel.isLoading {
                     VStack(spacing: 6) {
                         ProgressView()
@@ -208,6 +200,22 @@ private struct LiveLCD: View {
             LCDView(image: viewModel.lcdImage)
                 .frame(maxWidth: Self.width)
         }
+    }
+}
+
+/// The "Paused" square shown over the screen while a Tama is paused.
+/// Same look as Tomomix's, shared by every model's page.
+struct PausedBadge: View {
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "pause.circle.fill").font(.system(size: 34))
+            Text("Paused").font(.tomo(.footnote))
+        }
+        .foregroundStyle(.white)
+        .frame(width: 96, height: 96)                    // a square
+        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Tap to resume")
     }
 }
 

@@ -339,13 +339,7 @@ private struct TomoScene: View {
                     }
                 }
                 if model.paused {
-                    VStack(spacing: 6) {
-                        Image(systemName: "pause.circle.fill").font(.system(size: 34))
-                        Text("Paused").font(.tomo(.footnote))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(width: 96, height: 96)                    // a square
-                    .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+                    PausedBadge()
                 }
             }
             .frame(width: side, height: side)

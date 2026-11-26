@@ -22,18 +22,6 @@ struct T7PageView: View {
             }
     }
 
-    private func badge(systemImage: String, text: String) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.title2)
-            Text(text)
-                .font(.caption2)
-        }
-        .foregroundStyle(.white)
-        .padding(10)
-        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
     private var pageContent: some View {
         VStack(spacing: 16) {
             ZStack {
@@ -51,7 +39,7 @@ struct T7PageView: View {
                     }
 
                 if viewModel.isPaused {
-                    badge(systemImage: "pause.circle.fill", text: "Paused — tap to resume")
+                    PausedBadge()
                 } else if viewModel.isLoading {
                     VStack(spacing: 6) {
                         ProgressView()
