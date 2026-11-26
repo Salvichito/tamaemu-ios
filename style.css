@@ -192,10 +192,11 @@ section[id] { scroll-margin-top: 12px; }
 .rule-art img { height: 44px; width: auto; }
 
 .follow { position: relative; height: 100%; min-height: 340px; border-radius: 24px; background: linear-gradient(#fff5df, #ffe7c2); box-shadow: var(--shadow); overflow: hidden; }
-.follow .pet { position: absolute; left: 50%; bottom: -12px; height: 420px; transform: translateX(-50%); }
-.follow .arrow { position: absolute; bottom: 120px; width: 54px; opacity: .35; }
+/* the character sits low in its 512 box (feet at 442), so shift by its body centre (~72%) rather than 50% */
+.follow .pet { position: absolute; left: 50%; top: 50%; height: 420px; transform: translate(-50%, -72%); }
+.follow .arrow { position: absolute; top: 50%; width: 54px; opacity: .35; transform: translateY(-50%); }
 .follow .arrow.left { left: 6%; }
-.follow .arrow.right { right: 6%; transform: scaleX(-1); }
+.follow .arrow.right { right: 6%; transform: translateY(-50%) scaleX(-1); }
 .follow .arrow.lit { opacity: 1; }
 .follow .seq { position: absolute; top: 14px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
 .follow .seq span { background: #fff; color: #241f4a; border-radius: 10px; width: 34px; height: 34px; display: grid; place-items: center; font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
