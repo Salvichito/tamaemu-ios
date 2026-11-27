@@ -83,7 +83,6 @@ final class NearbyLinkSession: NSObject {
     ///   one falls back to the Plus Color's older kind of signal for it,
     ///   and the core does not emulate that on the iD side: the iD neither
     ///   hears the Plus Color nor sends anything.
-    /// - iD Lovely Melody: not tried.
     /// - 4U and 4U+: they connect by NFC touch, not infrared. Two emulated
     ///   4Us start the handshake but neither takes the answering role.
     /// - Tamagotchi Friends: its "bump" is a 125 kHz radio tag, not
@@ -99,6 +98,12 @@ final class NearbyLinkSession: NSObject {
         ["ps"],
         ["id", "idl"],
         ["idl", "ps"],
+        // iD Lovely Melody (2026-11-26, headless): with itself a visit and
+        // present; with the iD and the iD L a linked game. It offers itself
+        // as "Tamagotchi iD" in the connect menu.
+        ["id-melody"],
+        ["id-melody", "id"],
+        ["id-melody", "idl"],
     ]
 
     /// Bonjour service name; also listed in Info.plist (NSBonjourServices),

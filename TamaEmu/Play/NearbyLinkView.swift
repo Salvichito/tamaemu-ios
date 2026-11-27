@@ -267,10 +267,10 @@ struct NearbyLinkView: View {
                 "Choose TAMA-GO with B, then GAME or VISIT (press A to move to VISIT) with B. Both of you pick the same one.",
                 "When both screens show STAND BY, one of you presses B. For a visit, that Tama is the one who goes.",
             ]
-        case "id":
+        case "id", "id-melody":
             return [open, "Choose たまごっちiD, the first option, with B.", start]
         case "idl":
-            if peerDeviceID == "id" {
+            if peerDeviceID == "id" || peerDeviceID == "id-melody" {
                 return [open, "Press A once to move to たまごっちiD, then press B.", start]
             }
             return [
