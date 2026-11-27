@@ -390,26 +390,42 @@ final class EmulatorEngine {
     /// isn't a `periph_write8` call — it's a raw poke into plain working
     /// RAM, not a memory-mapped hardware register, so there's no
     /// dedicated write path to go through.
-    private static let pointsByteOffset: [String: Int] = [
-        "plus-color": 45792,  // confirmed 750→760 after earning 10
-        "id": 45920,          // confirmed 650→680 after earning 30
-        "4u-plain": 5220,     // confirmed 260→280 after earning 20
+    ///
+    /// The 2026-11-26 entries were found headless instead: set a guessed
+    /// spot to 1234, open the status page that shows points, and narrow
+    /// the guesses down until "1234G" appeared (P's: also seen going
+    /// 300 → 800 when evolving gave +500). Each was checked to still show
+    /// the new value after a minute of play. iD L and 4U+ keep a 32-bit
+    /// total, so the upper half is cleared too (left alone it showed a
+    /// garbled 8-digit number).
+    private static let pointsField: [String: (offset: Int, bytes: Int)] = [
+        "plus-color": (45792, 2),  // confirmed 750→760 after earning 10
+        "id": (45920, 2),          // confirmed 650→680 after earning 30
+        "4u-plain": (5220, 2),     // confirmed 260→280 after earning 20
+        "id-melody": (45920, 2),   // same spot as the iD
+        "idl": (46012, 4),
+        "ps": (5224, 2),
+        "4u": (4956, 4),           // 4U+
     ]
 
-    /// Sets the points/wallet total for a device in `pointsByteOffset`;
-    /// a no-op (returns `nil`) for anything not yet mapped there. Clamped
-    /// to what the field can actually hold (0...65535) regardless of what
-    /// the caller asks for — the UI additionally limits entry to 5 digits
-    /// (0...99999), but the real ceiling is the 16-bit field itself. Call
-    /// only while the engine's thread is stopped (same precondition as
-    /// `save()`).
+    /// Whether Set Points works on this model yet.
+    static func supportsPoints(_ deviceID: String) -> Bool {
+        pointsField[deviceID] != nil
+    }
+
+    /// Sets the points/wallet total for a device in `pointsField`; a
+    /// no-op (returns `nil`) for anything not yet mapped there. Clamped
+    /// to 0...65535 on 16-bit fields and 0...99999 (the 5 digits the UI
+    /// allows) on 32-bit ones. Call only while the engine's thread is
+    /// stopped (same precondition as `save()`).
     @discardableResult
     func setPoints(_ value: Int) -> Int? {
-        guard let byteOffset = Self.pointsByteOffset[device.id] else { return nil }
-        let ptr = UnsafeMutableRawPointer(emu).advanced(by: byteOffset).assumingMemoryBound(to: UInt8.self)
-        let clamped = max(0, min(65535, value))
-        ptr[0] = UInt8(clamped & 0xFF)
-        ptr[1] = UInt8((clamped >> 8) & 0xFF)
+        guard let field = Self.pointsField[device.id] else { return nil }
+        let ptr = UnsafeMutableRawPointer(emu).advanced(by: field.offset).assumingMemoryBound(to: UInt8.self)
+        let clamped = max(0, min(field.bytes == 4 ? 99999 : 65535, value))
+        for i in 0..<field.bytes {
+            ptr[i] = UInt8((clamped >> (8 * i)) & 0xFF)
+        }
         return clamped
     }
 

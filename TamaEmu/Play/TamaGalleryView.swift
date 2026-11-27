@@ -483,7 +483,7 @@ struct TamaGalleryView: View {
             pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
             syncClockButton
             nearbyLinkButton(device: viewModel.selectedDevice, peerName: viewModel.linkPeerName)
-            if ["plus-color", "id", "4u-plain"].contains(viewModel.selectedDevice.id) {
+            if EmulatorEngine.supportsPoints(viewModel.selectedDevice.id) {
                 Button {
                     if purchases.isPremium {
                         pointsInputText = ""
