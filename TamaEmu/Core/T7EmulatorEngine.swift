@@ -131,6 +131,34 @@ final class T7EmulatorEngine {
     private var figureToInsert: (data: Data, atFrame: UInt64)?
     private static let figureSwapFrames: UInt64 = 150
 
+    /// Sets the points total (Tama-Go and Friends keep it in the same
+    /// place: work RAM $0320-$0323, 8 decimal digits packed two per byte,
+    /// lowest digits first). Found headless 2026-11-26 on both ROMs: the
+    /// POINTS page showed the new value, still there a minute later.
+    /// Clamped to 0...99999 (the 5 digits the prompt allows). Applied by
+    /// the stepping thread between frames. Safe from any thread.
+    func setPoints(_ value: Int) {
+        pointsLock.lock(); pendingPoints = max(0, min(99999, value)); pointsLock.unlock()
+    }
+    private let pointsLock = NSLock()
+    private var pendingPoints: Int?
+
+    /// Owner name (Tama-Go): 8 bytes at work RAM $0308, see OwnerName.
+    /// Applied by the stepping thread between frames. Safe from any thread.
+    func setOwnerName(_ bytes: [UInt8]) {
+        pointsLock.lock(); pendingName = bytes; pointsLock.unlock()
+    }
+    private var pendingName: [UInt8]?
+
+    private static func writePoints(_ value: Int) {
+        var rest = value
+        for i in 0..<4 {
+            let low = rest % 10; rest /= 10
+            let high = rest % 10; rest /= 10
+            t7_ram_write(UInt16(0x320 + i), UInt8(high << 4 | low))
+        }
+    }
+
     // MARK: - Connecting to another Tama-Go
 
     /// Set from the main thread (T7PlayViewModel), read once per frame by
@@ -392,6 +420,13 @@ final class T7EmulatorEngine {
             if let waiting = figureToInsert, liveFramesStepped >= waiting.atFrame {
                 Self.insertFigure(waiting.data)
                 figureToInsert = nil
+            }
+
+            pointsLock.lock(); let pointsRequest = pendingPoints; pendingPoints = nil; pointsLock.unlock()
+            if let pointsRequest { Self.writePoints(pointsRequest) }
+            pointsLock.lock(); let nameRequest = pendingName; pendingName = nil; pointsLock.unlock()
+            if let nameRequest {
+                for (i, b) in nameRequest.enumerated() { t7_ram_write(UInt16(0x308 + i), b) }
             }
 
             if !deliverLinkInput() { break }

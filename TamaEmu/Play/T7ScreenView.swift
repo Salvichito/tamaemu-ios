@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The Tama-Go/Tamagotchi Friends screen, laid out like the real toy's
 /// LCD: the 48x31, 4-gray-level dot-matrix full width in the middle, and
-/// the 10 status icons (generic SF Symbols for now) floating on the same
+/// the 10 status icons (the user's own art) floating on the same
 /// glass, five above and five below.
 ///
 /// The core's icon numbers are the same physical spots on both toys (0-4
@@ -20,38 +20,41 @@ struct T7ScreenView: View {
     /// corners -- see renderT7Snapshot.
     var rounded = true
 
+    @Environment(\.displayScale) private var displayScale
+
     static let cornerRadius: CGFloat = 16
     private static let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
 
     /// Tama-Go, per Bandai's quick-start guide and a hands-on review
-    /// (matches a photo of the toy).
-    private static let tamaGoSymbolNames = [
-        "gauge.with.dots.needle.33percent", // 0 information
-        "fork.knife", // 1 food
-        "toilet.fill", // 2 toilet
-        "door.left.hand.open", // 3 door (games, shop, park, PC, date place)
-        "figure.stand", // 4 Gotchi Figure (only with a figure attached)
-        "bubble.left.fill", // 5 training (praise / time out)
-        "cross.case.fill", // 6 medicine
-        "dot.radiowaves.left.and.right", // 7 IR communication
-        "book.fill", // 8 album
-        "exclamationmark.circle.fill" // 9 attention
+    /// (matches a photo of the toy). The user's own icon art; the shared
+    /// ones are the same P1Icon* assets the first-gen screens use.
+    private static let tamaGoIconAssets = [
+        "P1IconStatus", // 0 information
+        "P1IconFood", // 1 food
+        "P1IconBathroom", // 2 toilet
+        "T7IconDoor", // 3 door (games, shop, park, PC, date place)
+        "T7IconFigure", // 4 Gotchi Figure (only with a figure attached)
+        "T7IconTalk", // 5 training (praise / time out)
+        "P1IconMedicine", // 6 medicine
+        "T7IconConnect", // 7 IR communication
+        "T7IconMemory", // 8 album
+        "P1IconAttention" // 9 attention
     ]
 
     /// Tamagotchi Friends, per its official manual; spots 4-8 checked by
     /// opening each menu in the emulator (Exchange, Text, Collection,
     /// Friends/Memory, then Medicine).
-    private static let friendsSymbolNames = [
-        "gauge.with.dots.needle.33percent", // 0 information
-        "fork.knife", // 1 food
-        "toilet.fill", // 2 toilet
-        "door.left.hand.open", // 3 door (game, shop, park, PC)
-        "dot.radiowaves.left.and.right", // 4 bump / connect
-        "envelope.fill", // 5 text messages
-        "shippingbox.fill", // 6 jewelry box
-        "book.fill", // 7 memory
-        "cross.case.fill", // 8 medicine
-        "exclamationmark.circle.fill" // 9 attention
+    private static let friendsIconAssets = [
+        "P1IconStatus", // 0 information
+        "P1IconFood", // 1 food
+        "P1IconBathroom", // 2 toilet
+        "T7IconDoor", // 3 door (game, shop, park, PC)
+        "T7IconConnect", // 4 bump / connect
+        "T7IconText", // 5 text messages
+        "T7IconJewelry", // 6 jewelry box
+        "T7IconMemory", // 7 memory
+        "P1IconMedicine", // 8 medicine
+        "P1IconAttention" // 9 attention
     ]
 
     /// A steps through icons 0-8 on both toys; attention (9) only lights
@@ -61,8 +64,8 @@ struct T7ScreenView: View {
         icon < T7EmulatorEngine.menuIconCount && (isFriends || icon != 4)
     }
 
-    private var iconSymbolNames: [String] {
-        isFriends ? Self.friendsSymbolNames : Self.tamaGoSymbolNames
+    private var iconAssets: [String] {
+        isFriends ? Self.friendsIconAssets : Self.tamaGoIconAssets
     }
 
     var body: some View {
@@ -82,7 +85,7 @@ struct T7ScreenView: View {
     private func screenContent(side: CGFloat) -> some View {
         let gridHeight = side * CGFloat(IOS_T7_LCD_HEIGHT) / CGFloat(IOS_T7_LCD_WIDTH)
         let band = (side - gridHeight) / 2
-        let iconSize = band * 0.5
+        let iconSize = band * 0.6
         return ZStack {
             LinearGradient(
                 colors: [Color(red: 0.80, green: 0.80, blue: 0.78), Color(red: 0.69, green: 0.69, blue: 0.67)],
@@ -101,7 +104,8 @@ struct T7ScreenView: View {
                     enabled: onIconTap != nil && Self.isTappable(i, isFriends: isFriends),
                     onTap: { onIconTap?(i) }
                 ) {
-                    Image(systemName: iconSymbolNames[i])
+                    Image(iconAssets[i])
+                        .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
                         .frame(width: iconSize, height: iconSize)
@@ -117,8 +121,8 @@ struct T7ScreenView: View {
 
     private var pixelGrid: some View {
         GeometryReader { geo in
-            if let image = makeBitmapImage() {
-                Image(decorative: image, scale: 1, orientation: .up)
+            if let image = makeBitmapImage(size: geo.size) {
+                Image(decorative: image, scale: displayScale, orientation: .up)
                     .resizable()
                     .interpolation(.none)
                     .frame(width: geo.size.width, height: geo.size.height)
@@ -127,46 +131,28 @@ struct T7ScreenView: View {
     }
 
     private static let cols = Int(IOS_T7_LCD_WIDTH), rows = Int(IOS_T7_LCD_HEIGHT)
-    /// Each logical LCD pixel is rendered as an oversample x oversample
-    /// block, with its rightmost/bottommost texel left transparent -- the
-    /// same thin gap line P1ScreenView uses.
-    private static let oversample = 16
+    /// The gap line between LCD pixels, as a share of one pixel's width
+    /// (the old fixed 16x oversample's one texel). Drawn at real device
+    /// size by PixelGridBitmap, same as P1ScreenView.
+    private static let gapFraction: CGFloat = 1.0 / 16.0
     /// "Off" pixels are transparent so the LCD glass shows through, as on
     /// P1. The three "on" levels are the same ink at 1/3, 2/3 and full
     /// strength -- evenly spaced like the reference tamago palette.
-    private func makeBitmapImage() -> CGImage? {
-        let scale = Self.oversample
-        let w = Self.cols * scale, h = Self.rows * scale
-        let ink = 34.0
-        var pixels = [UInt8](repeating: 0, count: w * h * 4)
-        for y in 0..<h {
-            let localY = y % scale
-            guard localY < scale - 1 else { continue }
-            let py = y / scale
-            for x in 0..<w {
-                let localX = x % scale
-                guard localX < scale - 1 else { continue }
-                let level = state.pixel(x / scale, py) // 0...3
-                guard level > 0 else { continue }
-                // Premultiplied alpha, so RGB is scaled by alpha too.
-                let alpha = Double(level) / 3.0 * 0.92
-                let c = UInt8((ink * alpha).rounded())
-                let i = (y * w + x) * 4
-                pixels[i] = c; pixels[i + 1] = c; pixels[i + 2] = c
-                pixels[i + 3] = UInt8((alpha * 255).rounded())
-            }
+    private static let levels: [PixelGridBitmap.RGBA] = (1...3).map { level in
+        // Premultiplied alpha, so RGB is scaled by alpha too.
+        let alpha = Double(level) / 3.0 * 0.92
+        let c = UInt8((34.0 * alpha).rounded())
+        return PixelGridBitmap.RGBA(r: c, g: c, b: c, a: UInt8((alpha * 255).rounded()))
+    }
+    private func makeBitmapImage(size: CGSize) -> CGImage? {
+        PixelGridBitmap.make(
+            cols: Self.cols, rows: Self.rows,
+            size: size, scale: displayScale,
+            gapFraction: Self.gapFraction
+        ) { px, py in
+            let level = Int(state.pixel(px, py)) // 0...3
+            return level > 0 ? Self.levels[min(level, 3) - 1] : nil
         }
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(
-            data: &pixels,
-            width: w,
-            height: h,
-            bitsPerComponent: 8,
-            bytesPerRow: w * 4,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
-        return context.makeImage()
     }
 }
 

@@ -5,6 +5,7 @@ struct TamaEmuApp: App {
     @State private var purchases = PurchaseManager()
 
     init() {
+        AppSettings.migrateAmbientToTheme()
         NotificationScheduler.configure()
         BackgroundRefresh.observeAppState()
         WatchRemote.shared.start()

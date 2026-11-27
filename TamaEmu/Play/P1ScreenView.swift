@@ -29,6 +29,8 @@ struct P1ScreenView: View {
     /// corners -- see renderP1Snapshot.
     var rounded: Bool = true
 
+    @Environment(\.displayScale) private var displayScale
+
     private let onColor = Color(red: 0.169, green: 0.165, blue: 0.157)
     static let cornerRadius: CGFloat = 16
     private static let iconSize: CGFloat = 36
@@ -111,8 +113,8 @@ struct P1ScreenView: View {
 
     private var pixelGrid: some View {
         GeometryReader { geo in
-            if let image = makeBitmapImage() {
-                Image(decorative: image, scale: 1, orientation: .up)
+            if let image = makeBitmapImage(size: geo.size) {
+                Image(decorative: image, scale: displayScale, orientation: .up)
                     .resizable()
                     .interpolation(.none)
                     .frame(width: geo.size.width, height: geo.size.height)
@@ -126,46 +128,81 @@ struct P1ScreenView: View {
     /// the background pattern underneath still shows through faintly.
     private static let onAlpha: CGFloat = 0.9
     private static let cols = 32, rows = 16
-    /// Each logical LCD pixel is rendered as an oversample x oversample
-    /// block, with its rightmost/bottommost texel left transparent -- a
-    /// thin gap line so adjacent "on" pixels read as separate squares
-    /// instead of one solid blob, same as a real LCD's pixel grid.
-    private static let oversample = 24
-    private func makeBitmapImage() -> CGImage? {
-        let scale = Self.oversample
-        let w = Self.cols * scale, h = Self.rows * scale
+    /// The gap line between LCD pixels, as a share of one pixel's width
+    /// (the old fixed 24x oversample's one texel).
+    private static let gapFraction: CGFloat = 1.0 / 24.0
+    private func makeBitmapImage(size: CGSize) -> CGImage? {
         // Premultiplied alpha: RGB must be scaled by onAlpha too, or the
         // "on" color comes out brighter than intended (CG reads raw bytes,
         // it doesn't premultiply them for us).
-        let alpha = UInt8((Self.onAlpha * 255).rounded())
-        let r = UInt8((43 * Self.onAlpha).rounded())
-        let g = UInt8((42 * Self.onAlpha).rounded())
-        let b = UInt8((40 * Self.onAlpha).rounded())
+        let ink = PixelGridBitmap.RGBA(
+            r: UInt8((43 * Self.onAlpha).rounded()),
+            g: UInt8((42 * Self.onAlpha).rounded()),
+            b: UInt8((40 * Self.onAlpha).rounded()),
+            a: UInt8((Self.onAlpha * 255).rounded())
+        )
+        return PixelGridBitmap.make(
+            cols: Self.cols, rows: Self.rows,
+            size: size, scale: displayScale,
+            gapFraction: Self.gapFraction
+        ) { px, py in state.pixel(px, py) ? ink : nil }
+    }
+}
+
+/// Draws a dot-matrix LCD as a bitmap the exact size of its spot on the
+/// screen, in real device pixels, with a see-through gap line after each
+/// LCD pixel so neighbours read as separate squares.
+///
+/// It used to be drawn at a fixed oversample (each LCD pixel a 24x24 or
+/// 16x16 block with a 1-texel gap) and then shrunk to fit. Wherever one
+/// LCD pixel came out at fewer device pixels than that (the iPad mini:
+/// about 15), the gap was thinner than a device pixel and nearest-
+/// neighbour scaling kept some gaps and dropped others, so the grid
+/// skipped lines in an uneven pattern. Here every gap is at least one
+/// whole device pixel; cells may differ by one device pixel in width,
+/// which can't be seen, where a missing line can.
+enum PixelGridBitmap {
+    struct RGBA { var r, g, b, a: UInt8 }
+
+    static func make(
+        cols: Int, rows: Int,
+        size: CGSize, scale: CGFloat,
+        gapFraction: CGFloat,
+        color: (Int, Int) -> RGBA?
+    ) -> CGImage? {
+        let w = Int((size.width * scale).rounded())
+        let h = Int((size.height * scale).rounded())
+        guard w >= cols, h >= rows else { return nil }
+        let xs = (0...cols).map { Int((Double($0) * Double(w) / Double(cols)).rounded()) }
+        let ys = (0...rows).map { Int((Double($0) * Double(h) / Double(rows)).rounded()) }
+        let gapX = max(1, Int((CGFloat(w) / CGFloat(cols) * gapFraction).rounded()))
+        let gapY = max(1, Int((CGFloat(h) / CGFloat(rows) * gapFraction).rounded()))
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
-        for y in 0..<h {
-            let localY = y % scale
-            guard localY < scale - 1 else { continue }
-            let py = y / scale
-            for x in 0..<w {
-                let localX = x % scale
-                guard localX < scale - 1 else { continue }
-                let px = x / scale
-                guard state.pixel(px, py) else { continue }
-                let i = (y * w + x) * 4
-                pixels[i] = r
-                pixels[i + 1] = g
-                pixels[i + 2] = b
-                pixels[i + 3] = alpha
+        pixels.withUnsafeMutableBufferPointer { buf in
+            for py in 0..<rows {
+                let y0 = ys[py], y1 = ys[py + 1] - gapY
+                guard y1 > y0 else { continue }
+                for px in 0..<cols {
+                    guard let c = color(px, py) else { continue }
+                    let x0 = xs[px], x1 = xs[px + 1] - gapX
+                    guard x1 > x0 else { continue }
+                    for y in y0..<y1 {
+                        var i = (y * w + x0) * 4
+                        for _ in x0..<x1 {
+                            buf[i] = c.r; buf[i + 1] = c.g; buf[i + 2] = c.b; buf[i + 3] = c.a
+                            i += 4
+                        }
+                    }
+                }
             }
         }
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
             data: &pixels,
             width: w,
             height: h,
             bitsPerComponent: 8,
             bytesPerRow: w * 4,
-            space: colorSpace,
+            space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
         return context.makeImage()

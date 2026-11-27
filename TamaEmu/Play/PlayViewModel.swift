@@ -251,6 +251,17 @@ final class PlayViewModel: SaveBackupHost {
         pauseEngine(action)
     }
 
+    /// Runs `action` on the stopped engine now, or, while paused (no
+    /// engine), right before the next one starts (Set Points, Your Name).
+    func applyToEngine(_ action: @escaping (EmulatorEngine) -> Void) {
+        if engine != nil {
+            pauseEngine(action)
+        } else {
+            actionsAwaitingEngine.append(action)
+        }
+    }
+    private var actionsAwaitingEngine: [(EmulatorEngine) -> Void] = []
+
     /// Path to this device's live flash/save image, if any exists yet.
     private var liveSaveURL: URL? {
         let path = SavePaths(device: selectedDevice).liveFlashPath
@@ -569,6 +580,9 @@ final class PlayViewModel: SaveBackupHost {
                         self.setLCDImage(image)
                     }
                     newEngine.setLinkPort(self.linkPort)
+                    // Thread not started yet: safe to write directly.
+                    for action in self.actionsAwaitingEngine { action(newEngine) }
+                    self.actionsAwaitingEngine = []
                     newEngine.start()
                     self.engine = newEngine
                     // The live engine keeps the gate from here; stopEngine()

@@ -91,7 +91,6 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.sharpPixels) private var sharpPixels = true
     @AppStorage(WidgetSharedState.lcdEffectEnabledKey, store: WidgetSharedState.sharedDefaultsOrStandard)
     private var lcdEffectEnabled = true
-    @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
     @AppStorage(AppSettings.Keys.reminderNotificationsEnabled) private var reminderNotificationsEnabled = false
     @AppStorage(AppSettings.Keys.reminderIntervalHours) private var reminderIntervalHours = 8.0
     @AppStorage(AppSettings.Keys.liveTranslationUsesCloud) private var liveTranslationUsesCloud = false
@@ -113,6 +112,10 @@ struct SettingsView: View {
     @State private var showingAPIKeyPrompt = false
     @State private var apiKeyDraft = ""
     @State private var showingPaywall = false
+    @State private var showingOwnerNamePrompt = false
+    @State private var ownerNameDraft = ""
+    /// Prefills "Your Name" on every Tama with the last name set.
+    @AppStorage("ownerName.last") private var lastOwnerName = ""
 
     init(
         device: TamaDevice,
@@ -218,6 +221,14 @@ struct SettingsView: View {
             } message: {
                 Text(target.restartMessage)
             }
+            .alert("Your Name", isPresented: $showingOwnerNamePrompt) {
+                TextField("Name", text: $ownerNameDraft)
+                    .autocorrectionDisabled()
+                Button("Set") { setOwnerName() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(OwnerName.hint(for: device.id))
+            }
             .alert(toast ?? "", isPresented: Binding(get: { toast != nil }, set: { if !$0 { toast = nil } })) {
                 Button("OK") { toast = nil }
             }
@@ -270,6 +281,12 @@ struct SettingsView: View {
                     ThemePickerView(device: device)
                 }
             }
+            if supportsOwnerName {
+                Button("Your Name…") {
+                    ownerNameDraft = lastOwnerName
+                    showingOwnerNamePrompt = true
+                }
+            }
             if case .firstGen = target {
                 Button("Screen Style…") { showingScreenStyle = true }
             }
@@ -291,9 +308,39 @@ struct SettingsView: View {
             if target.isTomomix {
                 Text("Tomomix's sky always fills your whole screen, free. Retro Screen adds big pixels and scan lines, like an old screen.")
             } else {
-                Text("Theme is the backdrop color behind \(device.title) when Ambient Background is off. Each Tama keeps its own.")
+                Text("Theme is the backdrop behind \(device.title). Each Tama keeps its own.")
             }
         }
+    }
+
+    /// Settings → Your Name: replaces the owner name the toy asked for at
+    /// setup (see OwnerName for which models and how).
+    private var supportsOwnerName: Bool {
+        switch target {
+        case .color, .t7: OwnerName.supports(device.id)
+        case .firstGen, .tomomix: false
+        }
+    }
+
+    private func setOwnerName() {
+        switch OwnerName.encode(ownerNameDraft, deviceID: device.id) {
+        case .failure(let error):
+            showToastAfterPrompt(error.message)
+        case .success(let bytes):
+            lastOwnerName = ownerNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch target {
+            case .color(let vm): vm.applyToEngine { _ = $0.setOwnerName(bytes) }
+            case .t7(let vm): vm.setOwnerName(bytes)
+            case .firstGen, .tomomix: break
+            }
+            showToastAfterPrompt("Name set. \(device.title) will use it from now on.")
+        }
+    }
+
+    /// A second alert right as the name prompt closes can be dropped, so
+    /// give the first one a moment to go away.
+    private func showToastAfterPrompt(_ message: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { toast = message }
     }
 
     private func tomomixCareSection(_ model: TomomixViewModel) -> some View {
@@ -487,13 +534,15 @@ struct SettingsView: View {
                     Text(mode.label).tag(mode.rawValue)
                 }
             }
-            Toggle("Sharp pixels", isOn: $sharpPixels)
-            Toggle("LCD Screen Effect", isOn: Binding(
-                get: { lcdEffectEnabled },
-                set: { lcdEffectEnabled = $0; WidgetSharedState.requestWidgetRefresh() }
-            ))
-            Toggle("Ambient Background", isOn: purchases.isPremium ? $ambientBackgroundEnabled : .constant(false))
-                .disabled(!purchases.isPremium)
+            // Only the color screens (LCDView) read these two; the B&W
+            // screens and Tomomix draw their own look and ignore them.
+            if target.isColor {
+                Toggle("Sharp pixels", isOn: $sharpPixels)
+                Toggle("LCD Screen Effect", isOn: Binding(
+                    get: { lcdEffectEnabled },
+                    set: { lcdEffectEnabled = $0; WidgetSharedState.requestWidgetRefresh() }
+                ))
+            }
             if AppIconChoice.isSupported {
                 NavigationLink("App Icon") {
                     AppIconPickerView()
@@ -502,7 +551,9 @@ struct SettingsView: View {
         } header: {
             Text("Display")
         } footer: {
-            Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. Ambient Background glows the play screen with the Tama's own colors, blurred full-bleed behind it — a Premium feature. These apply to every Tama. Tomomix always shows its own sky.")
+            if target.isColor {
+                Text("Sharp pixels keeps the LCD crisp when scaled up; turning it off smooths the pixel art instead. LCD Screen Effect adds scanlines and a glass reflection to match a real device's screen, on the play screen and the widget alike. These apply to every color Tama.")
+            }
         }
     }
 

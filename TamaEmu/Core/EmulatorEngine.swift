@@ -406,6 +406,9 @@ final class EmulatorEngine {
         "idl": (46012, 4),
         "ps": (5224, 2),
         "4u": (4956, 4),           // 4U+
+        // Found by logging which memory the money page reads: a search
+        // that only watched part of the screen had missed it.
+        "plus-color-hexa": (45796, 4),
     ]
 
     /// Whether Set Points works on this model yet.
@@ -427,6 +430,21 @@ final class EmulatorEngine {
             ptr[i] = UInt8((clamped >> (8 * i)) & 0xFF)
         }
         return clamped
+    }
+
+    /// Writes the owner's name (Settings → Your Name); `bytes` come from
+    /// `OwnerName.encode`. Returns false for a model without a known spot.
+    /// Call only while the engine's thread is stopped, like `setPoints`.
+    @discardableResult
+    func setOwnerName(_ bytes: [UInt8]) -> Bool {
+        let offset: Int
+        switch OwnerName.format(for: device.id) {
+        case .kana5(let o), .pairs8(let o): offset = o
+        default: return false
+        }
+        let ptr = UnsafeMutableRawPointer(emu).advanced(by: offset).assumingMemoryBound(to: UInt8.self)
+        for (i, b) in bytes.enumerated() { ptr[i] = b }
+        return true
     }
 
     deinit {

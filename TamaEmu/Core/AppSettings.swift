@@ -153,11 +153,31 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue.rawValue, forKey: Keys.appearanceMode) }
     }
 
-    /// On by default: the full-bleed blurred backdrop and screen glow
-    /// described by the play-screen look (see BlurredLCDBackground).
+    /// The old app-wide Ambient Background switch (on by default). It has
+    /// no control any more — Ambient is now a per-Tama theme — and is only
+    /// read as color Tamas' default theme (AppTheme.defaultTheme), so
+    /// someone who had switched it off keeps their gradients.
     static var ambientBackgroundEnabled: Bool {
-        get { UserDefaults.standard.object(forKey: Keys.ambientBackgroundEnabled) as? Bool ?? true }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.ambientBackgroundEnabled) }
+        UserDefaults.standard.object(forKey: Keys.ambientBackgroundEnabled) as? Bool ?? true
+    }
+
+    /// One-time move from the app-wide switch to the Ambient theme. With
+    /// the switch on, a color Tama's stored theme was hidden behind the
+    /// glow — so it becomes Ambient, keeping what the user actually saw.
+    /// Tamas with no stored theme need nothing (see defaultTheme).
+    static func migrateAmbientToTheme() {
+        let defaults = UserDefaults.standard
+        let doneKey = "settings.ambientMigratedToTheme"
+        guard !defaults.bool(forKey: doneKey) else { return }
+        if ambientBackgroundEnabled {
+            for device in DeviceCatalog.all() where AppTheme.supportsAmbient(device) {
+                let key = Keys.theme(for: device)
+                if defaults.string(forKey: key) != nil {
+                    defaults.set(AppTheme.ambient.rawValue, forKey: key)
+                }
+            }
+        }
+        defaults.set(true, forKey: doneKey)
     }
 
     /// Off by default: this is a state-blind fallback (see

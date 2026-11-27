@@ -9,7 +9,6 @@ struct TamaGalleryView: View {
     @Environment(PurchaseManager.self) private var purchases
 
     @AppStorage(AppSettings.Keys.appearanceMode) private var appearanceModeRaw = AppSettings.AppearanceMode.system.rawValue
-    @AppStorage(AppSettings.Keys.ambientBackgroundEnabled) private var ambientBackgroundEnabled = true
 
     @State private var showingSettings = false
     @State private var showingFigureImporter = false
@@ -29,20 +28,6 @@ struct TamaGalleryView: View {
     @State private var onlineLink = OnlineLinkSession()
     @State private var showingNearbyLink = false
     @State private var showingNewStarConfirm = false
-
-    /// Ambient Background is a premium feature — forced off for free users
-    /// regardless of their own stored preference, which is left untouched
-    /// so it springs back on the moment they unlock Premium.
-    private var effectiveAmbientBackgroundEnabled: Bool {
-        ambientBackgroundEnabled && purchases.isPremium
-    }
-
-    /// Whether the page on screen shows its own live backdrop: Tomomix's
-    /// sky (free, for everyone), or a color Tama's blurred screen with the
-    /// Premium Ambient Background on. Every other page gets the theme.
-    private var ambientActive: Bool {
-        selectedTomomix != nil || (effectiveAmbientBackgroundEnabled && selectedViewModel != nil)
-    }
 
     /// First Tama is always free; anything past that needs Premium.
     /// Pulled out of the `.alert` call itself — inlined there, this
@@ -175,19 +160,19 @@ struct TamaGalleryView: View {
     private func pageView(for device: TamaDevice) -> some View {
         switch device.family {
         case .ctama:
-            TamaPageView(
-                viewModel: gallery.viewModel(for: device),
-                ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
-            )
+            // Reads its own theme (Ambient or not) — see TamaPageView.
+            TamaPageView(viewModel: gallery.viewModel(for: device))
         case .v1:
+            // These can't glow; the flag only picks the bolder title,
+            // which Premium users always had (Ambient defaulted on).
             V1PageView(
                 viewModel: gallery.v1ViewModel(for: device),
-                ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
+                ambientBackgroundEnabled: purchases.isPremium
             )
         case .t7:
             T7PageView(
                 viewModel: gallery.t7ViewModel(for: device),
-                ambientBackgroundEnabled: effectiveAmbientBackgroundEnabled
+                ambientBackgroundEnabled: purchases.isPremium
             )
         case .tomomix:
             TomomixPageView(model: gallery.tomomixViewModel(), ambientBackgroundEnabled: true)
@@ -427,6 +412,7 @@ struct TamaGalleryView: View {
             if viewModel.supportsFigures {
                 figureMenu(viewModel: viewModel)
             }
+            setPointsButton
         }
         captureButtons(recordable: viewModel) { viewModel.screenshot() }
     }
@@ -484,20 +470,25 @@ struct TamaGalleryView: View {
             syncClockButton
             nearbyLinkButton(device: viewModel.selectedDevice, peerName: viewModel.linkPeerName)
             if EmulatorEngine.supportsPoints(viewModel.selectedDevice.id) {
-                Button {
-                    if purchases.isPremium {
-                        pointsInputText = ""
-                        showingSetPointsPrompt = true
-                    } else {
-                        showingPaywall = true
-                    }
-                } label: {
-                    Label(
-                        purchases.isPremium ? "Set Points…" : "Set Points… (Premium)",
-                        systemImage: purchases.isPremium ? "number.circle" : "star.fill"
-                    )
-                }
+                setPointsButton
             }
+        }
+    }
+
+    /// ⋯ "Set Points…" (Premium), shared by the color and Tama-Go/Friends menus.
+    private var setPointsButton: some View {
+        Button {
+            if purchases.isPremium {
+                pointsInputText = ""
+                showingSetPointsPrompt = true
+            } else {
+                showingPaywall = true
+            }
+        } label: {
+            Label(
+                purchases.isPremium ? "Set Points…" : "Set Points… (Premium)",
+                systemImage: purchases.isPremium ? "number.circle" : "star.fill"
+            )
         }
     }
 
@@ -636,9 +627,13 @@ struct TamaGalleryView: View {
                             if filtered != newValue { pointsInputText = filtered }
                         }
                     Button("Set") {
-                        if let value = Int(pointsInputText), let viewModel = selectedViewModel {
-                            viewModel.restartTamaClock { engine in
-                                _ = engine.setPoints(value)
+                        if let value = Int(pointsInputText) {
+                            if let viewModel = selectedViewModel {
+                                viewModel.applyToEngine { engine in
+                                    _ = engine.setPoints(value)
+                                }
+                            } else if let device = selectedDevice, device.family == .t7 {
+                                gallery.t7ViewModel(for: device).setPoints(value)
                             }
                         }
                     }
@@ -735,25 +730,22 @@ struct TamaGalleryView: View {
             .indexViewStyle(.page(backgroundDisplayMode: .never))
             .scrollContentBackground(.hidden)
             .background {
-                if !ambientActive {
-                    // Each device has its own theme ("Plain" draws the
-                    // system background, so this always fills the screen).
-                    if let device = selectedDevice {
-                        DeviceThemeBackground(device: device)
-                            .id(device.id)
+                if let model = selectedTomomix {
+                    // Tomomix: its own sky, edge to edge.
+                    TomoAmbientSky(model: model)
+                } else if let device = selectedDevice {
+                    // Each device has its own theme; Ambient is one of
+                    // them. LiveAmbientBackground is its own view on
+                    // purpose: reading `lcdImage` right here made this
+                    // whole gallery body — toolbar and the open ⋯ menu
+                    // included — rebuild on every LCD frame change, which
+                    // is what made the menu pulse and drop taps while the
+                    // Tama was animating.
+                    let viewModel = selectedViewModel
+                    DeviceThemeBackground(device: device) {
+                        LiveAmbientBackground(viewModel: viewModel)
                     }
-                } else {
-                    // Its own view on purpose: reading `lcdImage` right
-                    // here made this whole gallery body — toolbar and the
-                    // open ⋯ menu included — rebuild on every LCD frame
-                    // change, which is what made the menu pulse and drop
-                    // taps while the Tama was animating.
-                    if let model = selectedTomomix {
-                        // Tomomix: its own sky, edge to edge.
-                        TomoAmbientSky(model: model)
-                    } else {
-                        LiveAmbientBackground(viewModel: selectedViewModel)
-                    }
+                    .id(device.id)
                 }
             }
             // Shows while recording regardless of which page is visible —

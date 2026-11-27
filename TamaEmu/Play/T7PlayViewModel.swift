@@ -125,6 +125,28 @@ final class T7PlayViewModel: SaveBackupHost {
     /// ⋯ "Sync Clock to Now": the clock jumps to the real time and nothing
     /// ages in between: a quick stop and restart with the clock set on the
     /// way back in. Never automatic (not on unpause).
+    /// ⋯ "Set Points…": replaces the Tama's points total. Applied by the
+    /// engine between frames; while paused (no engine) it is kept and
+    /// applied as soon as play resumes.
+    func setPoints(_ value: Int) {
+        if let engine {
+            engine.setPoints(value)
+        } else {
+            pointsAwaitingEngine = value
+        }
+    }
+    private var pointsAwaitingEngine: Int?
+
+    /// Settings → Your Name. Same timing as setPoints.
+    func setOwnerName(_ bytes: [UInt8]) {
+        if let engine {
+            engine.setOwnerName(bytes)
+        } else {
+            nameAwaitingEngine = bytes
+        }
+    }
+    private var nameAwaitingEngine: [UInt8]?
+
     func syncClockToNow() {
         guard engine != nil, !isPaused else { return }
         stopEngine()
@@ -462,6 +484,14 @@ final class T7PlayViewModel: SaveBackupHost {
                 self.errorMessage = nil
                 self.isLoading = false
                 newEngine.setLinkPort(self.linkPort)
+                if let points = self.pointsAwaitingEngine {
+                    newEngine.setPoints(points)
+                    self.pointsAwaitingEngine = nil
+                }
+                if let name = self.nameAwaitingEngine {
+                    newEngine.setOwnerName(name)
+                    self.nameAwaitingEngine = nil
+                }
                 self.engine = newEngine
             }
         }

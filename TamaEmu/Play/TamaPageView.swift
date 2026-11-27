@@ -13,9 +13,22 @@ import TamaCore
 /// endFastForward() are safe to act on its own engine directly.
 struct TamaPageView: View {
     let viewModel: PlayViewModel
-    let ambientBackgroundEnabled: Bool
 
     @Environment(PurchaseManager.self) private var purchases
+    /// This Tama's theme; the screen glows only when it's Ambient (the
+    /// gallery draws the matching backdrop, see DeviceThemeBackground).
+    @AppStorage private var themeRaw: String?
+
+    init(viewModel: PlayViewModel) {
+        self.viewModel = viewModel
+        _themeRaw = AppStorage(AppSettings.Keys.theme(for: viewModel.selectedDevice))
+    }
+
+    private var ambientBackgroundEnabled: Bool {
+        let device = viewModel.selectedDevice
+        return AppTheme.stored(themeRaw, for: device)
+            .effective(isPremium: purchases.isPremium, device: device) == .ambient
+    }
     @State private var showingPaywall = false
 
     /// Set once a press has been held long enough to count as "hold" rather

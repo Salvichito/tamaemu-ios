@@ -19,7 +19,7 @@ func renderLCDSnapshot(image: CGImage?, side: CGFloat, scale: CGFloat = 3) -> CG
 /// there) and unrounded, for the same reason as renderLCDSnapshot above.
 @MainActor
 func renderP1Snapshot(state: P1ScreenState, deviceID: String, scale: CGFloat = 3) -> CGImage? {
-    let renderer = ImageRenderer(content: P1ScreenView(state: state, deviceID: deviceID, rounded: false).frame(width: 280, height: 280))
+    let renderer = ImageRenderer(content: P1ScreenView(state: state, deviceID: deviceID, rounded: false).frame(width: 280, height: 280).environment(\.displayScale, scale))
     renderer.scale = scale
     return renderer.cgImage
 }
@@ -28,7 +28,7 @@ func renderP1Snapshot(state: P1ScreenState, deviceID: String, scale: CGFloat = 3
 /// renderP1Snapshot above.
 @MainActor
 func renderT7Snapshot(state: T7ScreenState, isFriends: Bool, scale: CGFloat = 3) -> CGImage? {
-    let renderer = ImageRenderer(content: T7ScreenView(state: state, isFriends: isFriends, rounded: false).frame(width: 280, height: 280))
+    let renderer = ImageRenderer(content: T7ScreenView(state: state, isFriends: isFriends, rounded: false).frame(width: 280, height: 280).environment(\.displayScale, scale))
     renderer.scale = scale
     return renderer.cgImage
 }
