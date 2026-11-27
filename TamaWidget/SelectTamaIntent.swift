@@ -47,4 +47,24 @@ struct SelectTamaIntent: WidgetConfigurationIntent {
 
     @Parameter(title: "Pet")
     var tama: TamaEntity?
+
+    /// Only matters with tinted or clear Home Screen icons.
+    @Parameter(title: "Tinted Look", default: .tinted)
+    var tintedLook: TintedLook?
+}
+
+/// How the widget's Tama screen looks when the Home Screen uses tinted or
+/// clear icons. In that mode iOS redraws widgets in one color, and an
+/// opaque full-color picture with no hint turns into a solid white block.
+enum TintedLook: String, AppEnum {
+    case tinted
+    case greyscale
+    case fullColor
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Tinted Look"
+    static var caseDisplayRepresentations: [TintedLook: DisplayRepresentation] = [
+        .tinted: "Match Icon Tint",
+        .greyscale: "Greyscale",
+        .fullColor: "Full Color",
+    ]
 }

@@ -20,6 +20,8 @@ struct TamaEntry: TimelineEntry {
     /// Premium feature, so a free user sees a locked placeholder instead of
     /// the live LCD regardless of how this instance is configured.
     let isPremium: Bool
+    /// Per-widget choice for tinted / clear Home Screens (Edit Widget).
+    var tintedLook: TintedLook = .tinted
 }
 
 /// Pure viewer — runs no simulation of its own. Just reads whatever the
@@ -61,7 +63,7 @@ struct TamaProvider: AppIntentTimelineProvider {
 
     private func currentEntry(for configuration: SelectTamaIntent, at date: Date) -> TamaEntry {
         guard let id = configuration.tama?.id, let device = DeviceCatalog.find(name: id) else {
-            return TamaEntry(date: date, image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil, isPremium: WidgetSharedState.isPremium)
+            return TamaEntry(date: date, image: nil, deviceTitle: nil, isConfigured: false, appClosedAt: nil, isPremium: WidgetSharedState.isPremium, tintedLook: configuration.tintedLook ?? .tinted)
         }
         // The tomomix is free in full, its widget included.
         let isPremium = WidgetSharedState.isPremium || device.family == .tomomix
@@ -75,7 +77,8 @@ struct TamaProvider: AppIntentTimelineProvider {
             deviceTitle: WidgetSharedState.deviceTitle(for: device),
             isConfigured: true,
             appClosedAt: WidgetSharedState.appClosedAt,
-            isPremium: isPremium
+            isPremium: isPremium,
+            tintedLook: configuration.tintedLook ?? .tinted
         )
     }
 }
