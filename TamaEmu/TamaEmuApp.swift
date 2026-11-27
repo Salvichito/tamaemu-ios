@@ -7,6 +7,7 @@ struct TamaEmuApp: App {
     init() {
         NotificationScheduler.configure()
         BackgroundRefresh.observeAppState()
+        WatchRemote.shared.start()
         // The gallery's page dots run with backgroundDisplayMode(.never), so there's
         // no system scrim behind them — the default translucent-gray dot tint reads
         // fine on dark content but nearly disappears on a light background. .label

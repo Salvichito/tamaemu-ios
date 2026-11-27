@@ -71,7 +71,7 @@ final class V1EmulatorEngine {
             (ios_hal_tone_on(), Float(ios_hal_tone_freq_dhz()) / 10)
         },
         volumeProvider: {
-            Float(AppSettings.volume)
+            Float(AppSettings.playbackVolume)
         }
     )
 

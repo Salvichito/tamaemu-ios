@@ -240,7 +240,7 @@ final class EmulatorEngine {
             return (self.emu.pointee.tone_on != 0, self.emu.pointee.tone_freq)
         },
         volumeProvider: {
-            Float(AppSettings.volume)
+            Float(AppSettings.playbackVolume)
         }
     )
 

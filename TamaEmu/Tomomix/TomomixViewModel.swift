@@ -1240,7 +1240,7 @@ final class TomoBeeper: @unchecked Sendable {
     private let notes = OSAllocatedUnfairLock<[(Float, UInt64, UInt64)]>(initialState: [])
     private lazy var output = AudioOutput(
         toneProvider: { [weak self] in self?.current() ?? (false, 0) },
-        volumeProvider: { Float(AppSettings.volume) }
+        volumeProvider: { Float(AppSettings.playbackVolume) }
     )
 
     func start() { output.start() }

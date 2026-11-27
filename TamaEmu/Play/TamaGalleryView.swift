@@ -4,7 +4,7 @@ import TamaCore
 import UIKit
 
 struct TamaGalleryView: View {
-    @State private var gallery = GalleryViewModel()
+    @State private var gallery = GalleryViewModel.shared
     @Environment(\.scenePhase) private var scenePhase
     @Environment(PurchaseManager.self) private var purchases
 
@@ -147,7 +147,9 @@ struct TamaGalleryView: View {
             guard let currentID = gallery.selectedPage, let current = gallery.device(withID: currentID) else { return }
             switch newPhase {
             case .background:
-                gallery.pageDidDisappear(current)
+                // Unless the Apple Watch is playing it: then it carries on
+                // silently until the watch closes (see WatchRemote).
+                if !WatchRemote.shared.isServingWatch { gallery.pageDidDisappear(current) }
                 // The tomomix's own page schedules its calls when it
                 // stops; from any other page, schedule them from its save.
                 if current.family != .tomomix, let save = TomomixStore.load() {

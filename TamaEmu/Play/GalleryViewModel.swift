@@ -27,6 +27,11 @@ extension TomomixViewModel: EngineLifecycle {}
 @MainActor
 @Observable
 final class GalleryViewModel {
+    /// The one gallery. Shared (rather than owned by TamaGalleryView) so
+    /// the Apple Watch remote can reach it when iOS wakes the app in the
+    /// background, before or without any screen being built.
+    static let shared = GalleryViewModel()
+
     private(set) var ownedDevices: [TamaDevice]
     var selectedPage: TamaDevice.ID?
     var showingImport = false
@@ -143,18 +148,37 @@ final class GalleryViewModel {
     /// already (a no-op if it's already running, e.g. right after its own
     /// construction already started it).
     func pageDidAppear(_ device: TamaDevice) {
+        let page: EngineLifecycle & WatchMirrorable
         switch device.family {
-        case .ctama: viewModel(for: device).resumeIfNeeded()
-        case .v1: v1ViewModel(for: device).resumeIfNeeded()
-        case .t7: t7ViewModel(for: device).resumeIfNeeded()
-        case .tomomix: tomomixViewModel().resumeIfNeeded()
+        case .ctama: page = viewModel(for: device)
+        case .v1: page = v1ViewModel(for: device)
+        case .t7: page = t7ViewModel(for: device)
+        case .tomomix: page = tomomixViewModel()
         }
+        page.resumeIfNeeded()
+        // The Apple Watch remote mirrors whichever page is on screen.
+        WatchRemote.shared.show(page)
+    }
+
+    /// The watch opened while the phone app is in the background: start
+    /// the Tama the phone would be showing (see WatchRemote).
+    func wakeForWatch() {
+        guard let id = selectedPage, let device = device(withID: id) else { return }
+        pageDidAppear(device)
+    }
+
+    /// The watch closed and the phone app is still in the background.
+    func sleepAfterWatch() {
+        guard let id = selectedPage, let device = device(withID: id) else { return }
+        pageDidDisappear(device)
     }
 
     /// A page stopped being the one on screen — stop its engine, saving
     /// and publishing its last frame, same as backgrounding today.
     func pageDidDisappear(_ device: TamaDevice) {
-        cachedEngine(for: device.id)?.stopEngine()
+        guard let page = cachedEngine(for: device.id) else { return }
+        if let mirrored = page as? WatchMirrorable { WatchRemote.shared.hide(mirrored) }
+        page.stopEngine()
     }
 
     /// A device was just imported — either brand new, or an existing

@@ -77,7 +77,7 @@ final class T7EmulatorEngine {
             (ios_t7_sound_busy(), 0)
         },
         volumeProvider: {
-            Float(AppSettings.volume)
+            Float(AppSettings.playbackVolume)
         },
         pcmProvider: { out, count, restarted in
             if restarted { ios_t7_sound_skip_to(T7EmulatorEngine.audioTargetSamples) }

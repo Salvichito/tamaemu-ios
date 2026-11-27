@@ -97,6 +97,12 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue.clamped(to: 0...1), forKey: Keys.volume) }
     }
 
+    /// What the Tamas' sound actually plays at: the volume setting, or
+    /// nothing while one runs in the background for the Apple Watch.
+    static var playbackVolume: Double {
+        WatchRemote.silenced ? 0 : volume
+    }
+
     static var hapticsEnabled: Bool {
         get { UserDefaults.standard.object(forKey: Keys.hapticsEnabled) as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: Keys.hapticsEnabled) }
