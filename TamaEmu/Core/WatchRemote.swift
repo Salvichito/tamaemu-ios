@@ -399,6 +399,14 @@ extension T7PlayViewModel: WatchMirrorable {
     func watchRelease(_ button: InputController.Button) { releaseButton(button) }
 }
 
+extension T18PlayViewModel: WatchMirrorable {
+    var watchTitle: String { selectedDevice.title }
+    func watchFrame() -> CGImage? { screenImage }
+    var watchIsLoading: Bool { isLoading }
+    func watchPress(_ button: InputController.Button) { pressButton(button) }
+    func watchRelease(_ button: InputController.Button) { releaseButton(button) }
+}
+
 extension TomomixViewModel: WatchMirrorable {
     var watchTitle: String { displayName }
     func watchFrame() -> CGImage? { recordingFrame(side: 160) }

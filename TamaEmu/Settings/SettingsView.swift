@@ -7,6 +7,7 @@ enum SettingsTarget {
     case color(PlayViewModel)
     case firstGen(V1PlayViewModel)
     case t7(T7PlayViewModel)
+    case t18(T18PlayViewModel)
     case tomomix(TomomixViewModel)
 
     var backupHost: SaveBackupHost {
@@ -14,6 +15,7 @@ enum SettingsTarget {
         case .color(let vm): vm
         case .firstGen(let vm): vm
         case .t7(let vm): vm
+        case .t18(let vm): vm
         case .tomomix(let model): model
         }
     }
@@ -33,6 +35,7 @@ enum SettingsTarget {
         switch self {
         case .color(let vm): vm.prepareExportURL()
         case .t7(let vm): vm.prepareExportURL()
+        case .t18(let vm): vm.prepareExportURL()
         case .tomomix(let model): model.prepareExportURL()
         case .firstGen: nil
         }
@@ -42,6 +45,7 @@ enum SettingsTarget {
         switch self {
         case .color(let vm): try vm.importSave(from: url)
         case .t7(let vm): try vm.importSave(from: url)
+        case .t18(let vm): try vm.importSave(from: url)
         case .tomomix(let model): try model.importSave(from: url)
         case .firstGen: break
         }
@@ -52,6 +56,7 @@ enum SettingsTarget {
         case .color(let vm): vm.restartTama()
         case .firstGen(let vm): vm.restartTama()
         case .t7(let vm): vm.restartTama()
+        case .t18(let vm): vm.restartTama()
         case .tomomix: break // its restart is "Send a New Shooting Star" in ⋯
         }
     }
@@ -65,6 +70,8 @@ enum SettingsTarget {
             "Like taking the battery out and back in: this model keeps everything in memory, so the game starts over from the beginning. What's there now is kept in Backups, so you can undo this."
         case .t7:
             "Like pressing the toy's reset button. What's there now is kept in Backups, so you can undo this."
+        case .t18:
+            "Like taking the battery out and back in: the game's own save is kept, and it starts at CONTINUE / RESET ALL. What's there now is kept in Backups, so you can undo this."
         }
     }
 }
@@ -318,7 +325,7 @@ struct SettingsView: View {
     private var supportsOwnerName: Bool {
         switch target {
         case .color, .t7: OwnerName.supports(device.id)
-        case .firstGen, .tomomix: false
+        case .firstGen, .t18, .tomomix: false
         }
     }
 
@@ -331,7 +338,7 @@ struct SettingsView: View {
             switch target {
             case .color(let vm): vm.applyToEngine { _ = $0.setOwnerName(bytes) }
             case .t7(let vm): vm.setOwnerName(bytes)
-            case .firstGen, .tomomix: break
+            case .firstGen, .t18, .tomomix: break
             }
             showToastAfterPrompt("Name set. \(device.title) will use it from now on.")
         }

@@ -21,7 +21,7 @@ See [`Packages/TamaCore/CREDITS.md`](Packages/TamaCore/CREDITS.md) for the
 itemized list of changes made to the upstream core for this iOS port (each
 marked `// iOS port:` at the change site), as required by GPLv3 §5(a).
 
-Two further device families are emulated the same way, each its own
+Three further device families are emulated the same way, each its own
 statically-linked package under the same GPLv3 terms:
 
 - [`Packages/TamaLibCore/`](Packages/TamaLibCore/) vendors
@@ -35,6 +35,10 @@ statically-linked package under the same GPLv3 terms:
   Tamagotchi Friends), under that repository's license, GPL-3.0-or-later —
   itself a C port of [tamago](https://github.com/asterick/tamago) by asterick
   (BSD). See [`Packages/T7EmuCore/CREDITS.md`](Packages/T7EmuCore/CREDITS.md).
+- [`Packages/T18EmuCore/`](Packages/T18EmuCore/) vendors T18Emu by mameise, from
+  [mameise/Paramix-Studio](https://github.com/mameise/Paramix-Studio) (Tamagotchi
+  Meets / Tamagotchi On), under that repository's license, GPL-3.0-or-later. See
+  [`Packages/T18EmuCore/CREDITS.md`](Packages/T18EmuCore/CREDITS.md).
 
 ## Bundled artwork
 

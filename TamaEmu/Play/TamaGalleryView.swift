@@ -75,8 +75,15 @@ struct TamaGalleryView: View {
         case .ctama: .color(gallery.viewModel(for: device))
         case .v1: .firstGen(gallery.v1ViewModel(for: device))
         case .t7: .t7(gallery.t7ViewModel(for: device))
+        case .t18: .t18(gallery.t18ViewModel(for: device))
         case .tomomix: .tomomix(gallery.tomomixViewModel())
         }
+    }
+
+    /// A Meets/On page's view model.
+    private var selectedT18ViewModel: T18PlayViewModel? {
+        guard let device = selectedDevice, device.family == .t18 else { return nil }
+        return gallery.t18ViewModel(for: device)
     }
 
     private var selectedTomomix: TomomixViewModel? {
@@ -174,6 +181,9 @@ struct TamaGalleryView: View {
                 viewModel: gallery.t7ViewModel(for: device),
                 ambientBackgroundEnabled: purchases.isPremium
             )
+        case .t18:
+            // Reads its own theme (Ambient or not), like TamaPageView.
+            T18PageView(viewModel: gallery.t18ViewModel(for: device))
         case .tomomix:
             TomomixPageView(model: gallery.tomomixViewModel(), ambientBackgroundEnabled: true)
         }
@@ -417,6 +427,16 @@ struct TamaGalleryView: View {
         captureButtons(recordable: viewModel) { viewModel.screenshot() }
     }
 
+    @ToolbarContentBuilder
+    private func t18ToolbarContent(viewModel: T18PlayViewModel) -> some ToolbarContent {
+        topBar {
+            pauseButton(isPaused: viewModel.isPaused) { viewModel.togglePause() }
+            syncClockButton
+            setPointsButton
+        }
+        captureButtons(recordable: viewModel) { viewModel.screenshot() }
+    }
+
     /// Plug a Gotchi Figure in or out (Tama-Go). Importing them is in
     /// Settings → Figures; with none yet, this opens the file picker.
     @ViewBuilder
@@ -613,6 +633,8 @@ struct TamaGalleryView: View {
                             viewModel.syncClockToNow()
                         } else if let device = selectedDevice, device.family == .t7 {
                             gallery.t7ViewModel(for: device).syncClockToNow()
+                        } else if let viewModel = selectedT18ViewModel {
+                            viewModel.syncClockToNow()
                         }
                     }
                     Button("Cancel", role: .cancel) {}
@@ -634,6 +656,8 @@ struct TamaGalleryView: View {
                                 }
                             } else if let device = selectedDevice, device.family == .t7 {
                                 gallery.t7ViewModel(for: device).setPoints(value)
+                            } else if let viewModel = selectedT18ViewModel {
+                                viewModel.setPoints(value)
                             }
                         }
                     }
@@ -742,8 +766,9 @@ struct TamaGalleryView: View {
                     // is what made the menu pulse and drop taps while the
                     // Tama was animating.
                     let viewModel = selectedViewModel
+                    let t18ViewModel = selectedT18ViewModel
                     DeviceThemeBackground(device: device) {
-                        LiveAmbientBackground(viewModel: viewModel)
+                        LiveAmbientBackground(viewModel: viewModel, t18ViewModel: t18ViewModel)
                     }
                     .id(device.id)
                 }
@@ -786,6 +811,8 @@ struct TamaGalleryView: View {
                     tomomixToolbarContent(model: model)
                 } else if let device = selectedDevice, device.family == .t7 {
                     t7ToolbarContent(viewModel: gallery.t7ViewModel(for: device))
+                } else if let viewModel = selectedT18ViewModel {
+                    t18ToolbarContent(viewModel: viewModel)
                 }
             }
     }
@@ -795,9 +822,11 @@ struct TamaGalleryView: View {
 /// re-renders just this backdrop and nothing else on the screen.
 private struct LiveAmbientBackground: View {
     let viewModel: PlayViewModel?
+    /// A Meets/On page's screen glows the same way.
+    var t18ViewModel: T18PlayViewModel?
 
     var body: some View {
-        BlurredLCDBackground(image: viewModel?.lcdImage)
+        BlurredLCDBackground(image: viewModel?.lcdImage ?? t18ViewModel?.screenImage)
     }
 }
 

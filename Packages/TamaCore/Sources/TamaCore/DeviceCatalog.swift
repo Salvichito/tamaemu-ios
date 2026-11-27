@@ -1,3 +1,4 @@
+import Foundation
 import CTama
 
 /// Which emulator core plays a device. Everything in this catalog used to
@@ -8,6 +9,8 @@ public enum TamaDeviceFamily: Hashable, Sendable {
     case ctama
     case v1
     case t7
+    /// Tamagotchi Meets / On (T18Emu, via T18EmuCore).
+    case t18
     /// Tomomix, the built-in original pet: no ROM, no emulator core. Its
     /// rules live in the app (TamaEmu/Tomomix), not in this package.
     case tomomix
@@ -99,6 +102,42 @@ private let t7Devices: [TamaDevice] = [
 /// stays intact and compiling.
 private let t7Enabled = true
 
+/// Tamagotchi Meets / On (T18Emu, via T18EmuCore): one device per
+/// edition, since each is its own firmware and save. All are 8 MB, like
+/// the P's and 4U, so the import tells them apart by content: the "SPII"
+/// header marks the family, and a fingerprint of the program code names the
+/// edition (`t18DeviceID(forROM:)`).
+private let t18Devices: [TamaDevice] = [
+    TamaDevice(id: "on-fairy", title: "Tamagotchi On (Fairy)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "on-magic", title: "Tamagotchi On (Magic)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "on-wonder-garden", title: "Tamagotchi On (Wonder Garden)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "meets-fairy", title: "Tamagotchi Meets (Fairy)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "meets-magical", title: "Tamagotchi Meets (Magical)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "meets-magical-v61", title: "Tamagotchi Meets (Magical v61)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "meets-pastel", title: "Tamagotchi Meets (Pastel)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "meets-sanrio", title: "Tamagotchi Meets (Sanrio)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "meets-sweets", title: "Tamagotchi Meets (Sweets)", romSize: 0x800000, family: .t18),
+    TamaDevice(id: "meets-fantasy", title: "Tamagotchi Meets (Fantasy)", romSize: 0x800000, family: .t18),
+]
+
+/// FNV-1a 64 over the first 0x1E0000 bytes (the program code, which a
+/// dump's own save data never touches) -> edition. The same fingerprint
+/// nijiiro-egg (oreo-fox, MIT) uses to name these dumps; all ten checked
+/// against real dumps 2026-11-27. The v61 Magical build isn't in that
+/// project's list (its file is dated 2018-05-18).
+private let t18CodeFingerprints: [UInt64: String] = [
+    0xD780_5452_8833_EB90: "on-fairy",          // EN v057
+    0x8313_24F3_B2FA_6768: "on-magic",          // EN v058
+    0xA38D_22B6_76C5_3108: "on-wonder-garden",  // EN v063
+    0x7056_A91C_C05E_227F: "meets-fairy",       // JP v030
+    0x4089_9249_C2E4_6D53: "meets-magical",     // JP v031
+    0x6EC1_D7DD_380F_3378: "meets-magical-v61", // JP v061
+    0xA6FF_6D03_28E7_0278: "meets-pastel",      // JP v055
+    0x3A68_A53E_2DB1_64B2: "meets-sanrio",      // JP v056
+    0x28AD_63C3_4FA9_E369: "meets-sweets",      // JP v062
+    0xEA18_7BF0_CBFA_04F3: "meets-fantasy",     // JP v047
+]
+
 public enum DeviceCatalog {
     /// The built-in pet. Not part of `all()`, which lists devices a ROM
     /// can be imported for.
@@ -115,6 +154,7 @@ public enum DeviceCatalog {
         if t7Enabled {
             result.append(contentsOf: t7Devices)
         }
+        result.append(contentsOf: t18Devices)
         return result
     }
 
@@ -127,6 +167,9 @@ public enum DeviceCatalog {
         }
         if let t7 = t7Devices.first(where: { $0.id == name }) {
             return t7
+        }
+        if let t18 = t18Devices.first(where: { $0.id == name }) {
+            return t18
         }
         guard let p = device_find(name) else { return nil }
         return TamaDevice(profile: p)
@@ -147,6 +190,28 @@ public enum DeviceCatalog {
     /// as any other ambiguous size).
     public static func v1DeviceID(forROM bytes: some Sequence<UInt8>) -> String? {
         v1ROMFingerprints[romFingerprint(bytes)]
+    }
+
+    /// An 8 MB Meets/On firmware: "SPII" header, entry 0x2000000C (the
+    /// same test Paramix Studio's t18Detect makes).
+    public static func isT18Firmware(_ rom: Data) -> Bool {
+        guard rom.count == 0x800000 else { return false }
+        let b = [UInt8](rom.prefix(8))
+        return b[0] == 0x53 && b[1] == 0x50 && b[2] == 0x49 && b[3] == 0x49
+            && b[4] == 0x0C && b[5] == 0x00 && b[6] == 0x00 && b[7] == 0x20
+    }
+
+    /// The Meets/On edition a firmware dump is, or nil for a build this
+    /// catalog doesn't know (the user then picks the edition).
+    public static func t18DeviceID(forROM rom: Data) -> String? {
+        guard isT18Firmware(rom) else { return nil }
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
+        rom.withUnsafeBytes { raw in
+            for byte in raw.prefix(0x1E_0000) {
+                hash = (hash ^ UInt64(byte)) &* 0x0000_0100_0000_01B3
+            }
+        }
+        return t18CodeFingerprints[hash]
     }
 
     public static func defaultDevice() -> TamaDevice {

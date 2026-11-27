@@ -232,6 +232,37 @@ enum BackgroundRefresh {
             return T7EmulatorEngine.peekScreen(romData: romData, eepromData: result.eeprom ?? savedEeprom, state: result.state)
                 .map { .t7(device, $0) }
 
+        case .t18:
+            // Meets/On: the game's flash save and the session, like .t7's
+            // two files. Its picture is a plain bitmap, so it's published
+            // right here (no SwiftUI drawing needed, unlike .v1/.t7).
+            guard let romData = try? Data(contentsOf: paths.importedROMPath),
+                  let savedState = try? Data(contentsOf: paths.t18StatePath),
+                  let caughtUpTo = paths.lastSavedAt else { return nil }
+            let savedFlash = try? Data(contentsOf: paths.t18FlashPath)
+            let owed = Date().timeIntervalSince(caughtUpTo)
+            guard owed > 1 else { return nil }
+            let result = T18EmulatorEngine.catchUp(
+                romData: romData,
+                flashData: savedFlash,
+                from: savedState,
+                backlogSeconds: owed,
+                wallClockBudget: budget,
+                shouldAbort: shouldAbort,
+                onCallDetected: notifyCall
+            )
+            guard result.advancedSeconds > 0 else { return nil }
+            try? paths.ensureDirectoriesExist()
+            if let flash = result.flash {
+                try? flash.write(to: paths.t18FlashPath, options: .atomic)
+            }
+            if (try? result.state.write(to: paths.t18StatePath, options: .atomic)) != nil {
+                paths.lastSavedAt = caughtUpTo.addingTimeInterval(result.advancedSeconds)
+            }
+            if let image = T18EmulatorEngine.peekScreen(romData: romData, flashData: result.flash ?? savedFlash, state: result.state)?.makeImage() {
+                WidgetSharedState.publish(image: image, device: device)
+            }
+
         case .tomomix:
             // No emulator: the rules engine plays the missed minutes in
             // milliseconds, so there's no budget to worry about. Its calls
@@ -286,6 +317,7 @@ final class EngineGate: @unchecked Sendable {
         case .ctama: key = "ctama." + device.id
         case .v1: key = "v1"
         case .t7: key = "t7"
+        case .t18: key = "t18"
         case .tomomix: key = "tomomix"
         }
         registryLock.lock(); defer { registryLock.unlock() }

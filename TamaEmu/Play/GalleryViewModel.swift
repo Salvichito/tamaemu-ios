@@ -16,6 +16,7 @@ private protocol EngineLifecycle: AnyObject {
 extension PlayViewModel: EngineLifecycle {}
 extension V1PlayViewModel: EngineLifecycle {}
 extension T7PlayViewModel: EngineLifecycle {}
+extension T18PlayViewModel: EngineLifecycle {}
 extension TomomixViewModel: EngineLifecycle {}
 
 /// Owns the set of owned Tamas and one cached view-model per device —
@@ -40,6 +41,7 @@ final class GalleryViewModel {
     private var viewModels: [TamaDevice.ID: PlayViewModel] = [:]
     private var v1ViewModels: [TamaDevice.ID: V1PlayViewModel] = [:]
     private var t7ViewModels: [TamaDevice.ID: T7PlayViewModel] = [:]
+    private var t18ViewModels: [TamaDevice.ID: T18PlayViewModel] = [:]
     /// There's only ever one tomomix.
     private var tomomix: TomomixViewModel?
 
@@ -120,12 +122,20 @@ final class GalleryViewModel {
         return vm
     }
 
+    func t18ViewModel(for device: TamaDevice) -> T18PlayViewModel {
+        if let existing = t18ViewModels[device.id] { return existing }
+        let vm = T18PlayViewModel(device: device)
+        t18ViewModels[device.id] = vm
+        return vm
+    }
+
     /// Already-cached view-model for a device, regardless of family — for
     /// the lifecycle calls below, which don't need to know which kind it
     /// is, and shouldn't create one on demand the way the typed accessors
     /// above do.
     private func cachedEngine(for id: TamaDevice.ID) -> EngineLifecycle? {
         (viewModels[id] as EngineLifecycle?) ?? (v1ViewModels[id] as EngineLifecycle?) ?? (t7ViewModels[id] as EngineLifecycle?)
+            ?? (t18ViewModels[id] as EngineLifecycle?)
             ?? (id == DeviceCatalog.tomomix.id ? tomomix : nil)
     }
 
@@ -136,6 +146,7 @@ final class GalleryViewModel {
         case .ctama: return viewModel(for: device)
         case .v1: return v1ViewModel(for: device)
         case .t7: return t7ViewModel(for: device)
+        case .t18: return t18ViewModel(for: device)
         case .tomomix: return tomomixViewModel()
         }
     }
@@ -153,6 +164,7 @@ final class GalleryViewModel {
         case .ctama: page = viewModel(for: device)
         case .v1: page = v1ViewModel(for: device)
         case .t7: page = t7ViewModel(for: device)
+        case .t18: page = t18ViewModel(for: device)
         case .tomomix: page = tomomixViewModel()
         }
         page.resumeIfNeeded()
@@ -192,6 +204,7 @@ final class GalleryViewModel {
         viewModels[device.id] = nil
         v1ViewModels[device.id] = nil
         t7ViewModels[device.id] = nil
+        t18ViewModels[device.id] = nil
         if !ownedDevices.contains(where: { $0.id == device.id }) {
             ownedDevices.append(device)
         }
@@ -214,6 +227,7 @@ final class GalleryViewModel {
         case .ctama: PlayViewModel.removeDeviceData(device)
         case .v1: V1PlayViewModel.removeDeviceData(device)
         case .t7: T7PlayViewModel.removeDeviceData(device)
+        case .t18: T18PlayViewModel.removeDeviceData(device)
         case .tomomix:
             TomomixStore.remove()
             TomomixStore.removedByPlayer = true
@@ -223,6 +237,7 @@ final class GalleryViewModel {
         viewModels[device.id] = nil
         v1ViewModels[device.id] = nil
         t7ViewModels[device.id] = nil
+        t18ViewModels[device.id] = nil
         ownedDevices.removeAll { $0.id == device.id }
         WidgetSharedState.publishOwnedDevices(ownedDevices)
         if selectedPage == device.id {

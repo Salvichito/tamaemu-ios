@@ -43,6 +43,15 @@ struct SavePaths {
     /// across a power-loss, same split as the real chip.
     var t7EepromPath: URL { savesDir.appendingPathComponent(device.id).appendingPathExtension("t7eeprom") }
 
+    /// The Meets/On (T18Emu) family's session: CPU, chip and SRAM
+    /// (`ios_t18_save_state`'s format).
+    var t18StatePath: URL { savesDir.appendingPathComponent(device.id).appendingPathExtension("t18state") }
+
+    /// The Meets/On game's own save: the flash sectors it has written
+    /// (`ios_t18_flash_save`'s format). Like t7EepromPath, the part the
+    /// real toy keeps through a battery change.
+    var t18FlashPath: URL { savesDir.appendingPathComponent(device.id).appendingPathExtension("t18flash") }
+
     func ensureDirectoriesExist() throws {
         try FileManager.default.createDirectory(at: romsDir, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: savesDir, withIntermediateDirectories: true)
@@ -122,7 +131,7 @@ struct SavePaths {
     /// wrong device was picked at import time and the data underneath it is
     /// simply wrong, not something worth keeping.
     func deleteAll() {
-        for url in [importedROMPath, liveFlashPath, stateFilePath, stateLockPath, v1StatePath, t7StatePath, t7EepromPath] {
+        for url in [importedROMPath, liveFlashPath, stateFilePath, stateLockPath, v1StatePath, t7StatePath, t7EepromPath, t18StatePath, t18FlashPath] {
             try? FileManager.default.removeItem(at: url)
         }
         try? FileManager.default.removeItem(at: backupsDir)
@@ -153,7 +162,7 @@ struct SavePaths {
         // per-device, so any other device copying it would later restore
         // it over the tomomix.
         if device.family == .tomomix { return [TomomixStore.saveURL] }
-        return [liveFlashPath, stateFilePath, v1StatePath, t7StatePath, t7EepromPath]
+        return [liveFlashPath, stateFilePath, v1StatePath, t7StatePath, t7EepromPath, t18StatePath, t18FlashPath]
     }
 
     private var backupsDir: URL {

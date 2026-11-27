@@ -39,7 +39,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
 
     /// Only color Tamas have screen colors to glow with.
     static func supportsAmbient(_ device: TamaDevice) -> Bool {
-        device.family == .ctama
+        device.family == .ctama || device.family == .t18
     }
 
     /// A Tama's theme before the user has picked one. Color Tamas glow

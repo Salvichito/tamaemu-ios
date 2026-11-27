@@ -34,7 +34,21 @@ enum DeviceDetector {
     }
 
     static func detect(size: Int, rom: Data?, in devices: [TamaDevice]) -> Result {
-        let bySize = candidates(forFileSize: size, in: devices)
+        var bySize = candidates(forFileSize: size, in: devices)
+        // Meets/On firmwares are 8 MB too, but carry their own header, so
+        // they're told apart from the color Tamas before anything else.
+        if let rom, bySize.contains(where: { $0.family == .t18 }) {
+            if DeviceCatalog.isT18Firmware(rom) {
+                let editions = bySize.filter { $0.family == .t18 }
+                if let id = DeviceCatalog.t18DeviceID(forROM: rom),
+                   let match = editions.first(where: { $0.id == id }) {
+                    return Result(candidates: [match], isCertain: true)
+                }
+                // An edition this app hasn't seen: the user picks which.
+                return Result(candidates: editions, isCertain: editions.count == 1)
+            }
+            bySize.removeAll { $0.family == .t18 }
+        }
         guard bySize.count > 1, let rom else {
             return Result(candidates: bySize, isCertain: bySize.count == 1)
         }
